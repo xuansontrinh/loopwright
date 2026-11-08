@@ -1,11 +1,24 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { contentRoot, listContent } from '../src/core/content.js';
+import { contentRoot, listContent, renderTemplate } from '../src/core/content.js';
 import { parseAgentSource } from '../src/generate/agents.js';
 
 const ROLES = ['scout', 'tester', 'implementer', 'reviewer'];
 const read = (rel: string) => readFileSync(contentRoot() + rel, 'utf8');
 const agent = (role: string) => parseAgentSource(role, read(`agents/${role}.md`));
+
+const SKILLS = ['flow', 'plan', 'test', 'build', 'review', 'done'].map((s) => `loopwright-${s}`);
+const skill = (name: string) => read(`skills/${name}/SKILL.md`);
+function skillMeta(name: string): { name?: string; description?: string; body: string } {
+  const m = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(skill(name));
+  if (!m) throw new Error(`${name}: missing frontmatter`);
+  const fm: Record<string, string> = {};
+  for (const line of m[1]!.split('\n')) {
+    const i = line.indexOf(':');
+    if (i > 0) fm[line.slice(0, i).trim()] = line.slice(i + 1).trim();
+  }
+  return { name: fm.name, description: fm.description, body: m[2]! };
+}
 
 describe('content', () => {
   it('no TODO-BODY remains in agents, prompts or schemas', () => {
@@ -70,5 +83,81 @@ describe('content', () => {
     expect(f.properties.impact).toEqual({ type: 'string', enum: ['high'] });
     expect(f.properties.confidence.enum).toEqual(['high', 'mid', 'low']);
     expect(s.properties.blocking.items.$ref).toBe('#/$defs/Finding');
+  });
+
+  describe('skills', () => {
+    it('the six skills exist and no TODO-BODY remains in content/skills', () => {
+      expect(listContent('skills')).toEqual([...SKILLS].sort().map((n) => `${n}/SKILL.md`));
+      for (const f of listContent('skills')) expect(read(`skills/${f}`), f).not.toContain('TODO-BODY');
+    });
+
+    it('every skill name matches folder and is spec-valid', () => {
+      for (const n of SKILLS) {
+        const { name } = skillMeta(n);
+        expect(name).toBe(n);
+        expect(name).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+        expect(name!.length).toBeLessThanOrEqual(64);
+      }
+    });
+
+    it('every skill has a safe description and a real body', () => {
+      for (const n of SKILLS) {
+        const { description, body } = skillMeta(n);
+        expect(description, n).toBeTruthy();
+        expect(description!.length, n).toBeGreaterThan(40);
+        expect(description, n).not.toContain(': ');
+        expect(description, n).not.toMatch(/^[#'"]/);
+        expect(description, n).not.toMatch(/TODO/);
+        expect(body.length, n).toBeGreaterThan(500);
+      }
+    });
+
+    it('no unknown placeholders', () => {
+      for (const n of SKILLS) expect(() => renderTemplate(skill(n), { LW_HOME: '.agents/loopwright' }), n).not.toThrow();
+    });
+
+    it('every skill runs lw.mjs from the worktree root and tells agents to spawn subagents', () => {
+      for (const n of SKILLS) {
+        const b = skill(n);
+        expect(b, n).toContain('node "{{LW_HOME}}/hooks/lw.mjs"');
+        expect(b, n).toContain('git rev-parse --show-toplevel');
+        expect(b, n).toContain('spawn the');
+      }
+    });
+
+    it('subagent-dispatching skills name their role with the spawn phrase', () => {
+      const roles: Record<string, string> = {
+        'loopwright-plan': 'scout',
+        'loopwright-test': 'tester',
+        'loopwright-build': 'implementer',
+        'loopwright-review': 'reviewer',
+      };
+      for (const [n, role] of Object.entries(roles)) {
+        expect(skill(n), n).toContain(`spawn the \`loopwright-${role}\` subagent and wait for its result`);
+      }
+    });
+
+    const phrases: Record<string, string[]> = {
+      'loopwright-flow': ['rebuild state', 'loopwright/hooks/', 'lw.mjs" status', '--base', ...SKILLS.filter((s) => s !== 'loopwright-flow')],
+      'loopwright-plan': [
+        'Assumption ledger', '-2', 'high-impact', 'low-impact', 'loopwright-scout', 'small', 'standard', 'large',
+        'two-pass', 'maxFixRounds', 'AskUserQuestion', '/plan', 'asked', 'batch-confirmed', 'overridden',
+        'lw.mjs" start', 'lw.mjs" dir', 'npx loopwright init', '## Goal',
+      ],
+      'loopwright-test': ['lw.mjs" stage test', 'lw.mjs" status', 'lockedTests'],
+      'loopwright-build': ['lw.mjs" stage build', 'task file path', 'chat history', 'slice'],
+      'loopwright-review': [
+        'lw.mjs" stage review', 'Blocking', 'Undecided', 'crossModelReview', 'crossModelReviewer', 'verdict pass',
+        'verdict fail', '{{LW_HOME}}/prompts/reviewer.md', '{{LW_HOME}}/schemas/verdict.json', 'structured_output',
+        'codex exec --sandbox read-only --output-schema', '--json-schema', 'implementer report', 'Review log', 'whole-branch',
+      ],
+      'loopwright-done': ['AGENTS.md', 'docs/agents', '@AGENTS.md', 'do not commit', 'status: done', 'lw.mjs" done', 'rejected'],
+    };
+    for (const [n, list] of Object.entries(phrases)) {
+      it(`${n} carries its required phrases`, () => {
+        const b = skill(n);
+        for (const s of list) expect(b, `${n}: ${s}`).toContain(s);
+      });
+    }
   });
 });
