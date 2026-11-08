@@ -132,3 +132,29 @@ describe('legacy migration', () => {
     expect(existsSync(join(repo, '.agents/skills/spec-create/SKILL.md'))).toBe(true);
   });
 });
+
+describe('legacy migration: still-referenced hook scripts', () => {
+  const home = mkdtempSync(join(tmpdir(), 'lw-h-'));
+  it('keeps .claude hook script when a mixed user+legacy group survives', () => {
+    const repo = legacyRepo();
+    const sp = join(repo, '.claude/settings.json');
+    const group = { hooks: [{ type: 'command', command: 'echo user' }, { type: 'command', command: CLAUDE_CMD }] };
+    writeFileSync(sp, JSON.stringify({ hooks: { UserPromptSubmit: [group] } }));
+    const dry = runCli(repo, ['init', '--dry-run'], { home });
+    expect(dry.stdout).toContain('manual cleanup needed: .claude/settings.json still references ide-mcp-context.mjs');
+    const r = runCli(repo, ['init', '--force'], { home });
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(readJson(sp).hooks.UserPromptSubmit).toEqual([group]);
+    expect(existsSync(join(repo, '.claude/hooks/ide-mcp-context.mjs'))).toBe(true);
+    expect(r.stdout).toContain('manual cleanup needed: .claude/settings.json still references ide-mcp-context.mjs');
+  });
+
+  it('keeps .codex hook script when the legacy block has no END marker', () => {
+    const repo = legacyRepo();
+    put(repo, '.codex/config.toml', OLD_BLOCK.replace('# END coding-agents-toolings ide-mcp\n', ''));
+    const r = runCli(repo, ['init', '--force'], { home });
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(existsSync(join(repo, '.codex/hooks/ide-mcp-context.mjs'))).toBe(true);
+    expect(r.stdout).toContain('manual cleanup needed: .codex/config.toml still references ide-mcp-context.mjs');
+  });
+});

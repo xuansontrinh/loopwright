@@ -6,7 +6,7 @@ import { readManifest, writeManifest } from '../core/manifest.js';
 import { InstallWriter } from '../core/writer.js';
 import { installAll, planWiring } from '../install/install.js';
 import { scaffoldLoopwrightDir } from '../install/loopwright-dir.js';
-import { detectLegacy } from '../install/migrate.js';
+import { scanLegacy } from '../install/migrate.js';
 import { SettingsParseError } from '../install/claude-settings.js';
 import { confirm } from '../utils/prompt.js';
 import { log } from '../utils/log.js';
@@ -23,7 +23,8 @@ function makeWriter(targets: Targets, opts: CommandOptions): InstallWriter {
 }
 
 async function migrateLegacy(root: string, opts: CommandOptions): Promise<void> {
-  const legacy = detectLegacy(root);
+  const { artifacts: legacy, warnings } = scanLegacy(root);
+  for (const w of warnings) log.warn(w);
   if (legacy.length === 0) return;
   if (opts.dryRun) {
     for (const a of legacy) log.dim(`Would ask to remove legacy: ${a.description}`);
