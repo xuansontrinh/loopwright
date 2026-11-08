@@ -16,6 +16,9 @@ try {
   if (!state || (state.stage !== 'build' && state.stage !== 'review')) allow();
   // The agent is ending its turn to let the user decide; blocking would push it past the human gate.
   if (state.awaitingUser) allow();
+  // A backgrounded subagent (e.g. the reviewer) is still working: the turn ends to wait for it, not to quit.
+  // Claude re-invokes the agent when it finishes, and that Stop carries no running tasks, so the gate applies then.
+  if (Array.isArray(input.background_tasks) && input.background_tasks.some((t) => t && t.status === 'running')) allow();
 
   const v = state.verdict;
   if (v && v.pass === true && v.fingerprint === fingerprint(cwd, state.baseCommit)) allow();

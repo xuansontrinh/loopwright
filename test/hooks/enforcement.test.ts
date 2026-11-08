@@ -120,6 +120,24 @@ describe.each(TOOLS)('stop-gate (%s)', (tool) => {
     expect(run('stop-gate.mjs', tool, input, repo).code).toBe(2);
   });
 
+  // Shape captured from a real Claude Code 2.1.319 Stop payload while a backgrounded subagent ran.
+  const running = [{ id: 'ae00e15d80a27bba1', type: 'subagent', status: 'running', description: 'Blind review of slice S1', agent_type: 'loopwright-reviewer' }];
+
+  it('stop-gate allows silently while a background task is running, and blocks again once none is', () => {
+    const repo = setup('review');
+    const r = run('stop-gate.mjs', tool, payload(tool, 'stop', repo, (p) => { p.background_tasks = running; }), repo);
+    expect(r.code).toBe(0);
+    expect(r.stderr).toBe('');
+    expect(JSON.parse(runLw(repo, ['status']).stdout).stopBlocks).toBe(0);
+    expect(run('stop-gate.mjs', tool, payload(tool, 'stop', repo, (p) => { p.background_tasks = []; }), repo).code).toBe(2);
+  });
+
+  it('stop-gate ignores background tasks that are no longer running', () => {
+    const repo = setup('build');
+    const done = [{ ...running[0], status: 'completed' }];
+    expect(run('stop-gate.mjs', tool, payload(tool, 'stop', repo, (p) => { p.background_tasks = done; }), repo).code).toBe(2);
+  });
+
   it('stop-gate allows in plan stage', () => {
     const repo = setup('test', false);
     expect(run('stop-gate.mjs', tool, payload(tool, 'stop', repo), repo).code).toBe(0);
