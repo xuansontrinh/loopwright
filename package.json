@@ -34,7 +34,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^25.5.0",
+    "@types/node": "^26.6.5",
     "smol-toml": "^1.9.1",
     "tsdown": "^0.23.7",
     "typescript": "^5.7.0",
