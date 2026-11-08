@@ -124,6 +124,8 @@ describe('init', () => {
     expect(r.exitCode).toBe(1);
     expect(r.stderr).toContain('settings.json');
     expect(readFileSync(join(repo, '.claude/settings.json'), 'utf8')).toBe(bad);
+    expect(existsSync(join(repo, '.agents'))).toBe(false);
+    expect(existsSync(join(repo, '.loopwright'))).toBe(false);
   });
 
   it('--global --force installs under HOME', () => {

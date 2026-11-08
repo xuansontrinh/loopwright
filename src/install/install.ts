@@ -12,6 +12,35 @@ import { renderCodexHookBlock, upsertCodexBlock } from './codex-config.js';
 import { linkClaude } from './symlink.js';
 import { log } from '../utils/log.js';
 
+export interface WiringPlan {
+  file: string;
+  kind: 'claude-hooks' | 'codex-block';
+  cur: string;
+  out: string;
+}
+
+/** Compute hook wiring results without writing. Throws SettingsParseError on malformed files. */
+export function planWiring(targets: Targets, opts: CommandOptions): WiringPlan[] {
+  if (!opts.hook) return [];
+  const read = (f: string): string => (existsSync(f) ? readFileSync(f, 'utf8') : '');
+  const cs = read(targets.claudeSettingsPath);
+  const cc = read(targets.codexConfigPath);
+  return [
+    {
+      file: targets.claudeSettingsPath,
+      kind: 'claude-hooks',
+      cur: cs,
+      out: mergeClaudeHooks(cs, hookSpecs('claude'), (s) => hookCommand('claude', targets, s.script), targets.claudeSettingsPath),
+    },
+    {
+      file: targets.codexConfigPath,
+      kind: 'codex-block',
+      cur: cc,
+      out: upsertCodexBlock(cc, renderCodexHookBlock(hookSpecs('codex'), (s) => hookCommand('codex', targets, s.script))),
+    },
+  ];
+}
+
 /** Install every file under content/ plus agents and hook wiring. Returns whether anything changed. */
 export async function installAll(
   targets: Targets,
@@ -19,6 +48,7 @@ export async function installAll(
   config: LoopwrightConfig,
   opts: CommandOptions,
 ): Promise<boolean> {
+  const wiring = planWiring(targets, opts);
   let changed = false;
   const vars = { LW_HOME: targets.lwHomeRef };
 
@@ -60,24 +90,14 @@ export async function installAll(
     if (await linkClaude({ root: targets.root, dryRun: opts.dryRun, force: opts.force })) changed = true;
   }
 
-  if (opts.hook) {
-    const wire = (file: string, kind: 'claude-hooks' | 'codex-block', next: (text: string) => string): void => {
-      const cur = existsSync(file) ? readFileSync(file, 'utf8') : '';
-      const out = next(cur);
-      writer.recordConfig({ file, kind });
-      if (out === cur) return;
-      changed = true;
-      log.dim(`  ${opts.dryRun ? 'Would update' : 'Updated'} ${file}`);
-      if (opts.dryRun) return;
-      mkdirSync(dirname(file), { recursive: true });
-      writeFileSync(file, out, 'utf8');
-    };
-    wire(targets.claudeSettingsPath, 'claude-hooks', (t) =>
-      mergeClaudeHooks(t, hookSpecs('claude'), (s) => hookCommand('claude', targets, s.script), targets.claudeSettingsPath),
-    );
-    wire(targets.codexConfigPath, 'codex-block', (t) =>
-      upsertCodexBlock(t, renderCodexHookBlock(hookSpecs('codex'), (s) => hookCommand('codex', targets, s.script))),
-    );
+  for (const w of wiring) {
+    writer.recordConfig({ file: w.file, kind: w.kind });
+    if (w.out === w.cur) continue;
+    changed = true;
+    log.dim(`  ${opts.dryRun ? 'Would update' : 'Updated'} ${w.file}`);
+    if (opts.dryRun) continue;
+    mkdirSync(dirname(w.file), { recursive: true });
+    writeFileSync(w.file, w.out, 'utf8');
   }
   return changed;
 }

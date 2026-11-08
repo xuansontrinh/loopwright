@@ -4,7 +4,7 @@ import { NotAGitRepoError, resolveTargets, type Targets } from '../core/targets.
 import { readConfig } from '../core/config.js';
 import { readManifest, writeManifest } from '../core/manifest.js';
 import { InstallWriter } from '../core/writer.js';
-import { installAll } from '../install/install.js';
+import { installAll, planWiring } from '../install/install.js';
 import { scaffoldLoopwrightDir } from '../install/loopwright-dir.js';
 import { SettingsParseError } from '../install/claude-settings.js';
 import { confirm } from '../utils/prompt.js';
@@ -33,6 +33,7 @@ export async function runInit(opts: CommandOptions): Promise<number> {
     throw e;
   }
   try {
+    planWiring(targets, opts); // pre-flight: abort before writing anything if settings are malformed
     if (targets.mode === 'repo' && targets.stateDir) scaffoldLoopwrightDir(targets.stateDir, opts.dryRun);
     const config = readConfig(targets.configPath);
 
