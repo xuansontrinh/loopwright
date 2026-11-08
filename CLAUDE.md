@@ -26,7 +26,7 @@ Releases: `npm version patch` (produces the bare `0.1.x` commits and a `v*` tag)
 - `content/` — **the product.** Copied verbatim (with `{{LW_HOME}}` templating) at install time and shipped in the package `files`.
   - `skills/loopwright-{flow,plan,test,build,review,done}/SKILL.md` — stage behavior lives here.
   - `agents/<role>.md` — single source per subagent role (Claude format); `src/generate/agents.ts` renders `.claude/agents/*.md` and `.codex/agents/*.toml` with models from config.
-  - `hooks/*.mjs` — plain Node scripts runnable without a build (`guard-locked-tests`, `stop-gate`, `reinject-context`, plus `lib.mjs` and the `lw.mjs` state tool the skills call). They fail open.
+  - `hooks/*.mjs` — plain Node scripts runnable without a build (`guard-locked-tests`, `stop-gate`, `reinject-context`, plus `lib.mjs` and the `lw.mjs` state tool the skills call). They fail open, and exit 0 silently under `LOOPWRIGHT_HOOKS=off`. `lw.mjs start` creates `.loopwright/` when missing (global installs, fresh clones) from `hooks/default-config.json`, which a test pins equal to `DEFAULT_CONFIG` in `src/core/config.ts`.
   - `prompts/reviewer.md`, `schemas/verdict.json` — the reviewer procedure and verdict schema, also used for headless cross-model review.
 - `src/cli.ts` — `node:util` `parseArgs` dispatch to `src/commands/{init,update,uninstall}.ts`.
 - `src/core/` — `targets.ts` (repo vs global paths; `.loopwright/` lives in the main worktree), `config.ts` (`DEFAULT_CONFIG`), `manifest.ts` + `writer.ts` (hash manifest; all writes are idempotent and honor `dryRun`; user-edited files are kept).

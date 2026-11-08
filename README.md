@@ -47,7 +47,9 @@ Repo install:
 - hook wiring (unless `--no-hook`): entries in `.claude/settings.json`, and a `# BEGIN loopwright` ... `# END loopwright` block in `.codex/config.toml`
 - `.loopwright/` (in the main worktree) with its own `.gitignore` (`*`), `config.json`, `manifest.json`, `tasks/`, `state/`
 
-Global install writes the equivalents to `~/.agents/skills`, `~/.claude/skills` (copies, not a symlink), `~/.claude/agents`, `~/.codex/agents`, `~/.claude/settings.json`, `~/.codex/config.toml`, and `~/.config/loopwright/` (hooks, prompts, schemas, `config.json`, `manifest.json`).
+In a repo without `.loopwright/` (a global install, or a fresh clone, since `.loopwright/` ignores itself), the first task start creates it: `.gitignore`, `tasks/`, `state/` and a `config.json` seeded from `~/.config/loopwright/config.json` if that exists, else the defaults.
+
+Global install writes the equivalents to `~/.agents/skills`, `~/.claude/skills` (copies, not a symlink), `~/.claude/agents`, `~/.codex/agents`, `~/.claude/settings.json`, `~/.codex/config.toml`, and `~/.config/loopwright/` (hooks, prompts, schemas, `manifest.json`). It does not create `~/.config/loopwright/config.json`; that file is optional (see Configuration).
 
 ## The loop
 
@@ -80,7 +82,9 @@ Task files live in `.loopwright/tasks/<date>-<title>.md`: goal, decisions (tagge
 
 ## Configuration
 
-`.loopwright/config.json` (global: `~/.config/loopwright/config.json`) is created with these defaults and never overwritten. `init`/`update` render the model settings into the generated agent files, so re-run `update` after editing.
+`.loopwright/config.json` is created with these defaults (by `init`, or by the first task start) and never overwritten. `init`/`update` render the model settings into the generated agent files, so re-run `update` after editing.
+
+Global installs read `~/.config/loopwright/config.json` if you create it (it is optional and not written by `init --global`): its model settings go into the global agent files, and it seeds the `config.json` of each repo's new `.loopwright/`.
 
 ```json
 {
@@ -115,6 +119,7 @@ Limits, stated plainly:
 - State fields such as `awaitingUser` and the history log are tamper-evident, not tamper-proof. A determined agent can write them; the aim is to catch drift, not adversaries.
 - Hooks fail open: if a hook crashes or state is unreadable it warns and allows, so a loopwright bug never bricks your session. Review checks remain authoritative.
 - With `--no-hook`, none of this is enforced.
+- Setting `LOOPWRIGHT_HOOKS=off` in a session's environment turns every loopwright hook into a silent no-op. The cross-model review sets it on the headless `claude -p` / `codex exec` reviewer so that session is not gated.
 
 ### Codex trust step (WIP)
 
@@ -126,9 +131,9 @@ All worktrees of a repo share one `.loopwright/` in the main worktree (found via
 
 ## Update and uninstall
 
-- `update` re-applies the current version using the manifest. A file you edited is kept (with a warning), not overwritten.
-- `uninstall` removes only manifest files whose content still matches what was installed, plus loopwright's own hook entries and Codex block. Modified files are kept. `.claude/settings.json` and `.codex/config.toml` are never deleted, only cleaned of loopwright entries. `.loopwright/tasks/` and config are never touched.
-- Both accept `--global`, `--dry-run`.
+- `update` re-applies the current version using the manifest. A file you edited is kept (with a warning), not overwritten. It reuses the `--no-hook`/`--no-symlink` choices recorded at `init` unless you pass them again. Files a newer version no longer ships stay tracked in the manifest (not deleted), so `uninstall` still removes them.
+- `uninstall` removes only manifest files whose content still matches what was installed, plus loopwright's own hook entries and Codex block (from the manifest's records and always from the target's `.claude/settings.json` and `.codex/config.toml`). Modified files are kept. `.claude/settings.json` and `.codex/config.toml` are never deleted, only cleaned of loopwright entries. `.loopwright/tasks/` and config are never touched.
+- Both accept `--global`, `--dry-run` and `--force` (`--force` skips confirmation prompts; for `update` it also overwrites files you edited).
 
 ## Migrating from coding-agents-toolings
 

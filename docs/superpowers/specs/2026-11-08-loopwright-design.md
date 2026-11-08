@@ -2,6 +2,8 @@
 
 Date: 2026-11-08 · Status: draft for review · Replaces: `coding-agents-toolings` (npm package already removed)
 
+_Amended 2026-11-08 to match implementation rulings (§4, §5, §6)._
+
 ## 1. Intent
 
 **Problem.** The current spec skills (`spec-create/update/complete/handoff`) generate multi-file specs that people skim and then execute blindly; `ide-mcp` duplicates what plain MCP setup provides; brainstorming/planning is better served by existing tools (e.g. superpowers).
@@ -76,6 +78,8 @@ Date: 2026-11-08 · Status: draft for review · Replaces: `coding-agents-tooling
 
 `.loopwright/` lives in the **main worktree**, located from any worktree via `git rev-parse --git-common-dir` (its parent dir). Bare repo with no main worktree → fall back to `.loopwright/` in the current worktree. The folder contains its own `.gitignore` (`*`), so the user's `.gitignore` is never edited.
 
+Repo `init` creates it. Where it is missing (global install, fresh clone), `lw.mjs start` creates it lazily: `.gitignore`, `tasks/`, `state/`, and `config.json` copied from `~/.config/loopwright/config.json` if present, else the default (`content/hooks/default-config.json`, kept equal to `DEFAULT_CONFIG`). `lw.mjs dir` prints `null` until then.
+
 ```
 .loopwright/
   .gitignore                   # "*"
@@ -107,7 +111,7 @@ Date: 2026-11-08 · Status: draft for review · Replaces: `coding-agents-tooling
 
 ### Task file (human-facing, target ≤ ~150 lines, one-line entries)
 
-- Header: status (`active|done`), stage, tier, two-pass, fix-round cap, check commands, worktree + branch, base commit.
+- Header: status (`active|done`), stage, `plan: draft|confirmed` (Test and Build refuse to start until `confirmed`), tier, two-pass, fix-round cap, check commands, worktree + branch, base commit.
 - Goal (one paragraph).
 - Decisions `D1…` — each tagged `asked` / `batch-confirmed` / `overridden`.
 - Assumptions `A1…` — confirmed or overridden.
@@ -118,9 +122,9 @@ Date: 2026-11-08 · Status: draft for review · Replaces: `coding-agents-tooling
 
 ### state/<worktree-id>.json (machine-only)
 
-Active task path, stage, locked tests `[{path, sha256}]`, latest verdict `{pass, fingerprint, round}`, stop-gate block count. Per-worktree files avoid concurrent writes between sessions.
+Active task path, stage, locked tests `[{path, sha256}]`, latest verdict `{pass, fingerprint, round}`, stop-gate block count, `awaitingUser` (reason, set by `lw.mjs await-user`, cleared by `resume`/`stage`/`verdict`), and an append-only `history: [{event, detail, at}]`. `start --force` keeps the prior `history` (appending `{event: start, detail: --force}`) and `lockedTests`. Per-worktree files avoid concurrent writes between sessions.
 
-**Fingerprint** = hash of `git diff <base-commit>` plus contents of untracked, non-ignored files in the task's worktree. Any code change after a pass makes the verdict stale.
+**Fingerprint** = hash of `git diff <base-commit>` plus untracked, non-ignored entries in the task's worktree (regular files: contents; symlinks: the link target string; anything else: path only). Any code change after a pass makes the verdict stale.
 
 ## 5. Enforcement and wiring
 
@@ -129,10 +133,12 @@ Active task path, stage, locked tests `[{path, sha256}]`, latest verdict `{pass,
 | Hook | Event | Behavior |
 |---|---|---|
 | `guard-locked-tests` | PreToolUse | During Build, blocks edit tools on locked paths (Claude `Edit`/`Write`/`MultiEdit`; Codex `apply_patch`). Shell edits are not reliably detectable — Review re-hashes as backstop. |
-| `stop-gate` | Stop | If stage is Build/Review and no passing verdict matches the current fingerprint → block with reason. Blocks at most 3 times per stage, then allows stop with a visible warning (deadlock guard; cap is fixed in v1, not a config option). |
-| `reinject-context` | Claude `SessionStart` (matcher `compact`); Codex `PostCompact` | Prints goal, stage, decisions and next step from the active task file. |
+| `stop-gate` | Stop | If stage is Build/Review and no passing verdict matches the current fingerprint → block with reason. Allows silently while `awaitingUser` is set (human gate). Blocks at most 3 times per stage, then allows stop with a visible warning (deadlock guard; cap is fixed in v1, not a config option). |
+| `reinject-context` | `SessionStart` with matcher `compact`, for both Claude and Codex (Codex `PostCompact` cannot inject context) | Prints goal, stage, decisions and next step (or the awaiting-user reason) from the active task file. |
 
-Wiring: Claude → `.claude/settings.json` (merged, deduped by script path). Codex → `.codex/config.toml` marker block (`# BEGIN/END loopwright`) or `.codex/hooks.json`, whichever the spike in §9 confirms is current. `init` prints the Codex trust/approval step (`/hooks`); skills warn if hooks appear inactive.
+Every hook exits 0 silently when the environment has `LOOPWRIGHT_HOOKS=off` (set on headless cross-model reviewer commands).
+
+Wiring: Claude → `.claude/settings.json` (merged, deduped by script path). Codex → `.codex/config.toml` marker block (`# BEGIN/END loopwright`) only. `init` prints the Codex trust/approval step (`/hooks`); skills warn if hooks appear inactive.
 
 ### Subagents
 
@@ -153,9 +159,11 @@ Single source per role (`scout`, `tester`, `implementer`, `reviewer`) in Claude 
 
 Every reported finding carries: location, the violated expectation, the proof, impact, confidence.
 
+Step 0 runs `lw.mjs check-locks`: changed or missing locked tests → Blocking; non-empty `lockedAfterBuild` (a path re-locked after a Build stage) or `forcedRestartAfterBuild: true` (a `start --force` after a Build stage) → Undecided.
+
 ### Cross-model review (opt-in)
 
-Same reviewer prompt file, executed via `codex exec --sandbox read-only --output-schema <schema>` or `claude -p --output-format json --json-schema <schema>`. Both verdicts must pass. Missing CLI → step skipped, noted in the review log.
+Same reviewer prompt file, executed via `codex exec --sandbox read-only --output-schema <schema>` or `claude -p --output-format json --json-schema <schema>`. Both verdicts must pass. Missing CLI → step skipped, noted in the review log. Both commands run with `LOOPWRIGHT_HOOKS=off`; the `claude -p` allowlist permits only `lw.mjs` `status`, `check-locks` and `fingerprint`.
 
 ## 6. Installer
 
@@ -163,20 +171,22 @@ Same reviewer prompt file, executed via `codex exec --sandbox read-only --output
 
 ```
 npx loopwright init      [--global] [--no-hook] [--no-symlink] [--dry-run] [--force]
-npx loopwright update    [--global] [--dry-run]
-npx loopwright uninstall [--global] [--dry-run]
+npx loopwright update    [--global] [--no-hook] [--no-symlink] [--dry-run] [--force]
+npx loopwright uninstall [--global] [--dry-run] [--force]
 ```
+
+The manifest records `options: {hook, symlink}`; `update` reuses them unless `--no-hook`/`--no-symlink` is passed explicitly.
 
 **Repo install** writes (intended to be committed, so teams share the workflow):
 - `.agents/skills/loopwright-{flow,plan,test,build,review,done}/SKILL.md` + `.claude/skills → ../.agents/skills` symlink (existing conflict handling retained).
 - `.claude/agents/loopwright-*.md`, `.codex/agents/loopwright-*.toml`.
 - `.agents/loopwright/hooks/*.mjs` (one copy, referenced by both tools).
 - Hook wiring (unless `--no-hook`).
-- `.loopwright/` with `.gitignore`, default `config.json`, `manifest.json`.
+- `.loopwright/` with `.gitignore`, default `config.json`, `manifest.json`, `tasks/`, `state/`.
 
-**Global install** writes the equivalent into `~/.agents/skills`, `~/.claude/skills`, `~/.claude/agents`, `~/.codex/agents`, `~/.config/loopwright/hooks/`, merges wiring into user Claude/Codex config, and keeps its manifest at `~/.config/loopwright/manifest.json`. It shows the planned changes and asks before touching user config (unless `--force`).
+**Global install** writes the equivalent into `~/.agents/skills`, `~/.claude/skills`, `~/.claude/agents`, `~/.codex/agents`, `~/.config/loopwright/{hooks,prompts,schemas}/` (no `config.json`; it is optional and read if present), merges wiring into user Claude/Codex config, and keeps its manifest at `~/.config/loopwright/manifest.json`. It shows the planned changes and asks before touching user config (unless `--force`).
 
-**Manifest** records every file written (path, sha256) and every config entry/block added. `update` re-applies the current version; a file whose hash differs from the manifest is user-edited → kept and the user is asked. `uninstall` removes only unmodified manifest files and loopwright config entries; it never touches `.loopwright/tasks/`.
+**Manifest** records every file written (path, sha256) and every config entry/block added (repo mode: worktree-relative keys for both). Entries for files no longer shipped are carried forward, not removed; when hooks are skipped, prior config entries are carried forward. The `.claude/skills` conflict is resolved before anything is written (abort writes nothing). `update` re-applies the current version; a file whose hash differs from the manifest is user-edited → kept and the user is asked. `uninstall` removes only unmodified manifest files and loopwright config entries (also always attempted on the target's default Claude settings and Codex config); it never touches `.loopwright/tasks/`.
 
 **Migration** (D17): `init` detects old artifacts — `spec-create|update|complete|handoff`, `ide-mcp` skill dirs, `ide-mcp-context.mjs` hooks, the `coding-agents-toolings ide-mcp` marker block in `.codex/config.toml`, matching `.claude/settings.json` entries — lists them and removes only on confirmation.
 
@@ -189,11 +199,13 @@ content/
   hooks/*.mjs
   prompts/reviewer.md          # shared with headless cross-model review
   schemas/verdict.json
+  hooks/default-config.json    # default .loopwright/config.json for lazy creation
 src/
   cli.ts                       # parseArgs dispatch
   commands/{init,update,uninstall}.ts
-  install/{targets,manifest,claude-settings,codex-config,symlink,conflict,migrate}.ts
-  generate/codex-agent.ts
+  core/{targets,config,manifest,writer,content,git,options}.ts
+  install/{install,claude-settings,codex-config,hook-wiring,symlink,migrate,loopwright-dir}.ts
+  generate/agents.ts           # Claude .md and Codex .toml agents from one source
 ```
 
 Content files are copied at install time and located via `new URL('../content', import.meta.url)`; `content/` is included in the package `files`.
