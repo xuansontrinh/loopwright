@@ -90,6 +90,7 @@ export async function installAll(
     if (await linkClaude({ root: targets.root, dryRun: opts.dryRun, force: opts.force })) changed = true;
   }
 
+  if (!opts.hook) writer.carryPriorConfig();
   for (const w of wiring) {
     writer.recordConfig({ file: w.file, kind: w.kind });
     if (w.out === w.cur) continue;

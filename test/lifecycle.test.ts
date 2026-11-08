@@ -179,3 +179,35 @@ describe('recorded install options', () => {
     expect(readJson(join(repo, '.loopwright/manifest.json')).options).toEqual({ hook: true, symlink: true });
   });
 });
+
+describe('hook wiring cleanup', () => {
+  const noRef = (repo: string) => {
+    for (const f of ['.claude/settings.json', '.codex/config.toml']) {
+      const p = join(repo, f);
+      if (existsSync(p)) expect(readFileSync(p, 'utf8'), f).not.toContain('loopwright/hooks/');
+    }
+  };
+
+  it('init → init --no-hook → uninstall leaves no wiring', () => {
+    const repo = spacedRepo();
+    const home = mkdtempSync(join(tmpdir(), 'lw-h-'));
+    expect(runCli(repo, ['init'], { home }).exitCode).toBe(0);
+    expect(runCli(repo, ['init', '--no-hook'], { home }).exitCode).toBe(0);
+    expect(readJson(join(repo, '.loopwright/manifest.json')).config).toHaveLength(2);
+    const r = runCli(repo, ['uninstall'], { home });
+    expect(r.exitCode, r.stderr).toBe(0);
+    noRef(repo);
+  });
+
+  it('uninstall removes wiring from default paths even without manifest config entries', () => {
+    const repo = spacedRepo();
+    const home = mkdtempSync(join(tmpdir(), 'lw-h-'));
+    expect(runCli(repo, ['init'], { home }).exitCode).toBe(0);
+    const mp = join(repo, '.loopwright/manifest.json');
+    const m = readJson(mp);
+    m.config = [];
+    writeFileSync(mp, JSON.stringify(m));
+    expect(runCli(repo, ['uninstall'], { home }).exitCode).toBe(0);
+    noRef(repo);
+  });
+});

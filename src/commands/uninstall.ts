@@ -2,7 +2,7 @@ import { existsSync, lstatSync, readFileSync, readdirSync, readlinkSync, rmSync,
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { CommandOptions } from '../core/options.js';
 import { NotAGitRepoError, resolveTargets, type Targets } from '../core/targets.js';
-import { readManifest, sha256 } from '../core/manifest.js';
+import { readManifest, sha256, type Manifest } from '../core/manifest.js';
 import { removeClaudeHooks, SettingsParseError } from '../install/claude-settings.js';
 import { removeCodexBlock } from '../install/codex-config.js';
 import { confirm } from '../utils/prompt.js';
@@ -61,23 +61,29 @@ export async function runUninstall(opts: CommandOptions): Promise<number> {
     dirsToPrune.add(dirname(p));
   }
 
-  for (const c of manifest.config) {
-    if (!existsSync(c.file)) continue;
-    const cur = readFileSync(c.file, 'utf-8');
+  // Manifest entries plus the target's default paths: hint-based removal is safe on any file,
+  // and covers wiring whose manifest record was lost.
+  const configs = new Map<string, Manifest['config'][number]['kind']>();
+  for (const c of manifest.config) configs.set(resolve(abs(c.file)), c.kind);
+  configs.set(resolve(targets.claudeSettingsPath), 'claude-hooks');
+  configs.set(resolve(targets.codexConfigPath), 'codex-block');
+  for (const [file, kind] of configs) {
+    if (!existsSync(file)) continue;
+    const cur = readFileSync(file, 'utf-8');
     let out: string;
     try {
-      out = c.kind === 'claude-hooks' ? removeClaudeHooks(cur, 'loopwright/hooks/', c.file) : removeCodexBlock(cur);
+      out = kind === 'claude-hooks' ? removeClaudeHooks(cur, 'loopwright/hooks/', file) : removeCodexBlock(cur);
     } catch (e) {
       if (e instanceof SettingsParseError) {
-        log.warn(`left ${c.file} untouched: ${e.message}`);
+        log.warn(`left ${file} untouched: ${e.message}`);
         continue;
       }
       throw e;
     }
     if (out === cur) continue;
-    log.dim(`  ${dry ? 'Would update' : 'Updated'} ${c.file}`);
+    log.dim(`  ${dry ? 'Would update' : 'Updated'} ${file}`);
     if (dry) continue;
-    writeFileSync(c.file, c.kind === 'claude-hooks' && out.trim() === '{}' ? '{}\n' : out, 'utf-8');
+    writeFileSync(file, kind === 'claude-hooks' && out.trim() === '{}' ? '{}\n' : out, 'utf-8');
   }
 
   const link = targets.claudeSkillsDir;

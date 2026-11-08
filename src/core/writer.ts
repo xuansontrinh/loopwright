@@ -57,8 +57,17 @@ export class InstallWriter {
   }
 
   recordConfig(entry: ConfigEntry): void {
+    this.addConfig(entry);
+  }
+
+  /** Hooks skipped this run: existing wiring stays in place, so its manifest record must too. */
+  carryPriorConfig(): void {
+    for (const c of this.opts.manifest?.config ?? []) this.addConfig(c);
+  }
+
+  private addConfig(entry: ConfigEntry): void {
     if (!this.config.some((c) => c.file === entry.file && c.kind === entry.kind)) {
-      this.config.push({ ...entry });
+      this.config.push({ file: entry.file, kind: entry.kind });
     }
   }
 
