@@ -19,6 +19,8 @@ npm run dev -- init --dry-run     # build and run the CLI against the cwd
 
 Unit tests import `src/` directly. E2E tests spawn `dist/cli.js` in temp git repos, and hook tests spawn `content/hooks/*.mjs`, so rebuild before running vitest directly or the e2e tests use stale output.
 
+CI: `.github/workflows/ci.yml` runs typecheck and tests on every PR and push to `main`, on Node 22.14 (the `engines` floor) and 24.
+
 Releases: `npm version patch` (produces the bare `0.1.x` commits and a `v*` tag); pushing the tag triggers `.github/workflows/publish.yml`, which builds, tests, publishes `loopwright` to npm via OIDC, and creates a GitHub release.
 
 ## Architecture
