@@ -9,7 +9,7 @@ Plan runs in this main thread. You state assumptions; the user decides. Do not e
 ## Setup
 
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
-2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` prints the `.loopwright` directory (`<lw>` below). `null` → tell the user to run `npx loopwright init` and stop.
+2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` prints the `.loopwright` directory (`<lw>` below). `null` inside a git repo → no task has started here yet; `lw.mjs start` (section 3) creates `.loopwright/`, so continue with a new task. Not a git repo → tell the user loopwright must run inside a git repo, stop.
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status`. "no active task" → continue with a new task. If it prints a task, read `<lw>/<task>`:
    - `stage: plan` → resume this plan: the first `— pending` item under `## Open questions`, else the proposal (step 6), else the confirmation (step 7). If the user says this plan is abandoned, offer to start the new one with `start tasks/<new file>.md --force` (the old task file stays).
    - past `plan` → the task is in progress; tell the user to continue it with `/loopwright-flow`. Do not start a second.
@@ -33,7 +33,7 @@ List every assumption you would otherwise make silently, one line each: `A<n> [h
 - **low-impact**: everything else (internal naming, file placement following an existing pattern, minor edge-case choices).
 - Cover: scope in/out, behavior and edge cases, interfaces and paths, error handling, compatibility, how it is tested (no test runner in the repo → high-impact), docs to update.
 
-Show the user the whole ledger in one compact message, then create the task file (see Task file) with status `active`, stage `plan` and `plan: draft`, and run `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md` (path relative to `<lw>`). Copy `baseCommit`, `worktree` and `branch` from its output into the header. Put every unresolved ledger line under `## Open questions` with `— pending`; move each to Decisions or Assumptions as it is resolved, so a resumed session knows what is still open. Starting early lets the hooks restore this task after compaction; it builds nothing.
+Show the user the whole ledger in one compact message, then run `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md` (path relative to `<lw>`; if `dir` printed `null`, this creates `.loopwright/`, so run `dir` again for `<lw>`) and create the task file (see Task file) with status `active`, stage `plan` and `plan: draft`. Copy `baseCommit`, `worktree` and `branch` from its output into the header. Put every unresolved ledger line under `## Open questions` with `— pending`; move each to Decisions or Assumptions as it is resolved, so a resumed session knows what is still open. Starting early lets the hooks restore this task after compaction; it builds nothing.
 
 ## 4. High-impact questions, one at a time
 

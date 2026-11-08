@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, lstatSync, readdirSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync, lstatSync, readdirSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -135,5 +135,23 @@ describe('update/uninstall', () => {
     expect(runCli(r2, ['init'], { home }).exitCode).toBe(0);
     expect(runCli(r2, ['uninstall'], { home }).exitCode).toBe(0);
     expect(readFileSync(join(r2, '.claude/settings.json'), 'utf8')).toBe('{}\n');
+  });
+});
+
+describe('global install end to end', () => {
+  it('global init → fresh repo → lw.mjs start creates .loopwright/', () => {
+    const h = realpathSync(mkdtempSync(join(tmpdir(), 'lw-gh-')));
+    const repo = realpathSync(createTempGitRepo('lw-gfresh-'));
+    execFileSync('git', ['-c', 'user.name=T', '-c', 'user.email=t@e', 'commit', '-q', '--allow-empty', '-m', 'init'], { cwd: repo });
+    expect(runCli(repo, ['init', '--global', '--force'], { home: h }).exitCode).toBe(0);
+    expect(existsSync(join(repo, '.loopwright'))).toBe(false);
+    const r = spawnSync('node', [join(h, '.config/loopwright/hooks/lw.mjs'), 'start', 'tasks/x.md'], {
+      cwd: repo, encoding: 'utf8', env: { ...process.env, HOME: h },
+    });
+    expect(r.status, r.stderr).toBe(0);
+    expect(JSON.parse(r.stdout).task).toBe('tasks/x.md');
+    expect(readFileSync(join(repo, '.loopwright/.gitignore'), 'utf8')).toBe('*\n');
+    expect(existsSync(join(repo, '.loopwright/config.json'))).toBe(true);
+    expect(execFileSync('git', ['status', '--porcelain'], { cwd: repo, encoding: 'utf8' })).toBe('');
   });
 });

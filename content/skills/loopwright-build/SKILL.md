@@ -9,7 +9,7 @@ The implementer subagent writes the code. This thread dispatches it and hands th
 ## Setup
 
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
-2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>` (`null` → tell the user to run `npx loopwright init`, stop).
+2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>` (`null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/` with the first task, so continue and the next step reports "no active task". Not a git repo → tell the user loopwright must run inside a git repo, stop).
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status` → `task` (relative to `<lw>`) and `lockedTests`. "no active task" → point the user to `/loopwright-plan` or `/loopwright-flow`, stop.
 4. Read the task file header (`tier`, `checks`).
    - Header not `plan: confirmed` → stop; the plan is not confirmed yet, point the user to `/loopwright-plan`.

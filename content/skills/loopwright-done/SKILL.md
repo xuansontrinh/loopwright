@@ -9,7 +9,7 @@ Done runs in this main thread; do not spawn the subagents here. You propose; the
 ## Setup
 
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
-2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>` (`null` → tell the user to run `npx loopwright init`, stop). Read `docsDir` from `<lw>/config.json` (default `docs/agents`).
+2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>` (`null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/` with the first task, so continue and the next step reports "no active task". Not a git repo → tell the user loopwright must run inside a git repo, stop). Read `docsDir` from `<lw>/config.json` (default `docs/agents`).
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status` → `task`, `verdict`. Then `node "{{LW_HOME}}/hooks/lw.mjs" fingerprint`.
    - No `verdict.pass: true`, or its `fingerprint` differs from the current one → the code changed since review or never passed: run `/loopwright-review` first. Continue only if the user explicitly says so, and note it in the review log.
 4. `node "{{LW_HOME}}/hooks/lw.mjs" stage done`, and set `stage: done` in the task file header.

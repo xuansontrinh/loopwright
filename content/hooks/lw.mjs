@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 // Loopwright state tool. Usage: node lw.mjs <cmd> [args]
-import { existsSync, unlinkSync } from 'node:fs';
-import { isAbsolute, resolve } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { isAbsolute, join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { fingerprint, gitTopLevel, loopwrightDir, readState, repoRelative, sha256File, statePath, worktreeId, writeState } from './lib.mjs';
+import { fileURLToPath } from 'node:url';
+import { fingerprint, gitTopLevel, loopwrightDir, loopwrightPath, readState, repoRelative, sha256File, statePath, worktreeId, writeState } from './lib.mjs';
 
 const STAGES = ['plan', 'test', 'build', 'review', 'done'];
 const cwd = process.cwd();
@@ -26,9 +28,27 @@ function flag(args, name) {
   return v;
 }
 
-function ctx() {
-  const dir = loopwrightDir(cwd);
-  if (!dir) fail('loopwright: no .loopwright directory found');
+/** Create <main worktree>/.loopwright/ (global installs, fresh clones). Config seeds from ~/.config/loopwright/config.json, else the default. */
+function scaffold(dir) {
+  mkdirSync(join(dir, 'tasks'), { recursive: true });
+  mkdirSync(join(dir, 'state'), { recursive: true });
+  const ignore = join(dir, '.gitignore');
+  if (!existsSync(ignore)) writeFileSync(ignore, '*\n');
+  const cfg = join(dir, 'config.json');
+  if (existsSync(cfg)) return;
+  const user = join(homedir(), '.config', 'loopwright', 'config.json');
+  copyFileSync(existsSync(user) ? user : fileURLToPath(new URL('./default-config.json', import.meta.url)), cfg);
+}
+
+function ctx(create = false) {
+  let dir = loopwrightDir(cwd);
+  if (!dir) {
+    const path = loopwrightPath(cwd);
+    if (!path) fail('loopwright: no .loopwright directory found (not inside a git repository)');
+    if (!create) fail('loopwright: no active task (no .loopwright directory yet; lw.mjs start creates it)');
+    scaffold(path);
+    dir = path;
+  }
   return { dir, id: worktreeId(cwd) };
 }
 
@@ -53,7 +73,7 @@ try {
       if (force) rest.splice(rest.indexOf('--force'), 1);
       const task = rest[0];
       if (!task) fail('loopwright: usage: start <task-rel-path> [--base <sha>]');
-      const { dir, id } = ctx();
+      const { dir, id } = ctx(true);
       if (!force && readState(dir, id)) fail('loopwright: task already active (run lw.mjs done first, or start --force)');
       const state = {
         version: 1,

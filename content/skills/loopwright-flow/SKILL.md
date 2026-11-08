@@ -9,7 +9,7 @@ Runs the stage skills in order for the confirmed tier and resumes where a task l
 ## Setup
 
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
-2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>`. `null` → tell the user to run `npx loopwright init` and stop.
+2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>`. `null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/` with the first task, so continue. Not a git repo → tell the user loopwright must run inside a git repo, stop.
 3. Hooks check: `grep -l "loopwright/hooks/" .claude/settings.json .codex/config.toml ~/.claude/settings.json ~/.codex/config.toml 2>/dev/null`. No match → warn the user once: "loopwright hooks are not installed, so locked tests, the stop gate and context restore are not enforced; run `npx loopwright init` to install them." Continue unless the user objects. In Codex, hooks also need approval via `/hooks`.
 
 ## Resume

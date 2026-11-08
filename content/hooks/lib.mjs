@@ -20,14 +20,19 @@ function mainWorktreeRoot(cwd) {
   return gitTopLevel(cwd);
 }
 
-/** Main-worktree .loopwright directory if it exists; null outside git or if absent. */
-export function loopwrightDir(cwd) {
+/** Main-worktree .loopwright path (whether or not it exists); null outside git. */
+export function loopwrightPath(cwd) {
   try {
-    const dir = join(mainWorktreeRoot(cwd), '.loopwright');
-    return existsSync(dir) ? dir : null;
+    return join(mainWorktreeRoot(cwd), '.loopwright');
   } catch {
     return null;
   }
+}
+
+/** Main-worktree .loopwright directory if it exists; null outside git or if absent. */
+export function loopwrightDir(cwd) {
+  const dir = loopwrightPath(cwd);
+  return dir && existsSync(dir) ? dir : null;
 }
 
 export function worktreeId(cwd) {

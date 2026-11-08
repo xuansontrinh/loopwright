@@ -1,0 +1,23 @@
+{
+  "maxFixRounds": 3,
+  "crossModelReview": "off",
+  "docsDir": "docs/agents",
+  "models": {
+    "claude": {
+      "scout": "opus",
+      "tester": "sonnet",
+      "implementer": "sonnet",
+      "reviewer": "opus"
+    },
+    "codex": {
+      "scout": "inherit",
+      "tester": "inherit",
+      "implementer": "inherit",
+      "reviewer": "inherit"
+    },
+    "crossModelReviewer": {
+      "claude": "opus",
+      "codex": "inherit"
+    }
+  }
+}

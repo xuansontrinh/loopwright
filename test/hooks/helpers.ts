@@ -13,6 +13,16 @@ export function git(cwd: string, args: string[]): string {
   }).trim();
 }
 
+/** A committed repo with no .loopwright/ (fresh clone / global install). */
+export function makeBareRepo(): string {
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'lw-hooks-')));
+  git(dir, ['init', '-q', '-b', 'main']);
+  writeFileSync(join(dir, 'a.txt'), 'one\n');
+  git(dir, ['add', '.']);
+  git(dir, ['commit', '-q', '-m', 'init']);
+  return dir;
+}
+
 export function makeRepo(): string {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'lw-hooks-')));
   git(dir, ['init', '-q', '-b', 'main']);
@@ -30,7 +40,7 @@ export function scaffoldLoopwright(dir: string): void {
   writeFileSync(join(lw, '.gitignore'), '*\n');
 }
 
-export function runLw(cwd: string, args: string[], input?: string) {
-  const r = spawnSync('node', [LW, ...args], { cwd, encoding: 'utf8', input });
+export function runLw(cwd: string, args: string[], input?: string, env?: Record<string, string>) {
+  const r = spawnSync('node', [LW, ...args], { cwd, encoding: 'utf8', input, env: env ? { ...process.env, ...env } : process.env });
   return { code: r.status, stdout: r.stdout, stderr: r.stderr };
 }

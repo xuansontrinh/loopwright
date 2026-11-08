@@ -125,6 +125,16 @@ describe('content', () => {
       }
     });
 
+    it('dir → null inside git is not an error: lw.mjs start creates .loopwright/', () => {
+      for (const n of SKILLS) {
+        const setup = skill(n).split('## Setup')[1]!.split('\n## ')[0]!;
+        expect(setup, n).toContain('`null` inside a git repo');
+        expect(setup, n).toContain('creates `.loopwright/`');
+        expect(setup, n).toContain('Not a git repo → tell the user loopwright must run inside a git repo');
+        expect(setup, n).not.toMatch(/`null` → tell the user to run `npx loopwright init`/);
+      }
+    });
+
     it('subagent-dispatching skills name their role with the spawn phrase', () => {
       const roles: Record<string, string> = {
         'loopwright-plan': 'scout',
@@ -142,7 +152,7 @@ describe('content', () => {
       'loopwright-plan': [
         'Assumption ledger', '-2', 'high-impact', 'low-impact', 'loopwright-scout', 'small', 'standard', 'large',
         'two-pass', 'maxFixRounds', 'AskUserQuestion', '/plan', 'asked', 'batch-confirmed', 'overridden',
-        'lw.mjs" start', 'lw.mjs" dir', 'npx loopwright init', '## Goal', 'plan: draft', 'plan: confirmed', '--force',
+        'lw.mjs" start', 'lw.mjs" dir', 'creates `.loopwright/`', '## Goal', 'plan: draft', 'plan: confirmed', '--force',
       ],
       'loopwright-test': ['lw.mjs" stage test', 'lw.mjs" status', 'lockedTests', 'plan: confirmed'],
       'loopwright-build': ['lw.mjs" stage build', 'task file path', 'chat history', 'slice', 'plan: confirmed', 'lw.mjs" await-user', 'lw.mjs" resume', 'AskUserQuestion'],

@@ -9,7 +9,7 @@ Reviewers judge in their own context. This thread dispatches them, merges their 
 ## Setup
 
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
-2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>` (`null` → tell the user to run `npx loopwright init`, stop).
+2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>` (`null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/` with the first task, so continue and the next step reports "no active task". Not a git repo → tell the user loopwright must run inside a git repo, stop).
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status` → `task` (relative to `<lw>`) and `baseCommit`. "no active task" → point the user to `/loopwright-flow`, stop.
 4. Read the task file header (`tier`, `two-pass`, `fix-round cap`) and `<lw>/config.json` (`crossModelReview`, `models.crossModelReviewer`; missing → `off`).
 5. Scope: small/standard → the task. Large → the first `S<n> [tested]` slice, or `whole` once every slice is `[passed]`.
