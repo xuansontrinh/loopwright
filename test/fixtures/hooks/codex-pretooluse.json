@@ -1,0 +1,1 @@
+{"session_id":"sess-1","turn_id":"turn-1","transcript_path":null,"cwd":"/REPO","hook_event_name":"PreToolUse","model":"gpt-5","permission_mode":"default","tool_name":"apply_patch","tool_input":{"command":"*** Begin Patch\n*** Update File: test/t.test.ts\n@@\n-a\n+b\n*** End Patch\n"},"tool_use_id":"call_1"}
