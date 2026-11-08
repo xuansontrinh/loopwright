@@ -1,8 +1,8 @@
 // Loopwright hook runtime library. Only node:* imports.
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 const MAX_BUFFER = 1024 * 1024 * 1024;
 
@@ -107,4 +107,27 @@ export function failOpen(err) {
   const msg = err instanceof Error ? err.message : String(err);
   process.stderr.write(`loopwright hook error: ${msg}\n`);
   process.exit(0);
+}
+
+/** realpath of the nearest existing ancestor, with the not-yet-existing tail re-appended. */
+export function realpathLoose(abs) {
+  const tail = [];
+  let cur = abs;
+  for (;;) {
+    try {
+      return join(realpathSync(cur), ...tail.reverse());
+    } catch {
+      const parent = dirname(cur);
+      if (parent === cur) return abs;
+      tail.push(basename(cur));
+      cur = parent;
+    }
+  }
+}
+
+/** Worktree-top-relative POSIX path of p (relative to cwd if not absolute), symlinks resolved. May start with '..' if outside. */
+export function repoRelative(cwd, p) {
+  const top = realpathSync(gitTopLevel(cwd));
+  const abs = realpathLoose(isAbsolute(p) ? resolve(p) : resolve(cwd, p));
+  return relative(top, abs).split(sep).join('/');
 }

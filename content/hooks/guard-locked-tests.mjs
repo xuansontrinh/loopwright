@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // PreToolUse guard: block edits to locked acceptance tests during the build stage.
-import { isAbsolute, relative, resolve, sep } from 'node:path';
-import { allow, deny, failOpen, gitTopLevel, loopwrightDir, readState, readStdinJson, worktreeId } from './lib.mjs';
+import { allow, deny, failOpen, loopwrightDir, readState, readStdinJson, repoRelative, worktreeId } from './lib.mjs';
 
 function patchPaths(command) {
   const out = [];
@@ -23,11 +22,9 @@ try {
 
   const ti = input.tool_input ?? {};
   const raw = input.tool_name === 'apply_patch' ? patchPaths(ti.command) : ti.file_path ? [ti.file_path] : [];
-  const top = gitTopLevel(cwd);
   const locked = new Set(state.lockedTests.map((l) => l.path));
   for (const p of raw) {
-    const abs = isAbsolute(p) ? p : resolve(cwd, p);
-    const rel = relative(top, abs).split(sep).join('/');
+    const rel = repoRelative(cwd, p);
     if (locked.has(rel)) deny('', '', `loopwright: ${rel} is a locked acceptance test. Ask the user before changing it.`);
   }
   allow();

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Loopwright state tool. Usage: node lw.mjs <cmd> [args]
 import { existsSync, unlinkSync } from 'node:fs';
-import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { fingerprint, gitTopLevel, loopwrightDir, readState, sha256File, statePath, worktreeId, writeState } from './lib.mjs';
+import { fingerprint, gitTopLevel, loopwrightDir, readState, repoRelative, sha256File, statePath, worktreeId, writeState } from './lib.mjs';
 
 const STAGES = ['plan', 'test', 'build', 'review', 'done'];
 const cwd = process.cwd();
@@ -87,11 +87,10 @@ try {
       if (rest.length === 0) fail('loopwright: usage: lock <paths...>');
       const { dir, id, state } = requireState();
       if (state.stage !== 'test') fail('loopwright: tests can only be locked in stage test');
-      const top = gitTopLevel(cwd);
       for (const p of rest) {
         const abs = isAbsolute(p) ? p : resolve(cwd, p);
         if (!existsSync(abs)) fail(`loopwright: cannot lock missing file ${p}`);
-        const rel = relative(top, abs).split(sep).join('/');
+        const rel = repoRelative(cwd, p);
         if (rel.startsWith('..')) fail(`loopwright: path outside worktree: ${p}`);
         const entry = { path: rel, sha256: sha256File(abs) };
         const i = state.lockedTests.findIndex((l) => l.path === rel);

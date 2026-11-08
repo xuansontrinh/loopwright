@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -164,5 +164,39 @@ describe('no-op and timing', () => {
     git(repo, ['status']);
     const r = run(script, 'claude', payload('claude', kind, repo), repo);
     expect(r.ms).toBeLessThan(1000);
+  });
+});
+
+describe('symlink handling', () => {
+  it('guard denies edit through a symlinked directory inside the repo', () => {
+    const repo = setup('build');
+    symlinkSync(join(repo, 'test'), join(repo, 'tlink'));
+    const input = payload('claude', 'pretooluse', repo, (p) => {
+      p.tool_input.file_path = join(repo, 'tlink/t.test.ts');
+    });
+    expect(run('guard-locked-tests.mjs', 'claude', input, repo).code).toBe(2);
+  });
+
+  it('guard denies when payload cwd is a symlink to the repo (logical absolute path)', () => {
+    const repo = setup('build');
+    const link = join(realpathSync(mkdtempSync(join(tmpdir(), 'lw-ln-'))), 'logical');
+    symlinkSync(repo, link);
+    for (const tool of TOOLS) {
+      const input = JSON.stringify(JSON.parse(payload(tool, 'pretooluse', link)));
+      const r = run('guard-locked-tests.mjs', tool, input, repo);
+      expect(r.code).toBe(2);
+      expect(r.stderr).toContain('loopwright: test/t.test.ts is a locked');
+    }
+  });
+
+  it('guard resolves a Write to a not-yet-existing path under a symlinked dir', () => {
+    const repo = setup('build');
+    symlinkSync(join(repo, 'test'), join(repo, 'tlink'));
+    const input = payload('claude', 'pretooluse', repo, (p) => {
+      p.tool_input.file_path = join(repo, 'tlink/new/deep/file.ts');
+    });
+    const r = run('guard-locked-tests.mjs', 'claude', input, repo);
+    expect(r.code).toBe(0);
+    expect(r.stderr).toBe('');
   });
 });
