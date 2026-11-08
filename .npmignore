@@ -1,7 +1,0 @@
-src/
-test/
-tsconfig.json
-tsconfig.build.json
-.gitignore
-.claude/
-.agents/

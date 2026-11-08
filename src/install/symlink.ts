@@ -1,14 +1,53 @@
 import { join } from 'node:path';
-import { createSymlink, removePath, ensureDir, removeDir, readdirSync, existsSync, dirExists } from '../utils/fs.js';
+import { createSymlink, removePath, ensureDir, removeDir, readdirSync, existsSync, isSymlink, symlinkTarget, isEmptyDir, dirExists } from '../utils/fs.js';
 import { log } from '../utils/log.js';
 import { choose, confirm } from '../utils/prompt.js';
-import { detectConflict } from './conflict.js';
 import { cpSync } from 'node:fs';
 
 export interface LinkClaudeOptions {
   root: string;
   dryRun: boolean;
   force: boolean;
+}
+
+
+export type ConflictKind =
+  | 'none'              // path doesn't exist
+  | 'correct-symlink'   // already points to .agents/skills
+  | 'wrong-symlink'     // symlink points elsewhere
+  | 'empty-dir'         // real empty directory
+  | 'dir-with-content'; // real directory with files
+
+export interface ConflictResult {
+  kind: ConflictKind;
+  currentTarget?: string;
+  files?: string[];
+}
+
+export function detectConflict(claudeSkillsPath: string, expectedTarget: string): ConflictResult {
+  if (!existsSync(claudeSkillsPath) && !isSymlink(claudeSkillsPath)) {
+    return { kind: 'none' };
+  }
+
+  if (isSymlink(claudeSkillsPath)) {
+    const target = symlinkTarget(claudeSkillsPath);
+    if (target === expectedTarget) {
+      return { kind: 'correct-symlink', currentTarget: target ?? undefined };
+    }
+    return { kind: 'wrong-symlink', currentTarget: target ?? undefined };
+  }
+
+  if (dirExists(claudeSkillsPath)) {
+    if (isEmptyDir(claudeSkillsPath)) {
+      return { kind: 'empty-dir' };
+    }
+    return {
+      kind: 'dir-with-content',
+      files: readdirSync(claudeSkillsPath),
+    };
+  }
+
+  return { kind: 'none' };
 }
 
 const RELATIVE_TARGET = '../.agents/skills';
@@ -88,7 +127,7 @@ export async function linkClaude(opts: LinkClaudeOptions): Promise<boolean> {
         'merge — copy files into .agents/skills/, then symlink',
         'replace — delete .claude/skills/, create symlink',
         'skip — leave .claude/skills/ as-is',
-        'abort — stop init',
+        'abort — stop install',
       ]);
 
       if (action.startsWith('merge')) {

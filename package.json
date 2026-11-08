@@ -1,27 +1,29 @@
 {
-  "name": "coding-agents-toolings",
+  "name": "loopwright",
   "author": "Xuan Son Trinh",
-  "version": "0.1.22",
-  "description": "Skills and toolings for AI coding agents",
+  "version": "0.0.0",
+  "description": "Agent workflow installer for Claude Code and Codex",
   "type": "module",
   "bin": {
-    "coding-agents-toolings": "./dist/index.js"
+    "loopwright": "./dist/cli.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/xuansontrinh/coding-agents-toolings.git"
+    "url": "https://github.com/xuansontrinh/loopwright.git"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
     "pretest": "npm run build",
     "test": "vitest run",
-    "dev": "npm run build && node dist/index.js"
+    "dev": "npm run build && node dist/cli.js"
   },
   "files": [
-    "dist/"
+    "dist/",
+    "content/"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22.14"
   },
   "keywords": [
     "ai",
@@ -32,7 +34,10 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "smol-toml": "^1.9.1",
+    "tsdown": "^0.23.7",
     "typescript": "^5.7.0",
+    "unrun": "^0.3.1",
     "vitest": "^3.0.0"
   }
 }
