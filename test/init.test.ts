@@ -153,4 +153,27 @@ describe('init', () => {
     expect(r.stdout).toContain('Apply these changes to your user configuration?');
     expect(readdirSync(home)).toEqual([]);
   });
+
+  it('abort at the .claude/skills conflict prompt exits 1 with nothing written', () => {
+    mkdirSync(join(repo, '.claude/skills/mine'), { recursive: true });
+    writeFileSync(join(repo, '.claude/skills/mine/SKILL.md'), '# mine');
+    const r = init([], '4\n');
+    expect(r.exitCode).toBe(1);
+    expect(r.stdout).toContain('How to handle existing .claude/skills/?');
+    expect(existsSync(join(repo, '.agents'))).toBe(false);
+    expect(existsSync(join(repo, '.loopwright'))).toBe(false);
+    expect(existsSync(join(repo, '.claude/agents'))).toBe(false);
+    expect(existsSync(join(repo, '.claude/settings.json'))).toBe(false);
+    expect(readFileSync(join(repo, '.claude/skills/mine/SKILL.md'), 'utf8')).toBe('# mine');
+  });
+
+  it('skip at the .claude/skills conflict prompt installs everything but the link', () => {
+    mkdirSync(join(repo, '.claude/skills/mine'), { recursive: true });
+    writeFileSync(join(repo, '.claude/skills/mine/SKILL.md'), '# mine');
+    const r = init([], '3\n');
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(lstatSync(join(repo, '.claude/skills')).isDirectory()).toBe(true);
+    expect(existsSync(join(repo, '.agents/skills/loopwright-flow/SKILL.md'))).toBe(true);
+    expect(existsSync(join(repo, '.loopwright/manifest.json'))).toBe(true);
+  });
 });

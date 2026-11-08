@@ -9,7 +9,7 @@ import { parseAgentSource, renderClaudeAgent, renderCodexAgent } from '../genera
 import { hookCommand, hookSpecs } from './hook-wiring.js';
 import { mergeClaudeHooks } from './claude-settings.js';
 import { renderCodexHookBlock, upsertCodexBlock } from './codex-config.js';
-import { linkClaude } from './symlink.js';
+import { applyLink, type LinkAction } from './symlink.js';
 import { log } from '../utils/log.js';
 
 export interface WiringPlan {
@@ -47,6 +47,7 @@ export async function installAll(
   writer: InstallWriter,
   config: LoopwrightConfig,
   opts: CommandOptions,
+  link: LinkAction = 'skip',
 ): Promise<boolean> {
   const wiring = planWiring(targets, opts);
   let changed = false;
@@ -87,7 +88,7 @@ export async function installAll(
   }
 
   if (targets.claudeSkillsMode === 'symlink') {
-    if (await linkClaude({ root: targets.root, dryRun: opts.dryRun, force: opts.force })) changed = true;
+    if (applyLink(targets.root, link, opts.dryRun)) changed = true;
   }
 
   if (!opts.hook) writer.carryPriorConfig();

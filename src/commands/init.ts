@@ -5,6 +5,7 @@ import { readConfig } from '../core/config.js';
 import { readManifest, writeManifest, type Manifest } from '../core/manifest.js';
 import { InstallWriter } from '../core/writer.js';
 import { installAll, planWiring } from '../install/install.js';
+import { planLink } from '../install/symlink.js';
 import { scaffoldLoopwrightDir } from '../install/loopwright-dir.js';
 import { scanLegacy } from '../install/migrate.js';
 import { SettingsParseError } from '../install/claude-settings.js';
@@ -75,6 +76,12 @@ export async function runInstall(opts: CommandOptions, doneVerb: string, migrate
   }
   try {
     planWiring(targets, opts); // pre-flight: abort before writing anything if settings are malformed
+    // Pre-flight: resolve the .claude/skills conflict (and any prompt) before writing anything.
+    const link = targets.claudeSkillsMode === 'symlink' ? await planLink({ root: targets.root, dryRun: opts.dryRun, force: opts.force }) : 'skip';
+    if (link === 'abort') {
+      console.error('loopwright: aborted; nothing was written.');
+      return 1;
+    }
     if (migrate && targets.mode === 'repo') await migrateLegacy(targets.root, opts);
     if (targets.mode === 'repo' && targets.stateDir) scaffoldLoopwrightDir(targets.stateDir, opts.dryRun);
     const config = readConfig(targets.configPath);
@@ -91,7 +98,7 @@ export async function runInstall(opts: CommandOptions, doneVerb: string, migrate
     }
 
     const writer = makeWriter(targets, opts);
-    const changed = await installAll(targets, writer, config, opts);
+    const changed = await installAll(targets, writer, config, opts, link);
     if (!opts.dryRun) writeManifest(targets.manifestPath, { ...writer.result(), options: { hook: opts.hook, symlink: opts.symlink } });
 
     if (!changed) log.success('loopwright is already up to date.');
