@@ -1,36 +1,8 @@
-import { existsSync, lstatSync, readFileSync, mkdirSync, writeFileSync, symlinkSync, unlinkSync, readdirSync, rmSync, readlinkSync } from 'node:fs';
-import { join, relative, dirname } from 'node:path';
-import { execSync } from 'node:child_process';
-
-export function isGitRepo(dir: string): boolean {
-  try {
-    execSync('git rev-parse --is-inside-work-tree', { cwd: dir, stdio: 'pipe' });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function gitRoot(dir: string): string {
-  return execSync('git rev-parse --show-toplevel', { cwd: dir, stdio: 'pipe' })
-    .toString()
-    .trim();
-}
+import { existsSync, lstatSync, mkdirSync, symlinkSync, unlinkSync, readdirSync, rmSync, readlinkSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 export function ensureDir(path: string): void {
   mkdirSync(path, { recursive: true });
-}
-
-export function writeIfChanged(filePath: string, content: string): 'created' | 'updated' | 'unchanged' {
-  ensureDir(dirname(filePath));
-  if (existsSync(filePath)) {
-    const existing = readFileSync(filePath, 'utf-8');
-    if (existing === content) return 'unchanged';
-    writeFileSync(filePath, content, 'utf-8');
-    return 'updated';
-  }
-  writeFileSync(filePath, content, 'utf-8');
-  return 'created';
 }
 
 export function isSymlink(path: string): boolean {
@@ -82,4 +54,4 @@ export function removePath(path: string): void {
   }
 }
 
-export { existsSync, readdirSync, join, relative, dirname };
+export { existsSync, readdirSync };
