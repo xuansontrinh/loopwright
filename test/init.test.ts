@@ -36,8 +36,10 @@ describe('init', () => {
       expect(readFileSync(p, 'utf8')).not.toContain('{{');
     }
     for (const role of ROLES) {
-      expect(existsSync(join(repo, `.claude/agents/loopwright-${role}.md`))).toBe(true);
-      expect(existsSync(join(repo, `.codex/agents/loopwright-${role}.toml`))).toBe(true);
+      for (const p of [`.claude/agents/loopwright-${role}.md`, `.codex/agents/loopwright-${role}.toml`]) {
+        expect(existsSync(join(repo, p)), p).toBe(true);
+        expect(readFileSync(join(repo, p), 'utf8'), p).not.toContain('{{');
+      }
     }
     for (const sub of ['skills', 'hooks', 'prompts', 'schemas']) {
       for (const f of listContent(sub)) {

@@ -71,7 +71,7 @@ export async function installAll(
   for (const f of listContent('agents')) {
     if (!f.endsWith('.md')) continue;
     const role = basename(f, '.md') as Role;
-    const src = parseAgentSource(role, readContent(`agents/${f}`));
+    const src = parseAgentSource(role, renderTemplate(readContent(`agents/${f}`), vars));
     await put(join(targets.claudeAgentsDir, `${src.name}.md`), renderClaudeAgent(src, config.models.claude[role] ?? 'inherit'));
     await put(
       join(targets.codexAgentsDir, `${src.name}.toml`),

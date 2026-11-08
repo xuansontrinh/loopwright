@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "loopwright review verdict",
+  "type": "object",
+  "required": ["pass", "blocking", "undecided", "droppedCount"],
+  "additionalProperties": false,
+  "properties": {
+    "pass": { "type": "boolean", "description": "True only when blocking and undecided are both empty." },
+    "blocking": { "type": "array", "items": { "$ref": "#/$defs/Finding" } },
+    "undecided": { "type": "array", "items": { "$ref": "#/$defs/Finding" } },
+    "droppedCount": { "type": "integer", "minimum": 0 }
+  },
+  "$defs": {
+    "Finding": {
+      "type": "object",
+      "required": ["location", "expectation", "proof", "impact", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "location": { "type": "string" },
+        "expectation": { "type": "string" },
+        "proof": { "type": "string" },
+        "impact": { "type": "string", "const": "high" },
+        "confidence": { "type": "string", "enum": ["high", "mid", "low"] }
+      }
+    }
+  }
+}
