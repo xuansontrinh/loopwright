@@ -77,11 +77,7 @@ export async function runUninstall(opts: CommandOptions): Promise<number> {
     if (out === cur) continue;
     log.dim(`  ${dry ? 'Would update' : 'Updated'} ${c.file}`);
     if (dry) continue;
-    const empty = out.trim() === '' || (c.kind === 'claude-hooks' && out.trim() === '{}');
-    if (empty) {
-      unlinkSync(c.file);
-      dirsToPrune.add(dirname(c.file));
-    } else writeFileSync(c.file, out, 'utf-8');
+    writeFileSync(c.file, c.kind === 'claude-hooks' && out.trim() === '{}' ? '{}\n' : out, 'utf-8');
   }
 
   const link = targets.claudeSkillsDir;

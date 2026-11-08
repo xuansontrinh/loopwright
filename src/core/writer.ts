@@ -51,7 +51,8 @@ export class InstallWriter {
       this.recorded.set(key, newHash);
       return 'updated';
     }
-    this.recorded.set(key, currentHash);
+    // Declined: never claim the user's content as ours. Keep the prior hash, or no entry at all.
+    if (prior !== undefined) this.recorded.set(key, prior);
     return 'kept';
   }
 

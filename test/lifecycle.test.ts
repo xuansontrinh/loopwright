@@ -54,8 +54,8 @@ describe('update/uninstall', () => {
     expect(r.exitCode, r.stderr).toBe(0);
     expect(existsSync(join(repo, SKILL))).toBe(false);
     expect(readdirSync(join(repo, '.agents'))).toEqual([]);
-    expect(readdirSync(join(repo, '.claude'))).toEqual([]);
-    expect(readdirSync(join(repo, '.codex'))).toEqual([]);
+    expect(readdirSync(join(repo, '.claude'))).toEqual(['settings.json']);
+    expect(readdirSync(join(repo, '.codex'))).toEqual(['config.toml']);
     expect(existsSync(join(repo, '.loopwright/manifest.json'))).toBe(false);
   });
 
@@ -113,6 +113,27 @@ describe('update/uninstall', () => {
     expect(existsSync(join(h, '.claude/agents'))).toBe(false);
     expect(existsSync(join(h, '.claude/skills'))).toBe(false);
     expect(existsSync(join(h, '.agents/skills'))).toBe(false);
-    expect(existsSync(join(h, '.claude/settings.json'))).toBe(false);
+    expect(readFileSync(join(h, '.claude/settings.json'), 'utf8')).toBe('{}\n');
+  });
+
+  it('declined overwrite stays user-owned across update and uninstall', () => {
+    const p = join(repo, SKILL);
+    writeFileSync(p, 'mine\n');
+    run(['update'], 'n\n');
+    const r2 = run(['update'], 'n\n');
+    expect(r2.stdout + r2.stderr).toContain('was modified');
+    expect(readFileSync(p, 'utf8')).toBe('mine\n');
+    const u = run(['uninstall']);
+    expect(u.stdout).toContain('kept modified file');
+    expect(readFileSync(p, 'utf8')).toBe('mine\n');
+  });
+
+  it('never deletes a user-created settings.json', () => {
+    const r2 = spacedRepo();
+    mkdirSync(join(r2, '.claude'));
+    writeFileSync(join(r2, '.claude/settings.json'), '{}');
+    expect(runCli(r2, ['init'], { home }).exitCode).toBe(0);
+    expect(runCli(r2, ['uninstall'], { home }).exitCode).toBe(0);
+    expect(readFileSync(join(r2, '.claude/settings.json'), 'utf8')).toBe('{}\n');
   });
 });

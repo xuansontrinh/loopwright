@@ -82,7 +82,7 @@ describe('InstallWriter', () => {
     expect(asked).toEqual([]);
   });
 
-  it('result() lists every written/unchanged/kept file with current hash', async () => {
+  it('result() lists written/unchanged files; kept files without prior entry are omitted', async () => {
     mkdirSync(join(root, 'd'));
     writeFileSync(join(root, 'same.md'), 's');
     writeFileSync(join(root, 'kept.md'), 'mine');
@@ -97,12 +97,19 @@ describe('InstallWriter', () => {
       version: 1,
       mode: 'repo',
       files: [
-        { path: 'kept.md', sha256: sha256('mine') },
         { path: 'new.md', sha256: sha256('n') },
         { path: 'same.md', sha256: sha256('s') },
       ],
       config: [{ file: '.claude/settings.json', kind: 'claude-hooks' }],
     });
+  });
+
+  it('result() keeps the prior hash for a declined file', async () => {
+    const f = join(root, 'k.md');
+    writeFileSync(f, 'mine');
+    const w = make({ manifest: manifestFor('k.md', 'old'), answer: false });
+    expect(await w.writeFile(f, 'new')).toBe('kept');
+    expect(w.result().files).toEqual([{ path: 'k.md', sha256: sha256('old') }]);
   });
 
   it('manifest round-trips', () => {
