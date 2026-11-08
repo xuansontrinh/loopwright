@@ -144,13 +144,14 @@ All worktrees of a repo share one `.loopwright/` in the main worktree (found via
 
 ## Releasing (maintainers)
 
-`main` only accepts pull requests, so **a release is a merged PR that bumps the `version` in `package.json`**. On every push to `main`, `.github/workflows/publish.yml` checks whether that version is already released; if not, it:
+`main` only accepts pull requests, so **a release is a merged PR that bumps the `version` in `package.json`**. Releases use npm **staged publishing**: CI can stage a version but cannot make it installable, so every release needs your 2FA approval.
 
-1. Runs `npm ci`, the typecheck, and the tests.
-2. Publishes to npm with trusted publishing (OIDC; no npm token in the repo). A version already on npm is not re-published.
-3. Creates the `vX.Y.Z` tag on the merge commit and a GitHub release with generated notes.
+When CI (`ci.yml`) passes for a push to `main`, `.github/workflows/publish.yml` runs for that exact commit. If its version has no GitHub release yet, it:
 
-Pushes that don't change the version (and the `0.0.0` placeholder) release nothing. A failed run leaves no tag; fix the cause, then re-run it from the Actions tab ("Run workflow" on `main`).
+1. Builds and runs `npm stage publish` with trusted publishing (OIDC; no npm token in the repo). A version already live on npm is not staged again.
+2. Creates the `vX.Y.Z` tag on that commit and a GitHub release with generated notes.
+
+CI failures, pushes that don't change the version, and the `0.0.0` placeholder release nothing. A failed run leaves no tag; fix the cause, then re-run it from the Actions tab ("Run workflow" on `main`, which first checks that CI passed for `main`'s head).
 
 **To release a new version:**
 
@@ -163,11 +164,13 @@ git push -u origin HEAD
 gh pr create --fill                       # merge it once CI is green
 ```
 
-**One-time setup** (needed once, for the first release):
+Then **approve the staged version**: on npmjs.com → `loopwright` → **Staged Packages** → **Approve** (or `npm stage list loopwright` and `npm stage approve <id>`, npm ≥ 11.15). It becomes installable and `latest` only after approval. Check with `npm view loopwright versions dist-tags`.
 
-1. Trusted publishing can only be configured for a package that already exists, so the first version is published by hand from the bump branch before merging: `npm login`, then `npm publish --access public` (`prepublishOnly` builds `dist/` first). Merging the PR then sees the version on npm and only creates the tag and release.
-2. On npmjs.com → `loopwright` → Settings → Trusted publishing, add GitHub Actions with repository `xuansontrinh/loopwright` and workflow `publish.yml`.
-3. A trusted-publisher config that has not completed a publish expires after 48 hours, so add it when you are about to merge the next version bump. After CI has published once, disallow token-based publishing in the package settings.
+**One-time setup:**
+
+1. Trusted publishing can only be configured for a package that already exists, so the first version (0.1.0) is published by hand (`npm publish --access public`; `prepublishOnly` builds `dist/`).
+2. On npmjs.com → `loopwright` → Settings → Trusted publishing → GitHub Actions: repository `xuansontrinh/loopwright`, workflow `publish.yml`, with **Allow `npm publish`** and **Allow `npm dist-tag`** left unchecked (stage-only).
+3. Publishing access: "Require two-factor authentication and disallow tokens".
 
 ## License
 

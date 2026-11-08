@@ -21,7 +21,7 @@ Unit tests import `src/` directly. E2E tests spawn `dist/cli.js` in temp git rep
 
 CI: `.github/workflows/ci.yml` runs typecheck and tests on every PR and push to `main`, on Node 22.14 (the `engines` floor) and 24.
 
-Releases: `main` is PR-only; a release is a merged PR bumping `package.json` `version` (`npm version patch --no-git-tag-version`). `.github/workflows/publish.yml` runs on every push to `main` and, for a version not yet released, runs typecheck + tests, publishes to npm via OIDC (skipped if already on npm), then creates the `vX.Y.Z` tag and GitHub release. Steps and the one-time npm setup: README.md → "Releasing (maintainers)".
+Releases: `main` is PR-only; a release is a merged PR bumping `package.json` `version` (`npm version patch --no-git-tag-version`). After `ci.yml` passes on a push to `main`, `.github/workflows/publish.yml` (`workflow_run`) runs for that commit and, for a version with no GitHub release yet, runs `npm stage publish` via OIDC (skipped if already live on npm) and creates the `vX.Y.Z` tag and GitHub release. A maintainer then approves the staged version on npmjs.com with 2FA. Details: README.md → "Releasing (maintainers)".
 
 ## Architecture
 

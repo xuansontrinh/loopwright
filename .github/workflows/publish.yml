@@ -1,16 +1,21 @@
 name: Publish to npm
 
 # main is protected (PRs only), so a release is a merged PR that bumps package.json "version".
-# On every push to main this workflow releases that version if it hasn't been released yet:
-# tests, npm publish (trusted publishing / OIDC), then the vX.Y.Z tag + GitHub release.
+# After CI passes on a push to main, this workflow releases that commit's version if it hasn't
+# been released yet: `npm stage publish` (trusted publishing / OIDC), then the vX.Y.Z tag and
+# GitHub release. Staged versions are not installable until a maintainer approves them with 2FA
+# on npmjs.com (CI cannot approve); a direct `npm publish` from CI is deliberately not allowed.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
-  workflow_dispatch:  # retry a failed release from the Actions tab
+  workflow_dispatch:  # retry a failed release of main's head from the Actions tab
 
 permissions:
   id-token: write  # npm trusted publishing
   contents: write  # create the tag and GitHub release
+  actions: read    # look up CI results for workflow_dispatch
 
 concurrency:
   group: publish
@@ -19,16 +24,41 @@ concurrency:
 jobs:
   publish:
     name: Release package.json version
-    if: github.ref == 'refs/heads/main'
+    # Only a successful CI run for a push to main (not a PR whose branch happens to be named main).
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
+    env:
+      # The exact commit CI tested (workflow_run) or main's head (manual retry).
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.SHA }}
+
+      - name: Require passing CI for this commit (manual retry)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ok=$(gh run list --workflow ci.yml --commit "$SHA" --event push --status success --json databaseId --jq 'length')
+          if [ "$ok" = "0" ]; then
+            echo "::error::No successful CI run for a push of $SHA; not releasing."
+            exit 1
+          fi
 
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
+      # The GitHub release marks a version as handled: it is created right after a successful
+      # stage (or for a version already live on npm). CI cannot query staged versions, so this
+      # is what keeps a re-run from staging the same version twice.
       - name: Detect unreleased version
         id: check
         env:
@@ -39,36 +69,39 @@ jobs:
           on_npm=false; npm view "loopwright@$version" version >/dev/null 2>&1 && on_npm=true
           released=false; gh release view "v$version" >/dev/null 2>&1 && released=true
           echo "on_npm=$on_npm" >> "$GITHUB_OUTPUT"
-          echo "released=$released" >> "$GITHUB_OUTPUT"
           if [ "$version" = "0.0.0" ]; then
             echo "Version 0.0.0 is the unreleased placeholder; nothing to do."
             echo "release=false" >> "$GITHUB_OUTPUT"
-          elif [ "$on_npm" = true ] && [ "$released" = true ]; then
-            echo "v$version is already published and released; nothing to do."
+          elif [ "$released" = true ]; then
+            echo "v$version already has a GitHub release (live on npm: $on_npm); nothing to do."
             echo "release=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Releasing v$version (on npm: $on_npm, GitHub release: $released)."
+            echo "Releasing v$version (live on npm: $on_npm)."
             echo "release=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - if: steps.check.outputs.release == 'true'
-        run: npm ci
-      - if: steps.check.outputs.release == 'true'
-        run: npm run typecheck
-      - if: steps.check.outputs.release == 'true'
-        run: npm test
-
-      # Trusted publishing needs npm >= 11.5.1; don't depend on what Node 24 bundles.
-      # A version already on npm (e.g. the first one, published by hand) is not re-published.
-      - name: Publish to npm
+      # CI already ran typecheck + tests for this commit; only the build is needed here.
+      # `npm stage` needs npm >= 11.15.0; don't depend on what Node 24 bundles.
+      # A version already live on npm (e.g. published by hand) is not staged again.
+      - name: Build and stage on npm
         if: steps.check.outputs.release == 'true' && steps.check.outputs.on_npm == 'false'
         run: |
+          npm ci
+          npm run build
           npm install -g npm@latest
-          npm publish --access public
+          npm stage publish --access public
 
-      # Runs only after a successful publish, so a failed publish leaves no tag and can be retried.
+      # Runs only after a successful stage, so a failed stage leaves no tag and can be retried.
       - name: Tag and create GitHub release
-        if: steps.check.outputs.release == 'true' && steps.check.outputs.released == 'false'
+        if: steps.check.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "v${{ steps.check.outputs.version }}" --target "$GITHUB_SHA" --title "v${{ steps.check.outputs.version }}" --generate-notes
+          VERSION: ${{ steps.check.outputs.version }}
+          ON_NPM: ${{ steps.check.outputs.on_npm }}
+        run: |
+          if [ "$ON_NPM" = true ]; then
+            notes="Install: \`npx loopwright@$VERSION init\`"
+          else
+            notes="Staged on npm: installable once a maintainer approves it (npmjs.com → loopwright → Staged Packages). Then: \`npx loopwright@$VERSION init\`"
+          fi
+          gh release create "v$VERSION" --target "$SHA" --title "v$VERSION" --notes "$notes" --generate-notes
