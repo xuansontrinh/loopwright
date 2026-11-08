@@ -6,9 +6,10 @@ State tool: `node "{{LW_HOME}}/hooks/lw.mjs" <cmd>`, run from the task's worktre
 
 ## 0. Locked tests (always first)
 
-Run `node "{{LW_HOME}}/hooks/lw.mjs" check-locks`. It prints `{ok, changed, missing, lockedAfterBuild}` and exits 1 when `ok` is false.
+Run `node "{{LW_HOME}}/hooks/lw.mjs" check-locks`. It prints `{ok, changed, missing, lockedAfterBuild, forcedRestartAfterBuild}` and exits 1 when `ok` is false.
 - `ok` is false → one Blocking finding per path in `changed` and `missing` (expectation: locked acceptance tests are unchanged; proof: the check-locks output).
 - `lockedAfterBuild` is non-empty → one Undecided finding per path (expectation: "acceptance test re-locked after Build began; user must confirm"; proof: the check-locks output).
+- `forcedRestartAfterBuild` is true → one Undecided finding (expectation: "task state was force-restarted after Build began; user must confirm locked tests"; proof: the check-locks output).
 - The command errors (e.g. no active task) → one Blocking finding with the error text as proof.
 
 ## Inputs

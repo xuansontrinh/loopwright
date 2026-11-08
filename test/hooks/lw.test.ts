@@ -37,11 +37,11 @@ describe('lw.mjs', () => {
     expect(runLw(repo, ['lock', 'test/t.test.ts', join(repo, 'a.txt')]).code).toBe(0);
     const ok = runLw(repo, ['check-locks']);
     expect(ok.code).toBe(0);
-    expect(JSON.parse(ok.stdout)).toEqual({ ok: true, changed: [], missing: [], lockedAfterBuild: [] });
+    expect(JSON.parse(ok.stdout)).toEqual({ ok: true, changed: [], missing: [], lockedAfterBuild: [], forcedRestartAfterBuild: false });
     writeFileSync(join(repo, 'test/t.test.ts'), 'y');
     const bad = runLw(repo, ['check-locks']);
     expect(bad.code).toBe(1);
-    expect(JSON.parse(bad.stdout)).toEqual({ ok: false, changed: ['test/t.test.ts'], missing: [], lockedAfterBuild: [] });
+    expect(JSON.parse(bad.stdout)).toEqual({ ok: false, changed: ['test/t.test.ts'], missing: [], lockedAfterBuild: [], forcedRestartAfterBuild: false });
   });
 
   it('check-locks reports missing', () => {
@@ -136,8 +136,42 @@ describe('lw.mjs', () => {
     expect(r.stderr).toContain('loopwright: task already active (run lw.mjs done first, or start --force)');
     expect(runLw(repo, ['start', TASK, '--force']).code).toBe(0);
     const h = JSON.parse(runLw(repo, ['status']).stdout).history;
-    expect(h).toHaveLength(1);
-    expect(h[0].event).toBe('start --force');
+    expect(h.map((e: { event: string; detail: string }) => `${e.event}:${e.detail}`)).toEqual([`start:${TASK}`, 'stage:test', 'start:--force']);
+  });
+
+  it('start --force keeps history and locks: a modified locked test is not laundered', () => {
+    const repo = makeRepo();
+    runLw(repo, ['start', TASK]);
+    runLw(repo, ['stage', 'test']);
+    runLw(repo, ['lock', 'a.txt']);
+    runLw(repo, ['stage', 'build']);
+    writeFileSync(join(repo, 'a.txt'), 'tampered\n');
+    expect(runLw(repo, ['start', TASK, '--force']).code).toBe(0);
+    const s = JSON.parse(runLw(repo, ['status']).stdout);
+    expect(s.lockedTests.map((l: { path: string }) => l.path)).toEqual(['a.txt']);
+    expect(s.stage).toBe('plan');
+    // Without re-locking, the edit is visible.
+    runLw(repo, ['stage', 'build']);
+    const plain = runLw(repo, ['check-locks']);
+    expect(plain.code).toBe(1);
+    expect(JSON.parse(plain.stdout)).toMatchObject({ ok: false, changed: ['a.txt'], forcedRestartAfterBuild: true });
+    // Re-locking the edited file is still flagged.
+    runLw(repo, ['stage', 'test']);
+    runLw(repo, ['lock', 'a.txt']);
+    runLw(repo, ['stage', 'build']);
+    const r = JSON.parse(runLw(repo, ['check-locks']).stdout);
+    expect(r.forcedRestartAfterBuild).toBe(true);
+    expect(r.lockedAfterBuild).toEqual(['a.txt']);
+  });
+
+  it('forcedRestartAfterBuild is false for a --force restart before any build', () => {
+    const repo = makeRepo();
+    runLw(repo, ['start', TASK]);
+    runLw(repo, ['start', TASK, '--force']);
+    runLw(repo, ['stage', 'test']);
+    runLw(repo, ['lock', 'a.txt']);
+    runLw(repo, ['stage', 'build']);
+    expect(JSON.parse(runLw(repo, ['check-locks']).stdout)).toEqual({ ok: true, changed: [], missing: [], lockedAfterBuild: [], forcedRestartAfterBuild: false });
   });
 
   it('a new path locked in a later slice is not in lockedAfterBuild; history is ordered', () => {

@@ -39,7 +39,7 @@ describe('content', () => {
 
   it('reviewer prompt carries the review procedure', () => {
     const p = read('prompts/reviewer.md');
-    for (const s of ['Blocking', 'Undecided', 'proof', 'check-locks', "Don't report anything", 'lockedAfterBuild', 'schemas/verdict.json', '`droppedCount` is a non-negative integer']) {
+    for (const s of ['Blocking', 'Undecided', 'proof', 'check-locks', "Don't report anything", 'lockedAfterBuild', 'forcedRestartAfterBuild', 'task state was force-restarted after Build began; user must confirm locked tests', 'schemas/verdict.json', '`droppedCount` is a non-negative integer']) {
       expect(p, s).toContain(s);
     }
   });

@@ -72,9 +72,10 @@ try {
       const force = rest.includes('--force');
       if (force) rest.splice(rest.indexOf('--force'), 1);
       const task = rest[0];
-      if (!task) fail('loopwright: usage: start <task-rel-path> [--base <sha>]');
+      if (!task) fail('loopwright: usage: start <task-rel-path> [--base <sha>] [--force]');
       const { dir, id } = ctx(true);
-      if (!force && readState(dir, id)) fail('loopwright: task already active (run lw.mjs done first, or start --force)');
+      const prior = readState(dir, id);
+      if (!force && prior) fail('loopwright: task already active (run lw.mjs done first, or start --force)');
       const state = {
         version: 1,
         task,
@@ -82,12 +83,15 @@ try {
         baseCommit: gitOut(['rev-parse', base]),
         worktree: gitTopLevel(cwd),
         branch: gitOut(['rev-parse', '--abbrev-ref', 'HEAD']),
-        lockedTests: [],
+        // A forced restart keeps the audit trail and the lock records, so a locked test edited
+        // during Build cannot be re-baselined unnoticed.
+        lockedTests: Array.isArray(prior?.lockedTests) ? prior.lockedTests : [],
         verdict: null,
         stopBlocks: 0,
-        history: [],
+        history: Array.isArray(prior?.history) ? prior.history : [],
       };
-      note(state, force ? 'start --force' : 'start', task);
+      if (force) note(state, 'start', '--force');
+      else note(state, 'start', task);
       writeState(dir, id, state);
       out(state);
       break;
@@ -143,7 +147,13 @@ try {
         if (seen.get(e.detail) === true && !lockedAfterBuild.includes(e.detail)) lockedAfterBuild.push(e.detail);
         seen.set(e.detail, false);
       }
-      out({ ok, changed, missing, lockedAfterBuild });
+      let built = false;
+      let forcedRestartAfterBuild = false;
+      for (const e of state.history ?? []) {
+        if (e.event === 'stage' && e.detail === 'build') built = true;
+        if (built && e.event === 'start' && e.detail === '--force') forcedRestartAfterBuild = true;
+      }
+      out({ ok, changed, missing, lockedAfterBuild, forcedRestartAfterBuild });
       process.exit(ok ? 0 : 1);
       break;
     }
