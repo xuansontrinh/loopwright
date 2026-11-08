@@ -68,9 +68,10 @@ export function sha256File(path) {
 
 export function fingerprint(cwd, baseCommit) {
   const h = createHash('sha256');
-  h.update(execFileSync('git', ['diff', '--binary', baseCommit], { cwd, maxBuffer: MAX_BUFFER, stdio: ['ignore', 'pipe', 'pipe'] }));
   const top = gitTopLevel(cwd);
-  const out = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '-z'], { cwd: top, maxBuffer: MAX_BUFFER, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
+  const diffArgs = ['-c', 'core.quotePath=false', 'diff', '--binary', '--no-color', '--no-ext-diff', '--no-textconv', '--no-renames', '--full-index', '--no-relative', '--src-prefix=a/', '--dst-prefix=b/', baseCommit];
+  h.update(execFileSync('git', diffArgs, { cwd: top, maxBuffer: MAX_BUFFER, stdio: ['ignore', 'pipe', 'pipe'] }));
+  const out = execFileSync('git', ['-c', 'core.quotePath=false', 'ls-files', '--others', '--exclude-standard', '-z'], { cwd: top, maxBuffer: MAX_BUFFER, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
   const files = out.split('\0').filter(Boolean).sort();
   for (const f of files) {
     h.update(f + '\0');

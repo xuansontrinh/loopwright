@@ -12,6 +12,9 @@ function fail(msg) {
   process.stderr.write(msg + '\n');
   process.exit(1);
 }
+const note = (state, event, detail) => {
+  (state.history ??= []).push({ event, detail, at: new Date().toISOString() });
+};
 const out = (v) => process.stdout.write(JSON.stringify(v, null, 2) + '\n');
 
 function flag(args, name) {
@@ -46,9 +49,12 @@ try {
       break;
     case 'start': {
       const base = flag(rest, '--base') ?? 'HEAD';
+      const force = rest.includes('--force');
+      if (force) rest.splice(rest.indexOf('--force'), 1);
       const task = rest[0];
       if (!task) fail('loopwright: usage: start <task-rel-path> [--base <sha>]');
       const { dir, id } = ctx();
+      if (!force && readState(dir, id)) fail('loopwright: task already active (run lw.mjs done first, or start --force)');
       const state = {
         version: 1,
         task,
@@ -59,7 +65,9 @@ try {
         lockedTests: [],
         verdict: null,
         stopBlocks: 0,
+        history: [],
       };
+      note(state, force ? 'start --force' : 'start', task);
       writeState(dir, id, state);
       out(state);
       break;
@@ -70,6 +78,7 @@ try {
       const { dir, id, state } = requireState();
       state.stage = name;
       state.stopBlocks = 0;
+      note(state, 'stage', name);
       writeState(dir, id, state);
       out(state);
       break;
@@ -77,6 +86,7 @@ try {
     case 'lock': {
       if (rest.length === 0) fail('loopwright: usage: lock <paths...>');
       const { dir, id, state } = requireState();
+      if (state.stage !== 'test') fail('loopwright: tests can only be locked in stage test');
       const top = gitTopLevel(cwd);
       for (const p of rest) {
         const abs = isAbsolute(p) ? p : resolve(cwd, p);
@@ -87,6 +97,7 @@ try {
         const i = state.lockedTests.findIndex((l) => l.path === rel);
         if (i === -1) state.lockedTests.push(entry);
         else state.lockedTests[i] = entry;
+        note(state, 'lock', rel);
       }
       writeState(dir, id, state);
       out(state.lockedTests);
@@ -103,7 +114,10 @@ try {
         else if (sha256File(abs) !== l.sha256) changed.push(l.path);
       }
       const ok = changed.length === 0 && missing.length === 0;
-      out({ ok, changed, missing });
+      const hist = state.history ?? [];
+      const b = hist.findIndex((e) => e.event === 'stage' && e.detail === 'build');
+      const lockedAfterBuild = b === -1 ? [] : [...new Set(hist.slice(b + 1).filter((e) => e.event === 'lock').map((e) => e.detail))];
+      out({ ok, changed, missing, lockedAfterBuild });
       process.exit(ok ? 0 : 1);
       break;
     }
@@ -120,6 +134,7 @@ try {
       if (roundRaw === undefined || !Number.isInteger(round) || round < 0) fail('loopwright: verdict requires --round <n>');
       const { dir, id, state } = requireState();
       state.verdict = { pass: result === 'pass', fingerprint: fingerprint(cwd, state.baseCommit), round };
+      note(state, 'verdict', `${result} round ${round}`);
       writeState(dir, id, state);
       out(state.verdict);
       break;
@@ -131,6 +146,7 @@ try {
     case 'done': {
       const { dir, id, state } = requireState();
       state.stage = 'done';
+      note(state, 'done', state.task);
       writeState(dir, id, state);
       unlinkSync(statePath(dir, id));
       out(state);

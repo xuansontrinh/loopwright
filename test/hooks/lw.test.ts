@@ -31,21 +31,23 @@ describe('lw.mjs', () => {
   it('lock then check-locks passes; edit then fails', () => {
     const repo = makeRepo();
     runLw(repo, ['start', TASK]);
+    runLw(repo, ['stage', 'test']);
     mkdirSync(join(repo, 'test'));
     writeFileSync(join(repo, 'test/t.test.ts'), 'x');
     expect(runLw(repo, ['lock', 'test/t.test.ts', join(repo, 'a.txt')]).code).toBe(0);
     const ok = runLw(repo, ['check-locks']);
     expect(ok.code).toBe(0);
-    expect(JSON.parse(ok.stdout)).toEqual({ ok: true, changed: [], missing: [] });
+    expect(JSON.parse(ok.stdout)).toEqual({ ok: true, changed: [], missing: [], lockedAfterBuild: [] });
     writeFileSync(join(repo, 'test/t.test.ts'), 'y');
     const bad = runLw(repo, ['check-locks']);
     expect(bad.code).toBe(1);
-    expect(JSON.parse(bad.stdout)).toEqual({ ok: false, changed: ['test/t.test.ts'], missing: [] });
+    expect(JSON.parse(bad.stdout)).toEqual({ ok: false, changed: ['test/t.test.ts'], missing: [], lockedAfterBuild: [] });
   });
 
   it('check-locks reports missing', () => {
     const repo = makeRepo();
     runLw(repo, ['start', TASK]);
+    runLw(repo, ['stage', 'test']);
     runLw(repo, ['lock', 'a.txt']);
     git(repo, ['rm', '-q', '-f', 'a.txt']);
     const r = runLw(repo, ['check-locks']);
@@ -114,5 +116,63 @@ describe('lw.mjs', () => {
     const s = runLw(dir, ['status']);
     expect(s.code).toBe(1);
     expect(s.stderr).toContain('loopwright: no .loopwright directory found');
+  });
+
+  it('lock refused outside stage test', () => {
+    const repo = makeRepo();
+    runLw(repo, ['start', TASK]);
+    runLw(repo, ['stage', 'build']);
+    const r = runLw(repo, ['lock', 'a.txt']);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain('loopwright: tests can only be locked in stage test');
+  });
+
+  it('start refused when active unless --force', () => {
+    const repo = makeRepo();
+    runLw(repo, ['start', TASK]);
+    runLw(repo, ['stage', 'test']);
+    const r = runLw(repo, ['start', TASK]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain('loopwright: task already active (run lw.mjs done first, or start --force)');
+    expect(runLw(repo, ['start', TASK, '--force']).code).toBe(0);
+    const h = JSON.parse(runLw(repo, ['status']).stdout).history;
+    expect(h).toHaveLength(1);
+    expect(h[0].event).toBe('start --force');
+  });
+
+  it('build -> test -> lock is reported in lockedAfterBuild; history is ordered', () => {
+    const repo = makeRepo();
+    runLw(repo, ['start', TASK]);
+    runLw(repo, ['stage', 'test']);
+    runLw(repo, ['lock', 'a.txt']);
+    runLw(repo, ['stage', 'build']);
+    runLw(repo, ['stage', 'test']);
+    writeFileSync(join(repo, 'b.txt'), 'b');
+    expect(runLw(repo, ['lock', 'b.txt']).code).toBe(0);
+    const r = runLw(repo, ['check-locks']);
+    expect(r.code).toBe(0);
+    expect(JSON.parse(r.stdout).lockedAfterBuild).toEqual(['b.txt']);
+    const h = JSON.parse(runLw(repo, ['status']).stdout).history;
+    expect(h.map((e: { event: string; detail: string }) => `${e.event}:${e.detail}`)).toEqual([
+      `start:${TASK}`, 'stage:test', 'lock:a.txt', 'stage:build', 'stage:test', 'lock:b.txt',
+    ]);
+  });
+
+  it('fingerprint ignores diff.external/diff.relative and cwd', () => {
+    const repo = makeRepo();
+    mkdirSync(join(repo, 'sub'));
+    writeFileSync(join(repo, 'sub/s.txt'), 's');
+    git(repo, ['add', '.']);
+    git(repo, ['commit', '-q', '-m', 'sub']);
+    git(repo, ['config', 'diff.external', 'true']);
+    git(repo, ['config', 'diff.relative', 'true']);
+    runLw(repo, ['start', TASK]);
+    const sub = join(repo, 'sub');
+    const fp = (cwd: string) => JSON.parse(runLw(cwd, ['fingerprint']).stdout).fingerprint as string;
+    const before = fp(sub);
+    writeFileSync(join(repo, 'a.txt'), 'changed\n');
+    const after = fp(sub);
+    expect(after).not.toBe(before);
+    expect(fp(repo)).toBe(after);
   });
 });
