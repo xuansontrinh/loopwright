@@ -1,6 +1,7 @@
 import type { CommandOptions } from '../core/options.js';
+import { runInstall } from './init.js';
 
-export async function runUpdate(opts: CommandOptions): Promise<number> {
-  void opts;
-  return 0;
+/** Re-apply the current version, honoring the existing manifest. */
+export function runUpdate(opts: CommandOptions): Promise<number> {
+  return runInstall(opts, 'updated');
 }

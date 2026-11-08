@@ -21,7 +21,12 @@ function makeWriter(targets: Targets, opts: CommandOptions): InstallWriter {
   });
 }
 
-export async function runInit(opts: CommandOptions): Promise<number> {
+export function runInit(opts: CommandOptions): Promise<number> {
+  return runInstall(opts, 'installed');
+}
+
+/** Shared install flow for `init` and `update`. */
+export async function runInstall(opts: CommandOptions, doneVerb: string): Promise<number> {
   let targets: Targets;
   try {
     targets = resolveTargets(opts);
@@ -53,7 +58,7 @@ export async function runInit(opts: CommandOptions): Promise<number> {
     if (!opts.dryRun) writeManifest(targets.manifestPath, writer.result());
 
     if (!changed) log.success('loopwright is already up to date.');
-    else if (!opts.dryRun) log.success('loopwright installed.');
+    else if (!opts.dryRun) log.success(`loopwright ${doneVerb}.`);
     if (targets.mode === 'repo' && opts.hook) log.info('Codex: trust this project and approve loopwright hooks via /hooks.');
     return 0;
   } catch (e) {
