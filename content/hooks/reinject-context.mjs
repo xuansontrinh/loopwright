@@ -2,7 +2,7 @@
 // SessionStart(compact) hook: re-inject the active task summary after context compaction.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { allow, failOpen, loopwrightDir, readState, readStdinJson, worktreeId } from './lib.mjs';
+import { allow, exitIfHooksOff, failOpen, loopwrightDir, readState, readStdinJson, worktreeId } from './lib.mjs';
 
 const NEXT = {
   plan: 'Continue /loopwright-plan: finish the assumption ledger and confirm the tier.',
@@ -27,6 +27,8 @@ function goalParagraph(text) {
   }
   return out;
 }
+
+exitIfHooksOff();
 
 try {
   const tool = process.argv.includes('--tool') ? process.argv[process.argv.indexOf('--tool') + 1] : 'claude';

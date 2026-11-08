@@ -16,9 +16,9 @@ function payload(tool: string, kind: string, repo: string, edit?: (p: any) => vo
   return JSON.stringify(p);
 }
 
-function run(script: string, tool: string, input: string, cwd: string) {
+function run(script: string, tool: string, input: string, cwd: string, env?: Record<string, string>) {
   const t0 = Date.now();
-  const r = spawnSync('node', [join(HOOKS, script), '--tool', tool], { cwd, input, encoding: 'utf8' });
+  const r = spawnSync('node', [join(HOOKS, script), '--tool', tool], { cwd, input, encoding: 'utf8', env: env ? { ...process.env, ...env } : process.env });
   return { code: r.status, stdout: r.stdout, stderr: r.stderr, ms: Date.now() - t0 };
 }
 
@@ -210,5 +210,29 @@ describe('symlink handling', () => {
     const r = run('guard-locked-tests.mjs', 'claude', input, repo);
     expect(r.code).toBe(0);
     expect(r.stderr).toBe('');
+  });
+});
+
+describe.each(TOOLS)('LOOPWRIGHT_HOOKS=off (%s)', (tool) => {
+  const OFF = { LOOPWRIGHT_HOOKS: 'off' };
+  it('every hook exits 0 silently, even where it would block', () => {
+    const repo = setup('build');
+    const before = runLw(repo, ['status']).stdout;
+    for (const [script, kind] of [['stop-gate.mjs', 'stop'], ['guard-locked-tests.mjs', 'pretooluse'], ['reinject-context.mjs', 'compact']] as const) {
+      const r = run(script, tool, payload(tool, kind, repo), repo, OFF);
+      expect(r.code, script).toBe(0);
+      expect(r.stdout, script).toBe('');
+      expect(r.stderr, script).toBe('');
+    }
+    expect(runLw(repo, ['status']).stdout).toBe(before);
+    // Sanity: without the env var the stop gate blocks.
+    expect(run('stop-gate.mjs', tool, payload(tool, 'stop', repo), repo).code).toBe(2);
+  });
+
+  it('lw.mjs itself still works with LOOPWRIGHT_HOOKS=off (the reviewer runs check-locks)', () => {
+    const repo = setup('build');
+    const r = runLw(repo, ['check-locks'], undefined, OFF);
+    expect(r.code).toBe(0);
+    expect(JSON.parse(r.stdout).ok).toBe(true);
   });
 });

@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Stop hook: block stopping in build/review without a passing review for the current code.
-import { allow, deny, failOpen, fingerprint, loopwrightDir, readState, readStdinJson, worktreeId, writeState } from './lib.mjs';
+import { allow, exitIfHooksOff, deny, failOpen, fingerprint, loopwrightDir, readState, readStdinJson, worktreeId, writeState } from './lib.mjs';
 
 const CAP = 3;
+
+exitIfHooksOff();
 
 try {
   const input = await readStdinJson();

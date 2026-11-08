@@ -89,6 +89,11 @@ export function fingerprint(cwd, baseCommit) {
   return h.digest('hex');
 }
 
+/** Hooks call this first: LOOPWRIGHT_HOOKS=off (e.g. a headless cross-model reviewer) disables them silently. */
+export function exitIfHooksOff() {
+  if (process.env.LOOPWRIGHT_HOOKS === 'off') process.exit(0);
+}
+
 export async function readStdinJson() {
   const chunks = [];
   for await (const c of process.stdin) chunks.push(c);

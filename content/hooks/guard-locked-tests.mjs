@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // PreToolUse guard: block edits to locked acceptance tests during the build stage.
-import { allow, deny, failOpen, loopwrightDir, readState, readStdinJson, repoRelative, worktreeId } from './lib.mjs';
+import { allow, exitIfHooksOff, deny, failOpen, loopwrightDir, readState, readStdinJson, repoRelative, worktreeId } from './lib.mjs';
 
 function patchPaths(command) {
   const out = [];
@@ -11,6 +11,8 @@ function patchPaths(command) {
   }
   return out;
 }
+
+exitIfHooksOff();
 
 try {
   const input = await readStdinJson();
