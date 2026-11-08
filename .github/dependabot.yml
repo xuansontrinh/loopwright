@@ -1,0 +1,41 @@
+# Dependabot version updates. Supply-chain hardening:
+#   - weekly schedule: at most one batch of update PRs per ecosystem per week
+#   - cooldown: a release must be this many days old before Dependabot proposes it, so
+#     compromised or yanked versions are usually caught by the ecosystem first
+#   - grouping: one PR per ecosystem for minor/patch bumps; majors arrive one per PR for review
+# Security updates (enable in Settings → Code security) are not delayed by cooldown.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 7
+    versioning-strategy: increase
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"

@@ -15,16 +15,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Lowest supported (engines >= 22.14) and the release build's version.
-        node-version: ['22.14', '24']
+        # Lowest supported (engines >= 22.14), the release build's version (24), and the newest release.
+        node-version: ['22.14', '24', '26']
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
 
-      - run: npm ci
+      # No dependency needs install scripts; skipping them blocks a common malware vector.
+      - run: npm ci --ignore-scripts
       - run: npm run typecheck
       - run: npm test

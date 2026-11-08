@@ -19,7 +19,7 @@ npm run dev -- init --dry-run     # build and run the CLI against the cwd
 
 Unit tests import `src/` directly. E2E tests spawn `dist/cli.js` in temp git repos, and hook tests spawn `content/hooks/*.mjs`, so rebuild before running vitest directly or the e2e tests use stale output.
 
-CI: `.github/workflows/ci.yml` runs typecheck and tests on every PR and push to `main`, on Node 22.14 (the `engines` floor) and 24.
+CI: `.github/workflows/ci.yml` runs typecheck and tests on every PR and push to `main`, on Node 22.14 (the `engines` floor), 24, and 26. `.github/dependabot.yml` opens weekly, cooldown-delayed update PRs for npm and GitHub Actions. Pin actions to commit SHAs with a `# vX.Y.Z` comment, and keep `npm ci --ignore-scripts`. Details: README.md → "Dependencies and supply chain".
 
 Releases: `main` is PR-only; a release is a merged PR bumping `package.json` `version` (`npm version patch --no-git-tag-version`). After `ci.yml` passes on a push to `main`, `.github/workflows/publish.yml` (`workflow_run`) runs for that commit and, for a version with no GitHub release yet, runs `npm stage publish` via OIDC (skipped if already live on npm) and creates the `vX.Y.Z` tag and GitHub release. A maintainer then approves the staged version on npmjs.com with 2FA. Details: README.md → "Releasing (maintainers)".
 

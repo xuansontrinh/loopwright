@@ -172,6 +172,13 @@ Then **approve the staged version**: on npmjs.com → `loopwright` → **Staged 
 2. On npmjs.com → `loopwright` → Settings → Trusted publishing → GitHub Actions: repository `xuansontrinh/loopwright`, workflow `publish.yml`, with **Allow `npm publish`** and **Allow `npm dist-tag`** left unchecked (stage-only).
 3. Publishing access: "Require two-factor authentication and disallow tokens".
 
+**Dependencies and supply chain:**
+
+- Dependabot (`.github/dependabot.yml`) checks npm and GitHub Actions weekly, only proposes releases at least 7 days old (14 for majors), and groups minor/patch bumps into one PR per ecosystem. Security updates are not delayed. Review and merge these PRs by hand; don't auto-merge them.
+- Actions are pinned to commit SHAs (the version is in a trailing comment, which Dependabot keeps current); pin any new action the same way.
+- `npm ci --ignore-scripts`: no dependency needs install scripts. If one ever does, allow it explicitly rather than dropping the flag.
+- `dependency-review.yml` fails PRs that add a dependency with a known moderate-or-worse vulnerability; `scorecard.yml` runs OpenSSF Scorecard weekly (results under Security → Code scanning).
+
 ## License
 
 MIT
