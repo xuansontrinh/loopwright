@@ -12,6 +12,7 @@ The implementer subagent writes the code. This thread dispatches it and hands th
 2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>` (`null` → tell the user to run `npx loopwright init`, stop).
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status` → `task` (relative to `<lw>`) and `lockedTests`. "no active task" → point the user to `/loopwright-plan` or `/loopwright-flow`, stop.
 4. Read the task file header (`tier`, `checks`).
+   - Header not `plan: confirmed` → stop; the plan is not confirmed yet, point the user to `/loopwright-plan`.
    - `standard` or `large` with no `lockedTests` (or, large, the current slice is still `[todo]`) → run `/loopwright-test` first.
    - `large` → the current slice is the first `S<n> [tested]` line; build only that slice. Every slice `[passed]` → this is a whole-branch fix round; no slice limit.
 
@@ -25,7 +26,7 @@ The implementer subagent writes the code. This thread dispatches it and hands th
    - fix round: the findings to fix, verbatim from Review (location, expectation, proof).
    Never paste chat history, your own summary of the decisions, or design ideas; the task file is the source.
 3. Keep the implementer report verbatim in this conversation; a two-pass review needs it.
-4. `Deviations` not "none" → show each to the user before Review. The user either accepts it (write a new decision `D<n> [asked]` to the task file) or wants it fixed (spawn the `loopwright-implementer` subagent and wait for its result again, with the deviation as the finding).
+4. `Deviations` not "none" → run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "deviations in build"` (so the stop gate lets you end the turn), then show each to the user before Review, one at a time (Claude: `AskUserQuestion`; Codex: numbered text, then end the turn). After the answers, run `node "{{LW_HOME}}/hooks/lw.mjs" resume`. The user either accepts it (write a new decision `D<n> [asked]` to the task file) or wants it fixed (spawn the `loopwright-implementer` subagent and wait for its result again, with the deviation as the finding).
 5. Go straight to `/loopwright-review`. The stop gate blocks ending the turn in Build without a passing review.
 
 ## Rules

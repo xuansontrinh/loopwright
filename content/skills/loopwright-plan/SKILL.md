@@ -10,7 +10,9 @@ Plan runs in this main thread. You state assumptions; the user decides. Do not e
 
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
 2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` prints the `.loopwright` directory (`<lw>` below). `null` → tell the user to run `npx loopwright init` and stop.
-3. `node "{{LW_HOME}}/hooks/lw.mjs" status`. If it prints a task, one is already active in this worktree: tell the user and offer `/loopwright-flow` (resume) or `/loopwright-done`; do not start a second. "no active task" → continue.
+3. `node "{{LW_HOME}}/hooks/lw.mjs" status`. "no active task" → continue with a new task. If it prints a task, read `<lw>/<task>`:
+   - `stage: plan` → resume this plan: the first `— pending` item under `## Open questions`, else the proposal (step 6), else the confirmation (step 7). If the user says this plan is abandoned, offer to start the new one with `start tasks/<new file>.md --force` (the old task file stays).
+   - past `plan` → the task is in progress; tell the user to continue it with `/loopwright-flow`. Do not start a second.
 4. Read `<lw>/config.json` for `maxFixRounds` (missing file or key → 3).
 5. `git status --porcelain` not empty → uncommitted changes will be part of the reviewed diff. Ask the user whether to commit/stash them first or include them; record the answer as a decision once the task file exists.
 
@@ -31,7 +33,7 @@ List every assumption you would otherwise make silently, one line each: `A<n> [h
 - **low-impact**: everything else (internal naming, file placement following an existing pattern, minor edge-case choices).
 - Cover: scope in/out, behavior and edge cases, interfaces and paths, error handling, compatibility, how it is tested (no test runner in the repo → high-impact), docs to update.
 
-Show the user the whole ledger in one compact message, then create the task file (see Task file) with status `active` and stage `plan`, and run `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md` (path relative to `<lw>`). Copy `baseCommit`, `worktree` and `branch` from its output into the header. Put every unresolved ledger line under `## Open questions` with `— pending`; move each to Decisions or Assumptions as it is resolved, so a resumed session knows what is still open. Starting early lets the hooks restore this task after compaction; it builds nothing.
+Show the user the whole ledger in one compact message, then create the task file (see Task file) with status `active`, stage `plan` and `plan: draft`, and run `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md` (path relative to `<lw>`). Copy `baseCommit`, `worktree` and `branch` from its output into the header. Put every unresolved ledger line under `## Open questions` with `— pending`; move each to Decisions or Assumptions as it is resolved, so a resumed session knows what is still open. Starting early lets the hooks restore this task after compaction; it builds nothing.
 
 ## 4. High-impact questions, one at a time
 
@@ -58,7 +60,7 @@ The user confirms or edits each item; write the outcome to the header and sectio
 ## 7. Confirm
 
 Show the task file path and a short summary (tier, decisions count, ACs). Ask for explicit confirmation. Until the user confirms, keep editing the plan; never start Test or Build.
-On confirmation: if `git rev-parse HEAD` differs from the recorded base commit, rerun `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md --force` and update the header. Then the next stage is `/loopwright-test` (standard, large) or `/loopwright-build` (small); under `/loopwright-flow`, return to the flow.
+On explicit confirmation, set the header line to `plan: confirmed` (Test and Build refuse to run without it). Then, if `git rev-parse HEAD` differs from the recorded base commit, rerun `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md --force` and update the header. Then the next stage is `/loopwright-test` (standard, large) or `/loopwright-build` (small); under `/loopwright-flow`, return to the flow.
 
 ## Task file
 
@@ -70,6 +72,7 @@ One line per entry; target ≤ ~150 lines. Template:
 
 status: active
 stage: plan
+plan: draft
 tier: <small|standard|large>
 two-pass: <on|off>
 fix-round cap: <n>

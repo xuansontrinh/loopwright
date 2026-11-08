@@ -13,7 +13,7 @@ The tester writes acceptance tests from the confirmed ACs and locks them. This t
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status` → `task` (path relative to `<lw>`). "no active task" → stop and point the user to `/loopwright-plan` or `/loopwright-flow`.
 4. Read the task file header.
    - `tier: small` → there is no Test stage; say so and go to `/loopwright-build`.
-   - Plan not confirmed (no tier, no ACs, or ACs without an interface) → go back to `/loopwright-plan`.
+   - Header not `plan: confirmed` (or no ACs, or ACs without an interface) → stop; point the user to `/loopwright-plan`.
    - `tier: large` → the current slice is the first `S<n> [todo]` line; test only its ACs.
 
 ## Steps

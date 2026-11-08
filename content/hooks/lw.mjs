@@ -78,6 +78,7 @@ try {
       const { dir, id, state } = requireState();
       state.stage = name;
       state.stopBlocks = 0;
+      delete state.awaitingUser;
       note(state, 'stage', name);
       writeState(dir, id, state);
       out(state);
@@ -113,9 +114,15 @@ try {
         else if (sha256File(abs) !== l.sha256) changed.push(l.path);
       }
       const ok = changed.length === 0 && missing.length === 0;
-      const hist = state.history ?? [];
-      const b = hist.findIndex((e) => e.event === 'stage' && e.detail === 'build');
-      const lockedAfterBuild = b === -1 ? [] : [...new Set(hist.slice(b + 1).filter((e) => e.event === 'lock').map((e) => e.detail))];
+      // Re-locking an existing lock after a build could launder an implementer's edit; first-time locks in later slices are legitimate.
+      const lockedAfterBuild = [];
+      const seen = new Map();
+      for (const e of state.history ?? []) {
+        if (e.event === 'stage' && e.detail === 'build') for (const p of seen.keys()) seen.set(p, true);
+        if (e.event !== 'lock') continue;
+        if (seen.get(e.detail) === true && !lockedAfterBuild.includes(e.detail)) lockedAfterBuild.push(e.detail);
+        seen.set(e.detail, false);
+      }
       out({ ok, changed, missing, lockedAfterBuild });
       process.exit(ok ? 0 : 1);
       break;
@@ -133,9 +140,28 @@ try {
       if (roundRaw === undefined || !Number.isInteger(round) || round < 0) fail('loopwright: verdict requires --round <n>');
       const { dir, id, state } = requireState();
       state.verdict = { pass: result === 'pass', fingerprint: fingerprint(cwd, state.baseCommit), round };
+      delete state.awaitingUser;
       note(state, 'verdict', `${result} round ${round}`);
       writeState(dir, id, state);
       out(state.verdict);
+      break;
+    }
+    case 'await-user': {
+      const reason = rest.join(' ').trim();
+      if (!reason) fail('loopwright: usage: await-user <reason>');
+      const { dir, id, state } = requireState();
+      state.awaitingUser = reason;
+      note(state, 'await-user', reason);
+      writeState(dir, id, state);
+      out(state);
+      break;
+    }
+    case 'resume': {
+      const { dir, id, state } = requireState();
+      note(state, 'resume', state.awaitingUser ?? '');
+      delete state.awaitingUser;
+      writeState(dir, id, state);
+      out(state);
       break;
     }
     case 'status': {
@@ -152,7 +178,7 @@ try {
       break;
     }
     default:
-      fail('loopwright: usage: lw.mjs <dir|start|stage|lock|check-locks|fingerprint|verdict|status|done>');
+      fail('loopwright: usage: lw.mjs <dir|start|stage|lock|check-locks|fingerprint|verdict|await-user|resume|status|done>');
   }
 } catch (err) {
   fail(`loopwright: ${err instanceof Error ? err.message : String(err)}`);

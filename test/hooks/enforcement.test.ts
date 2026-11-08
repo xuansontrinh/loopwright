@@ -108,6 +108,18 @@ describe.each(TOOLS)('stop-gate (%s)', (tool) => {
     expect(run('stop-gate.mjs', tool, payload(tool, 'stop', repo), repo).code).toBe(0);
   });
 
+  it('stop-gate allows silently while awaiting the user, and blocks again after resume', () => {
+    const repo = setup('review');
+    runLw(repo, ['await-user', 'undecided U1']);
+    const input = payload(tool, 'stop', repo);
+    const r = run('stop-gate.mjs', tool, input, repo);
+    expect(r.code).toBe(0);
+    expect(r.stderr).toBe('');
+    expect(JSON.parse(runLw(repo, ['status']).stdout).stopBlocks).toBe(0);
+    runLw(repo, ['resume']);
+    expect(run('stop-gate.mjs', tool, input, repo).code).toBe(2);
+  });
+
   it('stop-gate allows in plan stage', () => {
     const repo = setup('test', false);
     expect(run('stop-gate.mjs', tool, payload(tool, 'stop', repo), repo).code).toBe(0);

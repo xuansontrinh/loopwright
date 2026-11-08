@@ -12,6 +12,8 @@ try {
   const id = worktreeId(cwd);
   const state = readState(dir, id);
   if (!state || (state.stage !== 'build' && state.stage !== 'review')) allow();
+  // The agent is ending its turn to let the user decide; blocking would push it past the human gate.
+  if (state.awaitingUser) allow();
 
   const v = state.verdict;
   if (v && v.pass === true && v.fingerprint === fingerprint(cwd, state.baseCommit)) allow();

@@ -15,7 +15,7 @@ Runs the stage skills in order for the confirmed tier and resumes where a task l
 ## Resume
 
 `node "{{LW_HOME}}/hooks/lw.mjs" status`:
-- Prints a task → read `<lw>/<task>` and continue at its `stage` (plan: the next `— pending` item under `## Open questions`, else the proposal or confirmation; review: count rounds from the review log).
+- Prints a task → read `<lw>/<task>` and continue at its `stage` (plan: run `loopwright-plan`, which resumes the open plan; review: count rounds from the review log).
 - "no active task" → `grep -l "^status: active" <lw>/tasks/*.md`.
   - One or more files → ask the user which one (or a new task). For the chosen file, offer to rebuild state from it: `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md --base <base commit from its header>`, then `node "{{LW_HOME}}/hooks/lw.mjs" stage <stage from its header>`. Locked-test hashes are lost with the state: if the task already has acceptance tests and is past Test, tell the user; re-lock the test files named in its AC lines (`stage test`, `lock <files>`, then `stage <stage>`) only if the user confirms they are unchanged.
   - None, or the user wants a new task → start at Plan with the user's goal or spec path.
@@ -37,4 +37,4 @@ When a stage says to spawn the `loopwright-<role>` subagent, spawn the subagent 
 - each undecided review finding, and the fix-round cap being reached;
 - each AGENTS.md / docs change, and the commit message and PR draft.
 
-Never answer a gate yourself or treat silence as approval. Do not commit at any point.
+In Build and Review, run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "<reason>"` before asking and `resume` after the answer, as those skills say; otherwise the stop gate pushes you past the gate. Never answer a gate yourself or treat silence as approval. Do not commit at any point.

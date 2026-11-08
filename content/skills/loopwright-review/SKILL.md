@@ -19,16 +19,18 @@ Reviewers judge in their own context. This thread dispatches them, merges their 
 
 1. `node "{{LW_HOME}}/hooks/lw.mjs" stage review`, and set `stage: review` in the header.
 2. **Blind pass.** Now spawn the `loopwright-reviewer` subagent and wait for its result. Give it only: the absolute task file path, the base commit, and "Follow `{{LW_HOME}}/prompts/reviewer.md`. Blind pass." Large tier: add "Scope: slice S<n> (its ACs; earlier slices passed)" or "Scope: whole-branch review of all slices". Never include the implementer report, chat history or your opinion.
-3. **Second pass** (only if `two-pass: on`). Now spawn the `loopwright-reviewer` subagent and wait for its result, with the same three items plus "Second pass: verify the claims in this implementer report:" and the report verbatim. Report no longer available → skip and note it in the log line.
-4. **Cross-model pass** (only if `crossModelReview` is not `off`). `command -v <claude|codex>` fails → skip, note it. Otherwise run with `PROMPT="Follow {{LW_HOME}}/prompts/reviewer.md. Task file: <abs path>. Base commit: <sha>. Blind pass."`:
-   - claude (omit `--model` when the model is `inherit`): `claude -p --model <crossModelReviewer.claude> --output-format json --json-schema "$(cat "{{LW_HOME}}/schemas/verdict.json")" "$PROMPT"` — the verdict is the top-level `structured_output` field.
-   - codex (best effort, untested): `codex exec --sandbox read-only --output-schema "{{LW_HOME}}/schemas/verdict.json" -m <crossModelReviewer.codex> "$PROMPT"` — omit `-m` when the model is `inherit`; the verdict is the final message.
-   Any error, timeout or unparseable output → skip and note it. This pass never blocks on its own failure.
+3. **Second pass** (only if `two-pass: on`). Now spawn the `loopwright-reviewer` subagent and wait for its result, with the task file path, the base commit, "Follow `{{LW_HOME}}/prompts/reviewer.md`. Second pass.", and then "Verify the claims in this implementer report:" with the report verbatim. Report no longer available → skip and note it in the log line.
+4. **Cross-model pass** (only if `crossModelReview` is not `off`). `command -v <claude|codex>` fails → skip, note it. Otherwise, from the worktree root, set `PROMPT="Follow {{LW_HOME}}/prompts/reviewer.md. Task file: <abs path>. Base commit: <sha>. Blind pass."` and run:
+   - claude (omit `--model` when the model is `inherit`; add one `"Bash(<cmd>:*)"` per check command in the task header; the prompt must come after `--` because the tool flags take several values):
+     `claude -p --model <crossModelReviewer.claude> --output-format json --json-schema "$(cat "{{LW_HOME}}/schemas/verdict.json")" --allowedTools "Read" "Grep" "Glob" "Bash(git diff:*)" "Bash(git status:*)" "Bash(git log:*)" "Bash(node {{LW_HOME}}/hooks/lw.mjs:*)" "Bash(<check command>:*)" --disallowedTools "Edit" "Write" "MultiEdit" "NotebookEdit" -- "$PROMPT"`
+     The verdict is the top-level `structured_output` field.
+   - codex (best effort, untested; omit `-m` when the model is `inherit`): `OUT="$(mktemp)"; codex exec --sandbox read-only --output-schema "{{LW_HOME}}/schemas/verdict.json" -o "$OUT" -m <crossModelReviewer.codex> "$PROMPT"`, then read the verdict from `$OUT`.
+   Any error, timeout or unparseable output → skip and note it. This pass never blocks on its own failure. A check-command failure reported only by this pass that looks sandbox-caused (permission denied, read-only filesystem) is noted in the log, not counted as blocking.
 5. A subagent reply that is not one JSON verdict → dispatch it once more asking for only the JSON; still invalid → stop and show the user.
 
 ## Outcome
 
-Large tier: tests locked by a later slice's Test stage appear in `lockedAfterBuild` and come back as undecided; when presenting one, say which slice locked it (its AC lines name the file).
+Human gates: before you ask the user anything in this stage (an undecided finding, the fix-round cap, an invalid verdict; `AskUserQuestion` or a turn-ending question), run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "<what you are waiting for>"`, so the stop gate lets you end the turn. After the user answers, run `node "{{LW_HOME}}/hooks/lw.mjs" resume`. (`stage` and `verdict` also clear it.)
 
 Merge all passes: union of `blocking`, union of `undecided` (drop exact duplicates by location and expectation), sum of `droppedCount`. Decide from the arrays, not from the `pass` fields.
 

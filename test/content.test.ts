@@ -142,17 +142,26 @@ describe('content', () => {
       'loopwright-plan': [
         'Assumption ledger', '-2', 'high-impact', 'low-impact', 'loopwright-scout', 'small', 'standard', 'large',
         'two-pass', 'maxFixRounds', 'AskUserQuestion', '/plan', 'asked', 'batch-confirmed', 'overridden',
-        'lw.mjs" start', 'lw.mjs" dir', 'npx loopwright init', '## Goal',
+        'lw.mjs" start', 'lw.mjs" dir', 'npx loopwright init', '## Goal', 'plan: draft', 'plan: confirmed', '--force',
       ],
-      'loopwright-test': ['lw.mjs" stage test', 'lw.mjs" status', 'lockedTests'],
-      'loopwright-build': ['lw.mjs" stage build', 'task file path', 'chat history', 'slice'],
+      'loopwright-test': ['lw.mjs" stage test', 'lw.mjs" status', 'lockedTests', 'plan: confirmed'],
+      'loopwright-build': ['lw.mjs" stage build', 'task file path', 'chat history', 'slice', 'plan: confirmed', 'lw.mjs" await-user', 'lw.mjs" resume', 'AskUserQuestion'],
       'loopwright-review': [
         'lw.mjs" stage review', 'Blocking', 'Undecided', 'crossModelReview', 'crossModelReviewer', 'verdict pass',
         'verdict fail', '{{LW_HOME}}/prompts/reviewer.md', '{{LW_HOME}}/schemas/verdict.json', 'structured_output',
         'codex exec --sandbox read-only --output-schema', '--json-schema', 'implementer report', 'Review log', 'whole-branch',
+        'lw.mjs" await-user', 'lw.mjs" resume', 'Second pass.', '--allowedTools', '--disallowedTools', ' -- "$PROMPT"', '-o ', 'sandbox',
       ],
       'loopwright-done': ['AGENTS.md', 'docs/agents', '@AGENTS.md', 'do not commit', 'status: done', 'lw.mjs" done', 'rejected'],
     };
+    it('review second pass is not labelled blind and the slice-lock workaround is gone', () => {
+      const b = skill('loopwright-review');
+      const second = b.split('\n').find((l) => l.includes('**Second pass**'))!;
+      expect(second).toContain('Second pass.');
+      expect(second).not.toContain('Blind pass');
+      expect(b).not.toContain("later slice's Test stage");
+    });
+
     for (const [n, list] of Object.entries(phrases)) {
       it(`${n} carries its required phrases`, () => {
         const b = skill(n);

@@ -140,22 +140,65 @@ describe('lw.mjs', () => {
     expect(h[0].event).toBe('start --force');
   });
 
-  it('build -> test -> lock is reported in lockedAfterBuild; history is ordered', () => {
+  it('a new path locked in a later slice is not in lockedAfterBuild; history is ordered', () => {
+    const repo = makeRepo();
+    runLw(repo, ['start', TASK]);
+    runLw(repo, ['stage', 'test']);
+    runLw(repo, ['lock', 'a.txt']);
+    runLw(repo, ['stage', 'build']);
+    runLw(repo, ['stage', 'review']);
+    runLw(repo, ['stage', 'test']);
+    writeFileSync(join(repo, 'b.txt'), 'b');
+    expect(runLw(repo, ['lock', 'b.txt']).code).toBe(0);
+    const r = runLw(repo, ['check-locks']);
+    expect(r.code).toBe(0);
+    expect(JSON.parse(r.stdout).lockedAfterBuild).toEqual([]);
+    const h = JSON.parse(runLw(repo, ['status']).stdout).history;
+    expect(h.map((e: { event: string; detail: string }) => `${e.event}:${e.detail}`)).toEqual([
+      `start:${TASK}`, 'stage:test', 'lock:a.txt', 'stage:build', 'stage:review', 'stage:test', 'lock:b.txt',
+    ]);
+  });
+
+  it('a path re-locked after a build is in lockedAfterBuild', () => {
     const repo = makeRepo();
     runLw(repo, ['start', TASK]);
     runLw(repo, ['stage', 'test']);
     runLw(repo, ['lock', 'a.txt']);
     runLw(repo, ['stage', 'build']);
     runLw(repo, ['stage', 'test']);
-    writeFileSync(join(repo, 'b.txt'), 'b');
-    expect(runLw(repo, ['lock', 'b.txt']).code).toBe(0);
-    const r = runLw(repo, ['check-locks']);
-    expect(r.code).toBe(0);
-    expect(JSON.parse(r.stdout).lockedAfterBuild).toEqual(['b.txt']);
-    const h = JSON.parse(runLw(repo, ['status']).stdout).history;
-    expect(h.map((e: { event: string; detail: string }) => `${e.event}:${e.detail}`)).toEqual([
-      `start:${TASK}`, 'stage:test', 'lock:a.txt', 'stage:build', 'stage:test', 'lock:b.txt',
-    ]);
+    writeFileSync(join(repo, 'a.txt'), 'changed\n');
+    expect(runLw(repo, ['lock', 'a.txt']).code).toBe(0);
+    expect(JSON.parse(runLw(repo, ['check-locks']).stdout).lockedAfterBuild).toEqual(['a.txt']);
+  });
+
+  it('a path locked twice within one test stage is not in lockedAfterBuild', () => {
+    const repo = makeRepo();
+    runLw(repo, ['start', TASK]);
+    runLw(repo, ['stage', 'test']);
+    runLw(repo, ['lock', 'a.txt']);
+    runLw(repo, ['lock', 'a.txt']);
+    runLw(repo, ['stage', 'build']);
+    expect(JSON.parse(runLw(repo, ['check-locks']).stdout).lockedAfterBuild).toEqual([]);
+  });
+
+  it('await-user sets awaitingUser; resume, stage and verdict clear it; history records them', () => {
+    const repo = makeRepo();
+    runLw(repo, ['start', TASK]);
+    runLw(repo, ['stage', 'build']);
+    const status = () => JSON.parse(runLw(repo, ['status']).stdout);
+    expect(runLw(repo, ['await-user']).code).toBe(1);
+    expect(runLw(repo, ['await-user', 'deviation D2']).code).toBe(0);
+    expect(status().awaitingUser).toBe('deviation D2');
+    expect(runLw(repo, ['resume']).code).toBe(0);
+    expect(status().awaitingUser).toBeUndefined();
+    runLw(repo, ['await-user', 'undecided U1']);
+    runLw(repo, ['stage', 'review']);
+    expect(status().awaitingUser).toBeUndefined();
+    runLw(repo, ['await-user', 'fix-round cap']);
+    runLw(repo, ['verdict', 'fail', '--round', '1']);
+    expect(status().awaitingUser).toBeUndefined();
+    const h = status().history.map((e: { event: string; detail: string }) => `${e.event}:${e.detail}`);
+    expect(h).toEqual(expect.arrayContaining(['await-user:deviation D2', 'resume:deviation D2', 'await-user:undecided U1', 'await-user:fix-round cap']));
   });
 
   it('fingerprint ignores diff.external/diff.relative and cwd', () => {
