@@ -90,8 +90,8 @@ describe('InstallWriter', () => {
     await w.writeFile(join(root, 'new.md'), 'n');
     await w.writeFile(join(root, 'same.md'), 's');
     await w.writeFile(join(root, 'kept.md'), 'theirs');
-    w.recordConfig({ file: '.claude/settings.json', kind: 'claude-hooks' });
-    w.recordConfig({ file: '.claude/settings.json', kind: 'claude-hooks' });
+    w.recordConfig({ file: join(root, '.claude/settings.json'), kind: 'claude-hooks' });
+    w.recordConfig({ file: join(root, '.claude/settings.json'), kind: 'claude-hooks' });
     const m = w.result();
     expect(m).toEqual({
       version: 1,

@@ -211,3 +211,22 @@ describe('hook wiring cleanup', () => {
     noRef(repo);
   });
 });
+
+describe('worktree-relative config entries', () => {
+  it('manifest config keys are relative; uninstall from A cleans A, not B', () => {
+    const a = realpathSync(spacedRepo());
+    const home = mkdtempSync(join(tmpdir(), 'lw-h-'));
+    execFileSync('git', ['-c', 'user.name=T', '-c', 'user.email=t@e', 'commit', '-q', '--allow-empty', '-m', 'init'], { cwd: a });
+    const b = join(realpathSync(mkdtempSync(join(tmpdir(), 'lw-wtb-'))), 'b');
+    execFileSync('git', ['worktree', 'add', '-q', '-b', 'feat', b], { cwd: a, stdio: 'pipe' });
+    expect(runCli(a, ['init'], { home }).exitCode).toBe(0);
+    expect(runCli(b, ['init'], { home }).exitCode).toBe(0);
+    const m = readJson(join(a, '.loopwright/manifest.json'));
+    expect(m.config.map((c: any) => c.file).sort()).toEqual(['.claude/settings.json', '.codex/config.toml']);
+    const r = runCli(a, ['uninstall'], { home });
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(readFileSync(join(a, '.claude/settings.json'), 'utf8')).not.toContain('loopwright/hooks/');
+    expect(readFileSync(join(b, '.claude/settings.json'), 'utf8')).toContain('loopwright/hooks/');
+    expect(readFileSync(join(b, '.codex/config.toml'), 'utf8')).toContain('loopwright/hooks/');
+  });
+});

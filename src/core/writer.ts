@@ -56,8 +56,9 @@ export class InstallWriter {
     return 'kept';
   }
 
+  /** Record a wired config file (absolute path); stored under the same key scheme as files. */
   recordConfig(entry: ConfigEntry): void {
-    this.addConfig(entry);
+    this.addConfig({ file: this.opts.toKey(entry.file), kind: entry.kind });
   }
 
   /** Hooks skipped this run: existing wiring stays in place, so its manifest record must too. */
