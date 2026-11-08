@@ -42,9 +42,9 @@ Date: 2026-11-08 · Status: draft for review · Replaces: `coding-agents-tooling
 | D14 | Code-comment standard: comments explain *why*, briefly, each rationale stated in exactly one place; no restating *what* the code does. Implementer instruction **and** reviewer check. |
 | D15 | One shared `.loopwright/` in the main worktree for all worktrees of a repo. |
 | D16 | Tech stack: TypeScript/ESM bundled with tsdown (zero runtime deps), `tsc --noEmit`, `node:util` `parseArgs`, `readline` prompts, plain content files, marker-block TOML edits, hash manifest, vitest, Node `>=22.14`. |
+| D17 | Old skills (`spec-*`, `ide-mcp`) and the ide-mcp hook are removed from the package; `init` detects old installs and asks before removing them. `agent-specs/` is untouched. |
 | D18 | Subagent models are configurable per role and per tool in `config.json`; Plan runs in the main thread and uses the session's model. |
 | D19 | Review reports only proven, high-impact findings: confirmed ones block; unconfirmed-but-evidenced ones go to the user as *undecided*; everything else is dropped (count logged). Procedure in §5. |
-| D17 | Old skills (`spec-*`, `ide-mcp`) and the ide-mcp hook are removed from the package; `init` detects old installs and asks before removing them. `agent-specs/` is untouched. |
 
 ## 3. Workflow
 
