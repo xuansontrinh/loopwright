@@ -7,6 +7,8 @@ export interface Manifest {
   mode: 'repo' | 'global';
   files: { path: string; sha256: string }[];
   config: { file: string; kind: 'claude-hooks' | 'codex-block' }[];
+  /** Install options recorded at init/update, reused by update. */
+  options?: { hook: boolean; symlink: boolean };
 }
 
 export function sha256(text: string): string {

@@ -2,7 +2,7 @@ import { relative } from 'node:path';
 import type { CommandOptions } from '../core/options.js';
 import { NotAGitRepoError, resolveTargets, type Targets } from '../core/targets.js';
 import { readConfig } from '../core/config.js';
-import { readManifest, writeManifest } from '../core/manifest.js';
+import { readManifest, writeManifest, type Manifest } from '../core/manifest.js';
 import { InstallWriter } from '../core/writer.js';
 import { installAll, planWiring } from '../install/install.js';
 import { scaffoldLoopwrightDir } from '../install/loopwright-dir.js';
@@ -46,11 +46,26 @@ export function runInit(opts: CommandOptions): Promise<number> {
   return runInstall(opts, 'installed', true);
 }
 
+/** For update: reuse the hook/symlink options recorded in the manifest unless the flag was passed explicitly. */
+export function withRecordedOptions(opts: CommandOptions, recorded: Manifest['options']): CommandOptions {
+  if (!recorded) return opts;
+  return {
+    ...opts,
+    hook: opts.explicit?.hook ? opts.hook : recorded.hook,
+    symlink: opts.explicit?.symlink ? opts.symlink : recorded.symlink,
+  };
+}
+
 /** Shared install flow for `init` and `update`. */
 export async function runInstall(opts: CommandOptions, doneVerb: string, migrate = false): Promise<number> {
   let targets: Targets;
   try {
     targets = resolveTargets(opts);
+    if (!migrate) {
+      // update (not init): keep the options the install was made with.
+      opts = withRecordedOptions(opts, readManifest(targets.manifestPath)?.options);
+      targets = resolveTargets(opts);
+    }
   } catch (e) {
     if (e instanceof NotAGitRepoError) {
       console.error('loopwright: not a git repository (run inside a repo, or use --global)');
@@ -77,7 +92,7 @@ export async function runInstall(opts: CommandOptions, doneVerb: string, migrate
 
     const writer = makeWriter(targets, opts);
     const changed = await installAll(targets, writer, config, opts);
-    if (!opts.dryRun) writeManifest(targets.manifestPath, writer.result());
+    if (!opts.dryRun) writeManifest(targets.manifestPath, { ...writer.result(), options: { hook: opts.hook, symlink: opts.symlink } });
 
     if (!changed) log.success('loopwright is already up to date.');
     else if (!opts.dryRun) log.success(`loopwright ${doneVerb}.`);

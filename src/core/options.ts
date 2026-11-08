@@ -6,4 +6,6 @@ export interface CommandOptions {
   force: boolean;
   hook: boolean;
   symlink: boolean;
+  /** Which of hook/symlink were set by an explicit flag (update reuses recorded values otherwise). */
+  explicit?: { hook: boolean; symlink: boolean };
 }

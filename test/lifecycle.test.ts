@@ -155,3 +155,27 @@ describe('global install end to end', () => {
     expect(execFileSync('git', ['status', '--porcelain'], { cwd: repo, encoding: 'utf8' })).toBe('');
   });
 });
+
+describe('recorded install options', () => {
+  it('update reuses --no-hook/--no-symlink from init unless passed explicitly', () => {
+    const repo = spacedRepo();
+    const home = mkdtempSync(join(tmpdir(), 'lw-h-'));
+    expect(runCli(repo, ['init', '--no-hook', '--no-symlink'], { home }).exitCode).toBe(0);
+    const r = runCli(repo, ['update'], { home });
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(existsSync(join(repo, '.claude/settings.json'))).toBe(false);
+    expect(existsSync(join(repo, '.codex/config.toml'))).toBe(false);
+    expect(lstatSync(join(repo, '.claude/skills'), { throwIfNoEntry: false })).toBeUndefined();
+    expect(readJson(join(repo, '.loopwright/manifest.json')).options).toEqual({ hook: false, symlink: false });
+  });
+
+  it('a hooked install keeps its hooks on update', () => {
+    const repo = spacedRepo();
+    const home = mkdtempSync(join(tmpdir(), 'lw-h-'));
+    expect(runCli(repo, ['init'], { home }).exitCode).toBe(0);
+    expect(runCli(repo, ['update', '--force'], { home }).exitCode).toBe(0);
+    expect(readFileSync(join(repo, '.claude/settings.json'), 'utf8')).toContain('loopwright/hooks/');
+    expect(lstatSync(join(repo, '.claude/skills')).isSymbolicLink()).toBe(true);
+    expect(readJson(join(repo, '.loopwright/manifest.json')).options).toEqual({ hook: true, symlink: true });
+  });
+});

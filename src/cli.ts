@@ -12,6 +12,7 @@ const HELP = `loopwright - agent workflow installer for Claude Code and Codex
 Usage:
   loopwright init        Install the workflow into the current repo (or globally)
   loopwright update      Refresh installed files to the current version
+                         (reuses init's --no-hook/--no-symlink unless passed again)
   loopwright uninstall   Remove installed files
 
 Options:
@@ -70,6 +71,7 @@ export async function main(argv: string[]): Promise<number> {
     force: values.force,
     hook: !values['no-hook'],
     symlink: !values['no-symlink'],
+    explicit: { hook: values['no-hook'], symlink: values['no-symlink'] },
   };
 
   switch (command) {
