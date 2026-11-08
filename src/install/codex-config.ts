@@ -35,8 +35,13 @@ export function upsertCodexBlock(text: string, block: string): string {
   return `${base}\n${normalized}`;
 }
 
-export function removeCodexBlock(text: string): string {
-  const m = BLOCK_RE.exec(text);
+function markerRe(begin: string, end: string): RegExp {
+  const esc = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${esc(begin)}[ \\t]*\\r?\\n[\\s\\S]*?^${esc(end)}[ \\t]*(?:\\r?\\n|$)`, 'm');
+}
+
+export function removeCodexBlock(text: string, markers?: { begin: string; end: string }): string {
+  const m = (markers ? markerRe(markers.begin, markers.end) : BLOCK_RE).exec(text);
   if (!m) return text;
   let before = text.slice(0, m.index);
   const after = text.slice(m.index + m[0].length);

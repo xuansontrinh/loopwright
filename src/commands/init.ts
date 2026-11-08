@@ -6,6 +6,7 @@ import { readManifest, writeManifest } from '../core/manifest.js';
 import { InstallWriter } from '../core/writer.js';
 import { installAll, planWiring } from '../install/install.js';
 import { scaffoldLoopwrightDir } from '../install/loopwright-dir.js';
+import { detectLegacy } from '../install/migrate.js';
 import { SettingsParseError } from '../install/claude-settings.js';
 import { confirm } from '../utils/prompt.js';
 import { log } from '../utils/log.js';
@@ -21,12 +22,31 @@ function makeWriter(targets: Targets, opts: CommandOptions): InstallWriter {
   });
 }
 
+async function migrateLegacy(root: string, opts: CommandOptions): Promise<void> {
+  const legacy = detectLegacy(root);
+  if (legacy.length === 0) return;
+  if (opts.dryRun) {
+    for (const a of legacy) log.dim(`Would ask to remove legacy: ${a.description}`);
+    return;
+  }
+  log.info('Found files from the old coding-agents-toolings package:');
+  for (const a of legacy) log.dim(`  ${a.description}`);
+  if (!opts.force && !(await confirm('Remove these legacy coding-agents-toolings files?', false))) {
+    log.dim('Keeping legacy files.');
+    return;
+  }
+  for (const a of legacy) {
+    a.apply();
+    log.dim(`  Removed ${a.description}`);
+  }
+}
+
 export function runInit(opts: CommandOptions): Promise<number> {
-  return runInstall(opts, 'installed');
+  return runInstall(opts, 'installed', true);
 }
 
 /** Shared install flow for `init` and `update`. */
-export async function runInstall(opts: CommandOptions, doneVerb: string): Promise<number> {
+export async function runInstall(opts: CommandOptions, doneVerb: string, migrate = false): Promise<number> {
   let targets: Targets;
   try {
     targets = resolveTargets(opts);
@@ -39,6 +59,7 @@ export async function runInstall(opts: CommandOptions, doneVerb: string): Promis
   }
   try {
     planWiring(targets, opts); // pre-flight: abort before writing anything if settings are malformed
+    if (migrate && targets.mode === 'repo') await migrateLegacy(targets.root, opts);
     if (targets.mode === 'repo' && targets.stateDir) scaffoldLoopwrightDir(targets.stateDir, opts.dryRun);
     const config = readConfig(targets.configPath);
 
