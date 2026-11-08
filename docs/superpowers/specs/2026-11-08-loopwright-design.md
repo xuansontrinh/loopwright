@@ -42,6 +42,8 @@ Date: 2026-11-08 · Status: draft for review · Replaces: `coding-agents-tooling
 | D14 | Code-comment standard: comments explain *why*, briefly, each rationale stated in exactly one place; no restating *what* the code does. Implementer instruction **and** reviewer check. |
 | D15 | One shared `.loopwright/` in the main worktree for all worktrees of a repo. |
 | D16 | Tech stack: TypeScript/ESM bundled with tsdown (zero runtime deps), `tsc --noEmit`, `node:util` `parseArgs`, `readline` prompts, plain content files, marker-block TOML edits, hash manifest, vitest, Node `>=22.14`. |
+| D18 | Subagent models are configurable per role and per tool in `config.json`; Plan runs in the main thread and uses the session's model. |
+| D19 | Review reports only proven, high-impact findings: confirmed ones block; unconfirmed-but-evidenced ones go to the user as *undecided*; everything else is dropped (count logged). Procedure in §5. |
 | D17 | Old skills (`spec-*`, `ide-mcp`) and the ide-mcp hook are removed from the package; `init` detects old installs and asks before removing them. `agent-specs/` is untouched. |
 
 ## 3. Workflow
@@ -53,7 +55,7 @@ Date: 2026-11-08 · Status: draft for review · Replaces: `coding-agents-tooling
 | **Plan** | main thread (questions require it); repo investigation delegated to the read-only **scout** subagent | Input: goal text or imported spec. Scout report → assumption ledger → high-impact questions (one at a time) → low-impact batch → proposes tier, two-pass, fix-round cap, check commands (lint/typecheck/test) → user confirms. Each answer is written to the task file immediately. |
 | **Test** | **tester** subagent | Writes acceptance tests from the confirmed acceptance criteria using the repo's existing runner (if none exists, Plan must have asked). Runs them, confirms they fail for the right reason, records file hashes → locked. Sees no implementation. |
 | **Build** | **implementer** subagent | Reads decisions from the task file. Makes locked tests pass, adds its own unit tests, follows D14 and AGENTS.md/docs standards. Returns a short report. |
-| **Review** | **reviewer** subagent (+ other CLI if opted in) | Runs check commands; verifies locked-test hashes (mismatch = automatic fail); blind pass against decisions, acceptance criteria, standards docs, codebase patterns, D14; optional second pass verifying the implementer's report claims. Writes a verdict bound to the working-tree fingerprint. Findings → Build, up to the fix-round cap, then escalate to user. |
+| **Review** | **reviewer** subagent (+ other CLI if opted in) | Runs check commands; verifies locked-test hashes (mismatch = automatic fail); blind pass per the review procedure (§5); optional second pass verifying the implementer's report claims. Writes a verdict bound to the working-tree fingerprint. Blocking findings → Build, up to the fix-round cap, then escalate; undecided findings → user. |
 | **Done** | main thread | Proposes AGENTS.md/`docs/agents/` additions and prunes stale entries it noticed (each change approved individually); drafts commit message / PR text with decisions and rejected options; sets task `status: done`. |
 
 ### Tiers
@@ -88,9 +90,20 @@ Date: 2026-11-08 · Status: draft for review · Replaces: `coding-agents-tooling
 ### config.json
 
 ```json
-{ "maxFixRounds": 3, "crossModelReview": "off", "docsDir": "docs/agents" }
+{
+  "maxFixRounds": 3,
+  "crossModelReview": "off",
+  "docsDir": "docs/agents",
+  "models": {
+    "claude": { "scout": "opus", "tester": "sonnet", "implementer": "sonnet", "reviewer": "opus" },
+    "codex":  { "scout": "inherit", "tester": "inherit", "implementer": "inherit", "reviewer": "inherit" },
+    "crossModelReviewer": { "claude": "opus", "codex": "inherit" }
+  }
+}
 ```
-`crossModelReview`: `"off" | "codex" | "claude"`. Tier proposals may suggest a lower per-task fix-round cap.
+- `crossModelReview`: `"off" | "codex" | "claude"`. Tier proposals may suggest a lower per-task fix-round cap.
+- `models`: values are tool-native aliases or full IDs, or `inherit` (session model). Aliases are preferred so defaults don't age. `init`/`update` render them into the generated agent files; `config.json` is the single place to change them (editing generated agent files directly is flagged as a user modification by the manifest). Codex roles may also set `model_reasoning_effort`.
+- Plan runs in the main thread, so its model is whatever the session uses; README advises starting the session on the model you want for planning.
 
 ### Task file (human-facing, target ≤ ~150 lines, one-line entries)
 
@@ -124,6 +137,21 @@ Wiring: Claude → `.claude/settings.json` (merged, deduped by script path). Cod
 ### Subagents
 
 Single source per role (`scout`, `tester`, `implementer`, `reviewer`) in Claude format under `content/agents/`. Build emits `.claude/agents/loopwright-<role>.md` and generates `.codex/agents/loopwright-<role>.toml`, with per-target overrides for model/tools. Claude restrictions: scout and reviewer have no edit tools (reviewer keeps shell to run checks).
+
+### Review procedure (reviewer prompt, `content/prompts/reviewer.md`)
+
+1. **Scope** — diff vs task base commit, locked tests, task file.
+2. **Intent** — goal, decisions, acceptance criteria (blind pass: no implementer report).
+3. **Inspect** changed files and nearby code to understand call paths.
+4. **List candidate blocking issues silently** — bugs, regressions, security vulnerabilities, architecturally bad decisions, non-simplified code paths (a much simpler path does the same), missing tests; plus decision/AC violations, scope creep, D14 violations, deviations from standards docs and codebase patterns. Lint/format-level nits are excluded (mechanical checks own them).
+5. **Investigate each** — self-verify first (re-read code, run a repro or test). Assign impact and confidence (high/mid/low).
+6. **Report**
+   - **Blocking**: high impact + high confidence, confirmed → sent to Build.
+   - **Undecided**: high impact, could not be confirmed, **but backed by proof** (file:line, reputable SDK source or official docs link, decision/AC id) → presented to the user, who decides fix or dismiss.
+   - Everything else (no proof, or below high impact) is dropped; only the count is logged.
+7. **Verdict passes** when there are no blocking findings and every undecided finding is resolved by the user.
+
+Every reported finding carries: location, the violated expectation, the proof, impact, confidence.
 
 ### Cross-model review (opt-in)
 
