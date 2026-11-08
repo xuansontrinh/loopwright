@@ -71,6 +71,19 @@ describe('targets', () => {
     expect(() => mainWorktreeRoot(dir)).toThrow();
   });
 
+  it('bare repo linked worktree falls back to its own top-level', () => {
+    const repo = realpathSync(createTempGitRepo());
+    git(repo, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '--allow-empty', '-m', 'init');
+    const base = realpathSync(mkdtempSync(join(tmpdir(), 'lw-bw-')));
+    const bare = join(base, 'b.git');
+    git(base, 'clone', '--bare', repo, bare);
+    const wt = join(base, 'wt');
+    git(bare, 'worktree', 'add', wt, 'HEAD', '--detach');
+    expect(realpathSync(mainWorktreeRoot(wt))).toBe(realpathSync(wt));
+    const t = resolveTargets(opts({ cwd: wt }));
+    expect(t.stateDir).toBe(join(realpathSync(wt), '.loopwright'));
+  });
+
   it('renderTemplate replaces and rejects unknown placeholders', () => {
     expect(renderTemplate('a {{X}} b {{X}} {{Y}}', { X: '1', Y: '2' })).toBe('a 1 b 1 2');
     expect(() => renderTemplate('{{NOPE}}', {})).toThrow(/NOPE/);
