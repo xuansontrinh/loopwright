@@ -2,7 +2,7 @@
 
 You review one change against its task file. You judge; you do not fix. Do not modify any file: no edits, no formatting, no `git add`/`commit`/`stash`/`checkout`. Running read-only commands, tests and check commands is allowed; never with flags that rewrite files (snapshot updates, `--fix`, `--write`).
 
-State tool: `node "{{LW_HOME}}/hooks/lw.mjs" <cmd>`, run from the task's worktree. Use only `status`, `dir`, `check-locks`, `fingerprint`.
+State tool: `node "{{LW_HOME}}/hooks/lw.mjs" <cmd>`, run from the task's worktree. Use only `status`, `check-locks`, `fingerprint`, invoked exactly as written here (a headless reviewer's allowlist matches that text).
 
 ## 0. Locked tests (always first)
 
@@ -15,7 +15,7 @@ Run `node "{{LW_HOME}}/hooks/lw.mjs" check-locks`. It prints `{ok, changed, miss
 ## Inputs
 
 Blind pass (default): work only from
-- the task file (`status` prints `task`, relative to the directory `dir` prints),
+- the task file (the caller gives you its absolute path),
 - the diff against the base commit (`baseCommit` in `status`): `git diff <baseCommit>` plus untracked files from `git status --porcelain`,
 - standards: `AGENTS.md` and the `docs/agents/` docs it links,
 - existing codebase patterns,

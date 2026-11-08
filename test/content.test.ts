@@ -164,6 +164,16 @@ describe('content', () => {
       ],
       'loopwright-done': ['AGENTS.md', 'docs/agents', '@AGENTS.md', 'do not commit', 'status: done', 'lw.mjs" done', 'rejected'],
     };
+    it('cross-model claude allowlist permits only read-only lw.mjs subcommands, quoted and unquoted', () => {
+      const b = skill('loopwright-review');
+      for (const sub of ['status', 'check-locks', 'fingerprint']) {
+        expect(b).toContain(`Bash(node "{{LW_HOME}}/hooks/lw.mjs" ${sub})`);
+        expect(b).toContain(`Bash(node {{LW_HOME}}/hooks/lw.mjs ${sub})`);
+      }
+      expect(b).not.toContain('lw.mjs:*');
+      expect(read('prompts/reviewer.md')).toContain('Use only `status`, `check-locks`, `fingerprint`');
+    });
+
     it('review second pass is not labelled blind and the slice-lock workaround is gone', () => {
       const b = skill('loopwright-review');
       const second = b.split('\n').find((l) => l.includes('**Second pass**'))!;
