@@ -18,6 +18,11 @@ updates:
       semver-minor-days: 7
       semver-patch-days: 7
     versioning-strategy: increase
+    ignore:
+      # Keep Node's types at the engines floor (>= 22.14) so typecheck rejects newer-only APIs.
+      # Raise this together with "engines" in package.json.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     open-pull-requests-limit: 5
     groups:
       npm-minor-and-patch:
