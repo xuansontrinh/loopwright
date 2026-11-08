@@ -26,7 +26,7 @@ describe('content', () => {
 
   it('reviewer prompt carries the review procedure', () => {
     const p = read('prompts/reviewer.md');
-    for (const s of ['Blocking', 'Undecided', 'proof', 'check-locks', "Don't report anything", 'lockedAfterBuild', 'schemas/verdict.json']) {
+    for (const s of ['Blocking', 'Undecided', 'proof', 'check-locks', "Don't report anything", 'lockedAfterBuild', 'schemas/verdict.json', '`droppedCount` is a non-negative integer']) {
       expect(p, s).toContain(s);
     }
   });
@@ -51,17 +51,23 @@ describe('content', () => {
     expect(agent('tester').body).toContain('node "{{LW_HOME}}/hooks/lw.mjs" lock');
   });
 
+  it('tester treats an absent named module as the expected failure', () => {
+    const b = agent('tester').body;
+    expect(b).toContain('"Module not found" or a missing export at that path is the expected failure');
+    expect(b).toContain('If the task file names no module path or interface for an AC, stop and report it under Needs.');
+  });
+
   it('verdict schema is valid JSON with required keys', () => {
     const s = JSON.parse(read('schemas/verdict.json'));
-    expect(s.$schema).toBe('https://json-schema.org/draft/2020-12/schema');
+    expect(s).not.toHaveProperty('$schema');
     expect(s.type).toBe('object');
     expect(s.required.sort()).toEqual(['blocking', 'droppedCount', 'pass', 'undecided']);
     expect(s.additionalProperties).toBe(false);
-    expect(s.properties.droppedCount).toEqual({ type: 'integer', minimum: 0 });
+    expect(s.properties.droppedCount).toEqual({ type: 'integer' });
     const f = s.$defs.Finding;
     expect(f.required.sort()).toEqual(['confidence', 'expectation', 'impact', 'location', 'proof']);
     expect(f.additionalProperties).toBe(false);
-    expect(f.properties.impact).toEqual({ type: 'string', const: 'high' });
+    expect(f.properties.impact).toEqual({ type: 'string', enum: ['high'] });
     expect(f.properties.confidence.enum).toEqual(['high', 'mid', 'low']);
     expect(s.properties.blocking.items.$ref).toBe('#/$defs/Finding');
   });

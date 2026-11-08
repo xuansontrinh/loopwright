@@ -42,7 +42,7 @@ Second pass: only when the caller hands you the implementer's report. Verify eac
 6. **Report.**
    - **Blocking** — high impact, high confidence, confirmed by your investigation.
    - **Undecided** — high impact, not confirmed, but backed by proof. The user decides fix or dismiss.
-   - Everything else (no proof, or impact below high) is dropped. Count it in `droppedCount`; do not describe it.
+   - Everything else (no proof, or impact below high) is dropped. Count it in `droppedCount`; do not describe it. `droppedCount` is a non-negative integer.
 7. **Verdict rule.** `pass` is true only when `blocking` and `undecided` are both empty. Undecided findings go to the user; only they can resolve them.
 
 ## Findings
