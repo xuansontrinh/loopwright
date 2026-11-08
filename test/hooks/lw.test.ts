@@ -1,8 +1,9 @@
-import { mkdirSync, mkdtempSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, realpathSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { git, makeRepo, runLw } from './helpers.js';
+import { LW, git, makeRepo, runLw } from './helpers.js';
 
 const TASK = 'tasks/2026-11-08-x.md';
 
@@ -233,6 +234,29 @@ describe('lw.mjs', () => {
     expect(status().awaitingUser).toBeUndefined();
     const h = status().history.map((e: { event: string; detail: string }) => `${e.event}:${e.detail}`);
     expect(h).toEqual(expect.arrayContaining(['await-user:deviation D2', 'resume:deviation D2', 'await-user:undecided U1', 'await-user:fix-round cap']));
+  });
+
+  it('fingerprint does not read untracked FIFOs and hashes symlink targets as strings', () => {
+    const repo = makeRepo();
+    runLw(repo, ['start', TASK]);
+    const outside = realpathSync(mkdtempSync(join(tmpdir(), 'lw-out-')));
+    execFileSync('mkfifo', [join(outside, 'fifo')]);
+    execFileSync('mkfifo', [join(repo, 'pipe')]);
+    symlinkSync(join(outside, 'fifo'), join(repo, 'pipe-link'));
+    const t0 = Date.now();
+    const r = spawnSync('node', [LW, 'fingerprint'], { cwd: repo, encoding: 'utf8', timeout: 5000 });
+    expect(r.status, `signal=${r.signal} stderr=${r.stderr}`).toBe(0);
+    expect(Date.now() - t0).toBeLessThan(5000);
+    // A symlink contributes its target string, not the target's content.
+    writeFileSync(join(outside, 'data'), 'one');
+    symlinkSync(join(outside, 'data'), join(repo, 'data-link'));
+    const fp = () => JSON.parse(runLw(repo, ['fingerprint']).stdout).fingerprint as string;
+    const f0 = fp();
+    writeFileSync(join(outside, 'data'), 'two');
+    expect(fp()).toBe(f0);
+    unlinkSync(join(repo, 'data-link'));
+    symlinkSync(join(outside, 'other'), join(repo, 'data-link'));
+    expect(fp()).not.toBe(f0);
   });
 
   it('fingerprint ignores diff.external/diff.relative and cwd', () => {

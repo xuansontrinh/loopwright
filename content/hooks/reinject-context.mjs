@@ -49,7 +49,8 @@ try {
   } else {
     lines.push(`Stage: ${state.stage}`);
   }
-  lines.push(NEXT[state.stage] ?? NEXT.plan);
+  if (state.awaitingUser) lines.push(`Waiting on the user: ${state.awaitingUser} — do not proceed until they answer; then run lw.mjs resume.`);
+  else lines.push(NEXT[state.stage] ?? NEXT.plan);
   const body = lines.slice(0, 40);
   if (lines.length > 40) body[39] = lines[lines.length - 1];
   const out = body.join('\n');

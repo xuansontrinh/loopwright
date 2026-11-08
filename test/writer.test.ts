@@ -112,6 +112,20 @@ describe('InstallWriter', () => {
     expect(w.result().files).toEqual([{ path: 'k.md', sha256: sha256('old') }]);
   });
 
+  it('result() carries forward prior entries for files not written this run', async () => {
+    const prior: Manifest = {
+      version: 1, mode: 'repo', config: [],
+      files: [{ path: 'gone.md', sha256: sha256('old') }, { path: 'a.md', sha256: sha256('a0') }],
+    };
+    const w = make({ manifest: prior });
+    writeFileSync(join(root, 'a.md'), 'a0');
+    await w.writeFile(join(root, 'a.md'), 'a1');
+    expect(w.result().files).toEqual([
+      { path: 'a.md', sha256: sha256('a1') },
+      { path: 'gone.md', sha256: sha256('old') },
+    ]);
+  });
+
   it('manifest round-trips', () => {
     const p = join(root, 'x/m.json');
     const m = manifestFor('a', 'b');

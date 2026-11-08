@@ -1,7 +1,7 @@
 // Loopwright hook runtime library. Only node:* imports.
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 const MAX_BUFFER = 1024 * 1024 * 1024;
@@ -81,7 +81,11 @@ export function fingerprint(cwd, baseCommit) {
   for (const f of files) {
     h.update(f + '\0');
     try {
-      h.update(readFileSync(join(top, f)));
+      // Never follow or open anything but a regular file: a FIFO or device would block the hook.
+      const p = join(top, f);
+      const st = lstatSync(p);
+      if (st.isFile()) h.update(readFileSync(p));
+      else if (st.isSymbolicLink()) h.update('symlink\0' + readlinkSync(p));
     } catch {
       /* unreadable or vanished: path alone contributes */
     }

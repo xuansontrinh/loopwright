@@ -143,6 +143,16 @@ describe.each(TOOLS)('reinject-context (%s)', (tool) => {
     expect(text.trim().split('\n').length).toBeLessThanOrEqual(40);
   });
 
+  it('reinject tells the agent it is waiting on the user', () => {
+    const repo = setup('build');
+    runLw(repo, ['await-user', 'deviation D3']);
+    const r = run('reinject-context.mjs', tool, payload(tool, 'compact', repo), repo);
+    expect(r.code).toBe(0);
+    const text = tool === 'codex' ? JSON.parse(r.stdout).hookSpecificOutput.additionalContext : r.stdout;
+    expect(text).toContain('Waiting on the user: deviation D3 — do not proceed until they answer; then run lw.mjs resume.');
+    expect(text).toContain('Stage: build');
+  });
+
   it('reinject without task file prints header, stage, next step', () => {
     const repo = setup('plan', false);
     const r = run('reinject-context.mjs', tool, payload(tool, 'compact', repo), repo);

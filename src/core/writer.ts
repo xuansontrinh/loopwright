@@ -73,7 +73,10 @@ export class InstallWriter {
   }
 
   result(): Manifest {
-    const files = [...this.recorded.entries()]
+    // Files a newer version no longer ships stay tracked (never auto-removed), so uninstall still finds them.
+    const all = new Map(this.recorded);
+    for (const f of this.opts.manifest?.files ?? []) if (!all.has(f.path)) all.set(f.path, f.sha256);
+    const files = [...all.entries()]
       .map(([path, hash]) => ({ path, sha256: hash }))
       .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
     return {
