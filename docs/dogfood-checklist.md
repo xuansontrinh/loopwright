@@ -1,0 +1,39 @@
+# Dogfood checklist
+
+Agent behavior is not covered by automated tests. Run this by hand before a release, in a scratch git repo with a working test runner. Re-run `npx loopwright init` (or `npm run dev -- init`) first, and confirm hooks are wired (`grep -l "loopwright/hooks/" .claude/settings.json`).
+
+## Claude Code
+
+Run one sample task per tier with `/loopwright-flow`.
+
+| Tier | Sample task |
+|---|---|
+| small | Rename a helper function and update its callers |
+| standard | Add a small utility with clear input/output rules (for example a slug generator with edge cases) |
+| large | Add a feature spanning two or three separable modules (for example a CLI flag plus config plus output formatting) |
+
+For each run, check:
+
+- [ ] Plan lists assumptions, tagged high or low impact
+- [ ] High-impact questions are asked one at a time (structured, via `AskUserQuestion`); low-impact ones arrive in one batch
+- [ ] The task file in `.loopwright/tasks/` is updated immediately after each answer
+- [ ] Tier, two-pass and fix-round cap are proposed and need your confirmation before any test or code is written
+- [ ] Standard/large: acceptance tests are written first, fail for the right reason, and are locked (`node .agents/loopwright/hooks/lw.mjs status` lists them)
+- [ ] During Build, editing a locked test file through the agent's edit tools is blocked by the guard
+- [ ] Ending a turn in Build/Review without a passing verdict is blocked by the stop gate (and lets go after 3 blocks, with a warning)
+- [ ] Review output matches `content/schemas/verdict.json`; only proven findings appear; undecided findings are put to you
+- [ ] Tamper with a locked test via shell (`sed -i`): Review fails on the hash mismatch
+- [ ] Large: each slice runs Test, Build, Review, then a whole-branch review runs
+- [ ] `/compact` mid-task: goal, stage, decisions and next step are reinjected
+- [ ] Done proposes `AGENTS.md`/`docs/agents/` edits (each needs approval) and drafts a commit message, and does not commit
+- [ ] Optional: set `crossModelReview` to `codex`; both verdicts are reported, and a missing CLI is skipped with a log note
+
+## Codex (WIP)
+
+Codex support is work in progress; only install and discovery checks are listed. No end-to-end run has been done.
+
+- [ ] `npx loopwright init` completes in a scratch repo
+- [ ] `.codex/agents/loopwright-{scout,tester,implementer,reviewer}.toml` exist
+- [ ] `.codex/config.toml` contains the `# BEGIN loopwright` block
+- [ ] `codex features list` shows `hooks` enabled
+- [ ] `$loopwright-flow` is discovered in Codex; hooks appear in `/hooks` for approval

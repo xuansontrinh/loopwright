@@ -1,145 +1,145 @@
-# coding-agents-toolings
+# loopwright
 
-Skills and toolings for AI coding agents. Install spec-driven development skills into any git repo, with optional repo-local Codex and Claude hook wiring.
+A Plan → Test → Build → Review → Done workflow for AI coding agents, installed into your repo as skills, subagents and hooks.
 
-## Quick Start
+Agents tend to bake silent assumptions into a plan, write tests to fit their own code, grade their own work, and forget agreed decisions after compaction. loopwright counters this with an **assumption ledger** (every assumption is stated; high-impact ones are asked one at a time), **isolated contexts** (a tester that never sees the implementation, a reviewer that starts blind), **enforced gates** (hooks block edits to locked tests and block finishing without a passing review), and **no document sprawl** (one short task file per task, kept locally; durable lessons go to your existing `AGENTS.md` only with your approval).
 
-```bash
-npx coding-agents-toolings init
-```
+## Support
 
-This installs five skills and sets up your repo:
+| Feature | Claude Code | Codex |
+|---|---|---|
+| Skills install | Supported, tested | WIP: installed, not tested end-to-end |
+| Subagents (scout, tester, implementer, reviewer) | Supported, tested | WIP: installed, not tested end-to-end |
+| Hook enforcement (locked-test guard, stop gate, context reinjection) | Supported, tested | WIP: installed, not tested end-to-end |
+| Structured questions | `AskUserQuestion` | Plain-text fallback (numbered options) |
+| Cross-model review (as the reviewer) | Supported, tested | WIP: untested |
+| Global install | Supported, tested | WIP: installed, not tested end-to-end |
 
-```
-.agents/skills/
-  spec-create/SKILL.md     # Create a spec + task breakdown
-  spec-update/SKILL.md     # Update spec before session end
-  spec-complete/SKILL.md   # Archive completed spec
-  spec-handoff/SKILL.md    # Generate a handoff summary for teammates
-  ide-mcp/SKILL.md         # Prefer JetBrains IDE MCP tools for code work when available
+**Codex support is work in progress.** Its behavior was derived from Codex source and CLI help; no real Codex session has been run against loopwright yet. Expect rough edges.
 
-.claude/skills -> ../.agents/skills   # Compatibility symlink for Claude Code and similar agent setups
-
-.gitignore                 # agent-specs/ added (local working state)
-```
-
-If you also want repo-local hooks for Codex and Claude, run:
+## Install
 
 ```bash
-npx coding-agents-toolings init --hook
+npx loopwright init            # into the current git repo (commit the result to share it)
+npx loopwright init --global   # into your user directories instead
+npx loopwright update          # refresh installed files to this version
+npx loopwright uninstall       # remove installed files
 ```
 
-That additionally writes:
+Requires Node >= 22.14. Repo mode needs a git repository; `--global` does not.
 
-```
-.codex/config.toml                    # Repo-local Codex hook config + codex_hooks feature flag
-.codex/hooks/ide-mcp-context.mjs      # Hook script for Codex
+| Flag | Effect |
+|---|---|
+| `--global` | Install into your home directory instead of the repo. Shows the planned changes and asks before touching user config. |
+| `--no-hook` | Skip hook wiring. Skills still work but nothing is enforced. |
+| `--no-symlink` | Do not create the `.claude/skills` symlink. |
+| `--dry-run` | Show what would change without writing. |
+| `--force` | Overwrite conflicts and skip confirmation prompts. |
+| `-v`, `--version` / `-h`, `--help` | Print version / help. |
 
-.claude/settings.json                 # Repo-local Claude hook config
-.claude/hooks/ide-mcp-context.mjs     # Hook script for Claude
-```
+### What gets written
 
-## Skills
+Repo install:
 
-### `/spec-create`
+- `.agents/skills/loopwright-{flow,plan,test,build,review,done}/SKILL.md`, and `.claude/skills` as a symlink to `../.agents/skills` (existing directories or other symlinks are prompted about unless `--force`)
+- `.claude/agents/loopwright-<role>.md` and `.codex/agents/loopwright-<role>.toml` for `scout`, `tester`, `implementer`, `reviewer`
+- `.agents/loopwright/` with `hooks/`, `prompts/reviewer.md`, `schemas/verdict.json`
+- hook wiring (unless `--no-hook`): entries in `.claude/settings.json`, and a `# BEGIN loopwright` ... `# END loopwright` block in `.codex/config.toml`
+- `.loopwright/` (in the main worktree) with its own `.gitignore` (`*`), `config.json`, `manifest.json`, `tasks/`, `state/`
 
-Creates a structured spec and task breakdown for a new development task.
+Global install writes the equivalents to `~/.agents/skills`, `~/.claude/skills` (copies, not a symlink), `~/.claude/agents`, `~/.codex/agents`, `~/.claude/settings.json`, `~/.codex/config.toml`, and `~/.config/loopwright/` (hooks, prompts, schemas, `config.json`, `manifest.json`).
 
-Produces a compact working set in `agent-specs/active/<task-name>/`:
+## The loop
 
-- **`<task-name>-plan.md`** — Concise landing page with requirements, acceptance criteria, design, decisions, risks, and a cumulative multi-codebase map
-- **`<task-name>-tasks.md`** — Phased checklist with effort estimates (S/M/L/XL), per-task acceptance criteria, dependency tracking, and a handoff section
+1. **Plan** (main thread): a read-only scout investigates the repo; you get an assumption ledger. High-impact assumptions are asked one at a time, low-impact ones in a single batch to skim and override. The agent proposes tier, two-pass review, fix-round cap and check commands (lint/typecheck/test), and you confirm. Each answer is written to the task file immediately. You can import an existing spec or plan as input.
+2. **Test**: a tester subagent writes acceptance tests from the confirmed criteria, confirms they fail for the right reason, and locks them by file hash. It sees no implementation.
+3. **Build**: an implementer subagent makes the locked tests pass and adds its own unit tests. Comments explain why, briefly, never what.
+4. **Review**: a reviewer subagent runs the checks, re-hashes the locked tests (a mismatch fails the review), and does a blind pass over the diff against your decisions, criteria, standards and codebase patterns. Only proven, high-impact findings are reported: confirmed ones block; unconfirmed but evidenced ones go to you as *undecided*; the rest are dropped (count logged). The verdict is bound to a fingerprint of the working tree, so any later change makes it stale. Optional second pass checks the implementer's claims.
+5. **Done** (main thread): proposes `AGENTS.md` / `docs/agents/` additions and prunes (each approved individually), and drafts a commit/PR message with the decisions and rejected options. It does not commit.
 
-Enforces a conciseness contract and a mandatory self-review pass so the spec stays small enough to read without burning the next agent's context window — cutting redundancy, not substance.
+Tiers:
 
-### `/spec-update`
+- **small**: Plan, Build, Review (blind pass only by default).
+- **standard**: Plan, Test, Build, Review.
+- **large**: Plan splits work into slices; each slice runs Test, Build, Review; then one whole-branch review.
 
-Updates an existing spec before context compaction or session end. Captures what git doesn't record:
+A failed review returns to Build for up to the fix-round cap (default 3), then stops and hands the open findings to you.
 
-- Rewrites the active plan/tasks in place so they stay concise and current — no separate session archive
-- Maintains the plan's Codebase Map with in-scope repos, paths, links, and re-entry commands
-- Folds rejected approaches, blockers, and gotchas into the right plan sections (Decisions, Risks, Handoff)
-- Marks tasks done/blocked, adds newly discovered tasks
-- Updates the handoff section with current focus, next step, primary repos/paths, and open questions
+## Commands
 
-### `/spec-complete`
+| Claude Code | Codex | Does |
+|---|---|---|
+| `/loopwright-flow` | `$loopwright-flow` | Run or resume the whole loop, stopping wherever you must decide |
+| `/loopwright-plan` | `$loopwright-plan` | Plan stage |
+| `/loopwright-test` | `$loopwright-test` | Test stage |
+| `/loopwright-build` | `$loopwright-build` | Build stage |
+| `/loopwright-review` | `$loopwright-review` | Review stage |
+| `/loopwright-done` | `$loopwright-done` | Done stage |
 
-Marks a task as done and archives it:
+Task files live in `.loopwright/tasks/<date>-<title>.md`: goal, decisions (tagged asked / batch-confirmed / overridden), assumptions, acceptance criteria, review log, open questions.
 
-- Verifies all tasks and acceptance criteria are met
-- Writes a completion summary with outcome and lessons learned
-- Moves the task from `agent-specs/active/` to `agent-specs/completed/`
-- Preserves the plan, tasks, and handoff files in the archive
+## Configuration
 
-### `/spec-handoff`
+`.loopwright/config.json` (global: `~/.config/loopwright/config.json`) is created with these defaults and never overwritten. `init`/`update` render the model settings into the generated agent files, so re-run `update` after editing.
 
-Generates a standalone handoff summary for sharing with teammates in Slack, PRs, or tickets:
-
-- Auto-runs `spec-update` first to ensure docs are current
-- Reads the spec, tasks, and git history to produce a prose summary
-- Uses the Codebase Map as the durable source of repos/paths/links, falling back to git state when extra context is needed
-- Outputs to the conversation **and** saves to `agent-specs/active/<task-name>/<task-name>-handoff.md`
-- Supports format variants via `--format` flag: `default`, `pr`, `slack`, `ticket`
-
-### `ide-mcp`
-
-Helps coding sessions prefer connected JetBrains IDE MCP servers such as IntelliJ IDEA, WebStorm, PyCharm, GoLand, Rider, PhpStorm, RubyMine, RustRover, CLion, DataGrip, or DataSpell when the prompt is clearly about source code work.
-
-- Uses the shared repo-local skill as the portable behavior contract
-- Can optionally add repo-local Codex and Claude hooks when you run `init --hook`
-- When hooks are enabled, adds extra Codex guardrails so a code-oriented turn keeps leaning on JetBrains MCP after the first successful IDE lookup instead of drifting immediately into broad shell search
-- Nudges the agent toward IDE-aware symbol lookup, navigation, usages, inspections, and refactors
-- Falls back to normal repo exploration with `rg`, file reads, and build/test commands when no IDE MCP server is connected
-- Does **not** provision MCP connections itself; it relies on the user's existing Codex, Claude, or JetBrains setup
-
-## Options
-
-```
-npx coding-agents-toolings init [options]
-
---force       Overwrite existing files without prompting
---dry-run     Show what would happen without writing anything
---no-symlink  Only write to .agents/skills/, skip .claude/skills symlink
---hook        Also install repo-local Codex and Claude hook setup
+```json
+{
+  "maxFixRounds": 3,
+  "crossModelReview": "off",
+  "docsDir": "docs/agents",
+  "models": {
+    "claude": { "scout": "opus", "tester": "sonnet", "implementer": "sonnet", "reviewer": "opus" },
+    "codex":  { "scout": "inherit", "tester": "inherit", "implementer": "inherit", "reviewer": "inherit" },
+    "crossModelReviewer": { "claude": "opus", "codex": "inherit" }
+  }
+}
 ```
 
-## How It Works
+- `maxFixRounds`: default fix-round cap; Plan may propose a lower one per task.
+- `crossModelReview`: `"off"`, `"codex"` or `"claude"`. When set, the review also runs the same reviewer prompt headlessly through the other CLI (`codex exec` or `claude -p`) and both verdicts must pass. A missing or failing CLI is skipped with a note in the review log; it never blocks.
+- `docsDir`: where Done puts longer standards docs linked from `AGENTS.md`.
+- `models`: per tool and role; tool-native aliases or full IDs, or `inherit` (the session model). Codex also accepts `models.codex.effort.<role>`. Editing generated agent files directly counts as a user modification and is kept on update.
+- Plan runs in your main thread, so it uses your session's model. Start the session on the model you want for planning.
 
-Skills are installed to `.agents/skills/` with a compatibility symlink from `.claude/skills/` for Claude Code and related agent environments. The `ide-mcp` skill is the shared, portable behavior layer. Hook installation is opt-in: when you run `init --hook`, both Codex and Claude get a repo-local `UserPromptSubmit` nudge, and Codex also gets repo-local tool-time guardrails so broad shell search is less likely to replace JetBrains MCP navigation too early in a code-oriented turn.
+## Enforcement and its limits
 
-This package does not write user-global client config such as `~/.codex/config.toml` or `~/.claude.json`, and it does not try to generate JetBrains MCP connection details. It only installs repo-local skills and repo-local hook/config files.
+Three hooks (plain Node scripts, no dependencies) are wired by default:
 
-Specs are written to `agent-specs/` which is automatically added to `.gitignore` since they are local working state, not committed artifacts.
+- **Locked-test guard** (PreToolUse): during Build, blocks edit tools on locked test files.
+- **Stop gate** (Stop): in Build or Review, blocks finishing unless a passing verdict matches the current working-tree fingerprint. It blocks at most 3 times per stage, then lets the stop through with a warning, so it cannot deadlock a session. It stands down while the agent is waiting for your decision.
+- **Context reinjection** (SessionStart after compaction): re-prints goal, stage, decisions and next step from the task file.
 
-### Directory Structure
+Limits, stated plainly:
 
-```
-your-repo/
-  .agents/skills/          # Skill definitions (committed)
-  .claude/skills           # Symlink -> ../.agents/skills (committed)
-  agent-specs/             # Local specs (gitignored)
-    active/                # In-progress tasks
-      my-feature/
-        my-feature-plan.md
-        my-feature-tasks.md
-        my-feature-handoff.md
-    completed/             # Archived tasks
-```
+- Shell edits (`sed -i`, redirects) are not intercepted. The review re-hashes locked tests and fails on any mismatch; that is the real backstop.
+- State fields such as `awaitingUser` and the history log are tamper-evident, not tamper-proof. A determined agent can write them; the aim is to catch drift, not adversaries.
+- Hooks fail open: if a hook crashes or state is unreadable it warns and allows, so a loopwright bug never bricks your session. Review checks remain authoritative.
+- With `--no-hook`, none of this is enforced.
 
-With `init --hook`, the repo also gets:
+### Codex trust step (WIP)
 
-```
-your-repo/
-  .claude/settings.json    # Repo-local Claude hook config (committed)
-  .claude/hooks/           # Hook scripts for Claude (committed)
-  .codex/config.toml       # Repo-local Codex config + hooks (committed)
-  .codex/hooks/            # Hook scripts for Codex (committed)
-```
+Codex requires you to trust the project and approve hooks. After `init`, open Codex in the repo and approve the loopwright hooks via `/hooks`. Until approved, hooks do not run. This path is untested end-to-end.
 
-## Requirements
+## Worktrees
 
-- Node.js >= 18
-- Must be run inside a git repository
+All worktrees of a repo share one `.loopwright/` in the main worktree (found via `git rev-parse --git-common-dir`); machine state is kept per worktree under `.loopwright/state/`. Task files therefore survive removing a linked worktree. Note that `git worktree remove` refuses to remove a worktree that contains untracked, non-ignored files; `.loopwright/` ignores itself so it does not trigger that, but your own stray files can.
+
+## Update and uninstall
+
+- `update` re-applies the current version using the manifest. A file you edited is kept (with a warning), not overwritten.
+- `uninstall` removes only manifest files whose content still matches what was installed, plus loopwright's own hook entries and Codex block. Modified files are kept. `.claude/settings.json` and `.codex/config.toml` are never deleted, only cleaned of loopwright entries. `.loopwright/tasks/` and config are never touched.
+- Both accept `--global`, `--dry-run`.
+
+## Migrating from coding-agents-toolings
+
+`npx loopwright init` detects the old install: `spec-create`, `spec-update`, `spec-complete`, `spec-handoff` and `ide-mcp` skill directories, the `ide-mcp-context.mjs` hook files and settings entries, and the `coding-agents-toolings ide-mcp` block in `.codex/config.toml`. It lists them and removes them only after you confirm (`--force` confirms for you). `agent-specs/` is left alone.
+
+## What loopwright never touches
+
+- `AGENTS.md` and `CLAUDE.md`: `init` never edits them. The Done stage may propose edits, applied only with your approval (if `CLAUDE.md` lacks `@AGENTS.md` it proposes the import rather than duplicating content).
+- Your `.gitignore`: `.loopwright/` ignores itself.
+- Your commits: the agent drafts messages but does not commit.
+- Anything under `.loopwright/tasks/` on update or uninstall.
 
 ## License
 
