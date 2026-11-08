@@ -35,19 +35,20 @@
 
 ## Prerequisites (user)
 
-- [ ] Install Codex CLI (needed for Task 1 spike items 1–3 and Task 15 dogfooding) — or accept doc-only verification for those items.
-- [ ] Install and authenticate `gh` (Task 16 repo rename) — or rename the repo yourself in GitHub settings.
+- [x] Codex CLI installed (codex-cli 0.167.0). **No Codex account**: never run model turns; verify Codex facts only via offline CLI introspection and upstream source/docs.
+- [x] `gh` installed (2.46.0). [ ] `gh auth login` (needed for Task 16).
 
 ### Task 1: Spike — verify platform facts (spec §9)
 
-Throwaway investigation; output is a filled **Spike results** section appended to this plan, plus edits to any **[SPIKE]** constant in later tasks.
+Throwaway investigation; output is a filled **Spike results** section appended to this plan, plus edits to any **[SPIKE]** constant in later tasks. Codex methods are limited to offline introspection (`codex features list`, `codex doctor`, `codex debug prompt-input`, `--help`) and reading upstream `openai/codex` source/docs at the tag matching `codex --version`. Each result is labelled `verified (cli)`, `verified (source)`, or `docs only`.
 
-- [ ] **Step 1: Codex hook config** — in a scratch git repo, wire a trivial `Stop` hook that appends to a file, once via `.codex/hooks.json` and once via `[hooks]` in `.codex/config.toml`; trust the project and approve in `/hooks`. Record which loads, the feature flag name (`[features] hooks` vs `codex_hooks`), and whether `PostCompact` stdout reaches the model context.
-- [ ] **Step 2: Codex PreToolUse for edits** — log the stdin payload of a `PreToolUse` hook while Codex edits a file. Record the tool name (expected `apply_patch`), where the target path(s) appear, and the block response that works (`{"decision":"block","reason":…}` vs exit code 2).
-- [ ] **Step 3: Codex `request_user_input`** — check if it is callable outside `/plan` mode. Record yes/no.
-- [ ] **Step 4: Claude hooks** — with `claude` 2.1.x: confirm PreToolUse deny via exit code 2 + stderr for `Edit|Write|MultiEdit`; confirm Stop block via exit 2 and inspect `stop_hook_active` in the payload on the second Stop; confirm `SessionStart` matcher `compact` stdout is injected.
-- [ ] **Step 5: Worktree removal** — `git worktree add ../wt && touch ../wt/ignored.txt` (with `ignored.txt` in `.gitignore`), then `git worktree remove ../wt`. Record whether it succeeds and deletes the file.
-- [ ] **Step 6: Record** — append `## Spike results` (one line per item: fact, evidence) to this plan; update **[SPIKE]** constants in Tasks 6, 9, 10, 11; commit `docs: record loopwright spike results`.
+Already observed (codex-cli 0.167.0, `codex features list`): `hooks` stable, default true; `default_mode_request_user_input` under development, default false (→ item 3 answered: Plan-mode only by default).
+
+- [ ] **Step 1: Codex hook config** — in a scratch repo, write a `Stop` hook once in `.codex/hooks.json` and once as `[hooks]` in `.codex/config.toml`; run `codex doctor` (and `codex debug prompt-input` with a `SessionStart` hook that prints a marker) to see which config is loaded/validated and whether hook output reaches the prompt. Confirm from source: config location precedence, whether `[features] hooks` must be set, the project-trust/approval requirement, and `PostCompact` output semantics.
+- [ ] **Step 2: Codex PreToolUse for edits** — from source: the hook stdin payload schema, the tool name for file edits (expected `apply_patch`) and where patch paths appear, and the block response format (`{"decision":"block","reason":…}` vs exit code 2).
+- [ ] **Step 3: Claude hooks** — with the local `claude` 2.1.x in a scratch repo (real runs OK): confirm PreToolUse deny via exit 2 + stderr for `Edit|Write|MultiEdit`; Stop block via exit 2 and `stop_hook_active` on the repeated Stop; `SessionStart` matcher `compact` stdout injection (doc-confirm if compaction can't be triggered cheaply).
+- [ ] **Step 4: Worktree removal** — `git worktree add ../wt`, create an ignored file there, `git worktree remove ../wt`; record whether it succeeds and deletes the file.
+- [ ] **Step 5: Record** — append `## Spike results` (one line per item: fact, evidence label, source link/command) to this plan; update **[SPIKE]** constants in Tasks 6, 9, 10; commit `docs: record loopwright spike results`. Anything left `docs only` for Codex is listed as a dogfood risk in Task 15.
 
 ### Task 2: Toolchain, CLI skeleton, remove old product
 
@@ -292,7 +293,7 @@ Throwaway investigation; output is a filled **Spike results** section appended t
 ### Task 15: Dogfood (manual, with user)
 
 - [ ] **Step 1:** `npm run build && node dist/cli.js init --force` in a scratch repo; run the checklist in Claude Code; record failures as issues/tasks.
-- [ ] **Step 2:** Same in Codex (requires prerequisite).
+- [ ] **Step 2:** Codex: no account available — run `init` in a scratch repo, then `codex doctor` and `codex debug prompt-input` to confirm skills, agents and hooks are discovered; full Codex dogfooding is deferred until someone with an account runs the checklist (README notes Codex support as lighter-tested).
 - [ ] **Step 3:** Fix what the checklist exposes (each fix through the normal test-first cycle); commit per fix.
 
 ### Task 16: Rename and release
