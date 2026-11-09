@@ -160,7 +160,7 @@ describe('content', () => {
       'loopwright-review': [
         'lw.mjs" stage review', 'Blocking', 'Undecided', 'crossAgentReview', 'crossAgentReviewer', 'verdict pass',
         'verdict fail', '{{LW_HOME}}/prompts/reviewer.md', '{{LW_HOME}}/schemas/verdict.json', 'structured_output',
-        'LOOPWRIGHT_HOOKS=off codex exec --sandbox read-only --output-schema', 'LOOPWRIGHT_HOOKS=off claude -p', '--json-schema', 'implementer report', 'Review log', 'whole-branch',
+        'LOOPWRIGHT_HOOKS=off codex exec --sandbox read-only --output-schema', 'LOOPWRIGHT_HOOKS=off claude -p', '--effort', '--json-schema', 'implementer report', 'Review log', 'whole-branch',
         'lw.mjs" await-user', 'lw.mjs" resume', 'Second pass.', '--allowedTools', '--disallowedTools', ' -- "$PROMPT"', '-o ', 'sandbox',
       ],
       'loopwright-done': ['AGENTS.md', 'docs/agents', '@AGENTS.md', 'do not commit', 'status: done', 'lw.mjs" done', 'rejected'],

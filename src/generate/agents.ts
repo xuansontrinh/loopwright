@@ -28,10 +28,11 @@ export function parseAgentSource(role: string, md: string): AgentSource {
   };
 }
 
-export function renderClaudeAgent(src: AgentSource, model: string): string {
+export function renderClaudeAgent(src: AgentSource, model: string, effort?: string): string {
   const lines = ['---', `name: ${src.name}`, `description: ${src.description}`];
   if (src.tools) lines.push(`tools: ${src.tools}`);
   if (model !== 'inherit') lines.push(`model: ${model}`);
+  if (effort) lines.push(`effort: ${effort}`);
   lines.push('---', '', src.body, '');
   return lines.join('\n');
 }

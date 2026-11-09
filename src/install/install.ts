@@ -101,7 +101,7 @@ export async function installAll(
     if (!f.endsWith('.md')) continue;
     const role = basename(f, '.md') as Role;
     const src = parseAgentSource(role, renderTemplate(readContent(`agents/${f}`), vars));
-    await put(join(targets.claudeAgentsDir, `${src.name}.md`), renderClaudeAgent(src, config.models.claude[role] ?? 'inherit'));
+    await put(join(targets.claudeAgentsDir, `${src.name}.md`), renderClaudeAgent(src, config.models.claude[role] ?? 'inherit', config.models.claude.effort?.[role]));
     await put(
       join(targets.codexAgentsDir, `${src.name}.toml`),
       renderCodexAgent(src, config.models.codex[role] ?? 'inherit', config.models.codex.effort?.[role]),

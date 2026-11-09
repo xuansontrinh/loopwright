@@ -94,10 +94,10 @@ Global installs read `~/.config/loopwright/config.json` if you create it (it is 
   "crossAgentReview": "off",
   "docsDir": "docs/agents",
   "models": {
-    "claude": { "scout": "opus", "tester": "sonnet", "implementer": "sonnet", "reviewer": "opus" },
+    "claude": { "scout": "opus", "tester": "sonnet", "implementer": "sonnet", "reviewer": "opus", "effort": { "scout": "medium", "tester": "medium", "implementer": "medium", "reviewer": "high" } },
     "codex":  { "scout": "inherit", "tester": "inherit", "implementer": "inherit", "reviewer": "inherit" },
     "junie":  { "scout": "opus", "tester": "sonnet", "implementer": "sonnet", "reviewer": "gpt", "effort": { "scout": "medium", "tester": "medium", "implementer": "medium", "reviewer": "high" } },
-    "crossAgentReviewer": { "claude": "opus", "codex": "inherit" }
+    "crossAgentReviewer": { "claude": "opus", "codex": "inherit", "effort": { "claude": "high" } }
   }
 }
 ```
@@ -105,7 +105,7 @@ Global installs read `~/.config/loopwright/config.json` if you create it (it is 
 - `maxFixRounds`: default fix-round cap; Plan may propose a lower one per task.
 - `crossAgentReview`: `"off"`, `"codex"` or `"claude"`. When set, the review also runs the same reviewer prompt headlessly through the other CLI (`codex exec` or `claude -p`) and both verdicts must pass. A missing or failing CLI is skipped with a note in the review log; it never blocks.
 - `docsDir`: where Done puts longer standards docs linked from `AGENTS.md`.
-- `models`: per tool and role; tool-native aliases or full IDs, or `inherit` (the session model). Codex and Junie also accept `models.<tool>.effort.<role>`. Editing generated agent files directly counts as a user modification and is kept on update.
+- `models`: per tool and role; tool-native aliases or full IDs, or `inherit` (the session model). All three tools accept `models.<tool>.effort.<role>`; an empty string omits it. Claude accepts `low`, `medium`, `high`, `xhigh`, `max` (rendered as `effort:` in the agent frontmatter); Junie also accepts `minimal`; Codex values are passed through unvalidated. `models.crossAgentReviewer.effort.claude` (default `high`) is passed as `--effort` to the headless `claude -p` reviewer. Editing generated agent files directly counts as a user modification and is kept on update.
 - Plan runs in your main thread, so it uses your session's model. Start the session on the model you want for planning.
 
 ## Enforcement and its limits

@@ -7,7 +7,13 @@
       "scout": "opus",
       "tester": "sonnet",
       "implementer": "sonnet",
-      "reviewer": "opus"
+      "reviewer": "opus",
+      "effort": {
+        "scout": "medium",
+        "tester": "medium",
+        "implementer": "medium",
+        "reviewer": "high"
+      }
     },
     "codex": {
       "scout": "inherit",
@@ -29,7 +35,10 @@
     },
     "crossAgentReviewer": {
       "claude": "opus",
-      "codex": "inherit"
+      "codex": "inherit",
+      "effort": {
+        "claude": "high"
+      }
     }
   }
 }

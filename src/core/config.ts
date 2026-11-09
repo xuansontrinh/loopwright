@@ -7,10 +7,10 @@ export interface LoopwrightConfig {
   crossAgentReview: 'off' | 'codex' | 'claude';
   docsDir: string;
   models: {
-    claude: Record<Role, string>;
+    claude: Record<Role, string> & { effort?: Partial<Record<Role, string>> };
     codex: Record<Role, string> & { effort?: Partial<Record<Role, string>> };
     junie: Record<Role, string> & { effort?: Partial<Record<Role, string>> };
-    crossAgentReviewer: { claude: string; codex: string };
+    crossAgentReviewer: { claude: string; codex: string; effort?: { claude?: string } };
   };
 }
 
@@ -19,7 +19,13 @@ export const DEFAULT_CONFIG: LoopwrightConfig = {
   crossAgentReview: 'off',
   docsDir: 'docs/agents',
   models: {
-    claude: { scout: 'opus', tester: 'sonnet', implementer: 'sonnet', reviewer: 'opus' },
+    claude: {
+      scout: 'opus',
+      tester: 'sonnet',
+      implementer: 'sonnet',
+      reviewer: 'opus',
+      effort: { scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' },
+    },
     codex: { scout: 'inherit', tester: 'inherit', implementer: 'inherit', reviewer: 'inherit' },
     junie: {
       scout: 'opus',
@@ -28,7 +34,7 @@ export const DEFAULT_CONFIG: LoopwrightConfig = {
       reviewer: 'gpt',
       effort: { scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' },
     },
-    crossAgentReviewer: { claude: 'opus', codex: 'inherit' },
+    crossAgentReviewer: { claude: 'opus', codex: 'inherit', effort: { claude: 'high' } },
   },
 };
 
@@ -43,6 +49,17 @@ function merge(base: unknown, over: unknown): unknown {
   return out;
 }
 
+const CLAUDE_EFFORT = ['low', 'medium', 'high', 'xhigh', 'max'];
+const JUNIE_EFFORT = ['minimal', ...CLAUDE_EFFORT];
+
+function validateEffort(path: string, key: string, values: unknown, allowed: string[]): void {
+  if (!isPlainObject(values)) return;
+  for (const [role, v] of Object.entries(values)) {
+    if (v === '' || (typeof v === 'string' && allowed.includes(v))) continue;
+    throw new Error(`Invalid ${key}.${role} in ${path}: ${JSON.stringify(v)} (allowed: ${allowed.join(', ')}, or "")`);
+  }
+}
+
 export function readConfig(path: string): LoopwrightConfig {
   if (!existsSync(path)) return structuredClone(DEFAULT_CONFIG);
   let parsed: unknown;
@@ -51,5 +68,10 @@ export function readConfig(path: string): LoopwrightConfig {
   } catch (e) {
     throw new Error(`Invalid JSON in ${path}: ${(e as Error).message}`);
   }
-  return merge(structuredClone(DEFAULT_CONFIG), parsed) as LoopwrightConfig;
+  const config = merge(structuredClone(DEFAULT_CONFIG), parsed) as LoopwrightConfig;
+  const m = config.models;
+  validateEffort(path, 'models.claude.effort', m.claude?.effort, CLAUDE_EFFORT);
+  validateEffort(path, 'models.junie.effort', m.junie?.effort, JUNIE_EFFORT);
+  validateEffort(path, 'models.crossAgentReviewer.effort', m.crossAgentReviewer?.effort, CLAUDE_EFFORT);
+  return config;
 }
