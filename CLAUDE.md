@@ -29,7 +29,7 @@ Releases: `main` is PR-only; a release is a merged PR bumping `package.json` `ve
   - `skills/loopwright-{flow,plan,test,build,review,done}/SKILL.md` — stage behavior lives here.
   - `agents/<role>.md` — single source per subagent role (Claude format); `src/generate/agents.ts` renders `.claude/agents/*.md` and `.codex/agents/*.toml` with models from config.
   - `hooks/*.mjs` — plain Node scripts runnable without a build (`guard-locked-tests`, `stop-gate`, `reinject-context`, plus `lib.mjs` and the `lw.mjs` state tool the skills call). They fail open, and exit 0 silently under `LOOPWRIGHT_HOOKS=off`. `lw.mjs start` creates `.loopwright/` when missing (global installs, fresh clones) from `hooks/default-config.json`, which a test pins equal to `DEFAULT_CONFIG` in `src/core/config.ts`.
-  - `prompts/reviewer.md`, `schemas/verdict.json` — the reviewer procedure and verdict schema, also used for headless cross-model review.
+  - `prompts/reviewer.md`, `schemas/verdict.json` — the reviewer procedure and verdict schema, also used for headless cross-agent review.
 - `src/cli.ts` — `node:util` `parseArgs` dispatch to `src/commands/{init,update,uninstall}.ts`.
 - `src/core/` — `targets.ts` (repo vs global paths; `.loopwright/` lives in the main worktree), `config.ts` (`DEFAULT_CONFIG`), `manifest.ts` + `writer.ts` (hash manifest; all writes are idempotent and honor `dryRun`; user-edited files are kept).
 - `src/install/` — `install.ts` orchestrates; `claude-settings.ts` merges hooks into JSON, `codex-config.ts` upserts the `# BEGIN/END loopwright` TOML block, `symlink.ts` handles `.claude/skills`, `loopwright-dir.ts` scaffolds `.loopwright/`.
@@ -42,3 +42,4 @@ Releases: `main` is PR-only; a release is a merged PR bumping `package.json` `ve
 - Never write user-global config except in `--global` mode, and never delete settings files, `.loopwright/tasks/`, or `AGENTS.md`/`CLAUDE.md` content.
 - Junie CLI hooks run with `cwd=~/.junie`: find the repo from the payload's `project_path`; edits arrive as `apply_patch` with `tool_input.patch`; hooks in a project's `.junie/config.json` only run when passed with `--config-location` (or from `~/.junie/config.json` with `--global`).
 - Unstable or opt-in features go in the `--experimental` registry (`src/core/experimental.ts`), never as their own CLI flag; `all` expands to explicit names at invocation so future experiments are not enabled silently.
+- `AGENTS.md` is a symlink to `CLAUDE.md`: edit `CLAUDE.md` only; `sed -i` or a bulk search-and-replace over `AGENTS.md` turns the link into a regular file, so exclude it or use `--follow-symlinks`.

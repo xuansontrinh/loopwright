@@ -26,7 +26,7 @@ For each run, check:
 - [ ] Large: each slice runs Test, Build, Review, then a whole-branch review runs
 - [ ] `/compact` mid-task: goal, stage, decisions and next step are reinjected
 - [ ] Done proposes `AGENTS.md`/`docs/agents/` edits (each needs approval) and drafts a commit message, and does not commit
-- [ ] Optional: set `crossModelReview` to `codex`; both verdicts are reported, and a missing CLI is skipped with a log note
+- [ ] Optional: set `crossAgentReview` to `codex`; both verdicts are reported, and a missing CLI is skipped with a log note
 
 ## Codex (WIP)
 

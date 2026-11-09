@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { contentRoot, listContent, renderTemplate } from '../src/core/content.js';
 import { parseAgentSource } from '../src/generate/agents.js';
@@ -157,14 +158,14 @@ describe('content', () => {
       'loopwright-test': ['lw.mjs" stage test', 'lw.mjs" status', 'lockedTests', 'plan: confirmed'],
       'loopwright-build': ['lw.mjs" stage build', 'task file path', 'chat history', 'slice', 'plan: confirmed', 'lw.mjs" await-user', 'lw.mjs" resume', 'AskUserQuestion'],
       'loopwright-review': [
-        'lw.mjs" stage review', 'Blocking', 'Undecided', 'crossModelReview', 'crossModelReviewer', 'verdict pass',
+        'lw.mjs" stage review', 'Blocking', 'Undecided', 'crossAgentReview', 'crossAgentReviewer', 'verdict pass',
         'verdict fail', '{{LW_HOME}}/prompts/reviewer.md', '{{LW_HOME}}/schemas/verdict.json', 'structured_output',
         'LOOPWRIGHT_HOOKS=off codex exec --sandbox read-only --output-schema', 'LOOPWRIGHT_HOOKS=off claude -p', '--json-schema', 'implementer report', 'Review log', 'whole-branch',
         'lw.mjs" await-user', 'lw.mjs" resume', 'Second pass.', '--allowedTools', '--disallowedTools', ' -- "$PROMPT"', '-o ', 'sandbox',
       ],
       'loopwright-done': ['AGENTS.md', 'docs/agents', '@AGENTS.md', 'do not commit', 'status: done', 'lw.mjs" done', 'rejected'],
     };
-    it('cross-model claude allowlist permits only read-only lw.mjs subcommands, quoted and unquoted', () => {
+    it('cross-agent claude allowlist permits only read-only lw.mjs subcommands, quoted and unquoted', () => {
       const b = skill('loopwright-review');
       for (const sub of ['status', 'check-locks', 'fingerprint']) {
         expect(b).toContain(`Bash(node "{{LW_HOME}}/hooks/lw.mjs" ${sub})`);
@@ -188,5 +189,29 @@ describe('content', () => {
         for (const s of list) expect(b, `${n}: ${s}`).toContain(s);
       });
     }
+  });
+});
+
+describe('cross-agent rename', () => {
+  const root = new URL('../', import.meta.url).pathname;
+  const files = (dir: string): string[] =>
+    readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : [join(dir, n)]));
+
+  it('review skill uses the cross-agent names and heading', () => {
+    const b = skill('loopwright-review');
+    expect(b).toContain('**Cross-agent pass**');
+    expect(b).toContain('`models.crossAgentReviewer`');
+  });
+
+  it('README uses the new keys and support-table label', () => {
+    const r = readFileSync(root + 'README.md', 'utf8');
+    expect(r).toContain('"crossAgentReview": "off"');
+    expect(r).toContain('"crossAgentReviewer"');
+    expect(r).toContain('Cross-agent review');
+  });
+
+  it('no cross-model wording remains', () => {
+    const targets = [...files(root + 'src'), ...files(root + 'content'), root + 'README.md', root + 'CLAUDE.md', root + 'docs/dogfood-checklist.md'];
+    for (const f of targets) expect(readFileSync(f, 'utf8'), f).not.toMatch(/cross[-_ ]?model/i);
   });
 });

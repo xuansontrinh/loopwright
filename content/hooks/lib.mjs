@@ -93,7 +93,7 @@ export function fingerprint(cwd, baseCommit) {
   return h.digest('hex');
 }
 
-/** Hooks call this first: LOOPWRIGHT_HOOKS=off (e.g. a headless cross-model reviewer) disables them silently. */
+/** Hooks call this first: LOOPWRIGHT_HOOKS=off (e.g. a headless cross-agent reviewer) disables them silently. */
 export function exitIfHooksOff() {
   if (process.env.LOOPWRIGHT_HOOKS === 'off') process.exit(0);
 }

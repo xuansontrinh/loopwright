@@ -1,6 +1,6 @@
 {
   "maxFixRounds": 3,
-  "crossModelReview": "off",
+  "crossAgentReview": "off",
   "docsDir": "docs/agents",
   "models": {
     "claude": {
@@ -27,7 +27,7 @@
         "reviewer": "high"
       }
     },
-    "crossModelReviewer": {
+    "crossAgentReviewer": {
       "claude": "opus",
       "codex": "inherit"
     }

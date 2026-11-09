@@ -12,7 +12,7 @@ Agents tend to bake silent assumptions into a plan, write tests to fit their own
 | Subagents (scout, tester, implementer, reviewer) | Supported, tested | WIP: installed, not tested end-to-end | WIP: `.junie/agents` |
 | Hook enforcement (locked-test guard, stop gate, context reinjection) | Supported, tested | WIP: installed, not tested end-to-end | Experimental (`--experimental junie-hooks`, Early Access) |
 | Structured questions | `AskUserQuestion` | Plain-text fallback (numbered options) | Plain-text fallback |
-| Cross-model review (as the reviewer) | Supported, tested | WIP: untested | Not supported |
+| Cross-agent review (as the reviewer) | Supported, tested | WIP: untested | Not supported |
 | Global install | Supported, tested | WIP: installed, not tested end-to-end | WIP: `~/.junie/agents` |
 
 **Codex support is work in progress.** Its behavior was derived from Codex source and CLI help; no real Codex session has been run against loopwright yet. Expect rough edges.
@@ -91,19 +91,19 @@ Global installs read `~/.config/loopwright/config.json` if you create it (it is 
 ```json
 {
   "maxFixRounds": 3,
-  "crossModelReview": "off",
+  "crossAgentReview": "off",
   "docsDir": "docs/agents",
   "models": {
     "claude": { "scout": "opus", "tester": "sonnet", "implementer": "sonnet", "reviewer": "opus" },
     "codex":  { "scout": "inherit", "tester": "inherit", "implementer": "inherit", "reviewer": "inherit" },
     "junie":  { "scout": "opus", "tester": "sonnet", "implementer": "sonnet", "reviewer": "gpt", "effort": { "scout": "medium", "tester": "medium", "implementer": "medium", "reviewer": "high" } },
-    "crossModelReviewer": { "claude": "opus", "codex": "inherit" }
+    "crossAgentReviewer": { "claude": "opus", "codex": "inherit" }
   }
 }
 ```
 
 - `maxFixRounds`: default fix-round cap; Plan may propose a lower one per task.
-- `crossModelReview`: `"off"`, `"codex"` or `"claude"`. When set, the review also runs the same reviewer prompt headlessly through the other CLI (`codex exec` or `claude -p`) and both verdicts must pass. A missing or failing CLI is skipped with a note in the review log; it never blocks.
+- `crossAgentReview`: `"off"`, `"codex"` or `"claude"`. When set, the review also runs the same reviewer prompt headlessly through the other CLI (`codex exec` or `claude -p`) and both verdicts must pass. A missing or failing CLI is skipped with a note in the review log; it never blocks.
 - `docsDir`: where Done puts longer standards docs linked from `AGENTS.md`.
 - `models`: per tool and role; tool-native aliases or full IDs, or `inherit` (the session model). Codex and Junie also accept `models.<tool>.effort.<role>`. Editing generated agent files directly counts as a user modification and is kept on update.
 - Plan runs in your main thread, so it uses your session's model. Start the session on the model you want for planning.
@@ -122,7 +122,7 @@ Limits, stated plainly:
 - State fields such as `awaitingUser` and the history log are tamper-evident, not tamper-proof. A determined agent can write them; the aim is to catch drift, not adversaries.
 - Hooks fail open: if a hook crashes or state is unreadable it warns and allows, so a loopwright bug never bricks your session. Review checks remain authoritative.
 - With `--no-hook`, none of this is enforced.
-- Setting `LOOPWRIGHT_HOOKS=off` in a session's environment turns every loopwright hook into a silent no-op. The cross-model review sets it on the headless `claude -p` / `codex exec` reviewer so that session is not gated.
+- Setting `LOOPWRIGHT_HOOKS=off` in a session's environment turns every loopwright hook into a silent no-op. The cross-agent review sets it on the headless `claude -p` / `codex exec` reviewer so that session is not gated.
 
 ### Codex trust step (WIP)
 

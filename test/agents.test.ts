@@ -67,3 +67,11 @@ describe('readConfig', () => {
     expect(() => readConfig(p)).toThrow(p);
   });
 });
+
+describe('DEFAULT_CONFIG cross-agent keys', () => {
+  it('uses crossAgent* names with unchanged defaults', () => {
+    expect(DEFAULT_CONFIG.crossAgentReview).toBe('off');
+    expect(DEFAULT_CONFIG.models.crossAgentReviewer).toEqual({ claude: 'opus', codex: 'inherit' });
+    expect(JSON.stringify(DEFAULT_CONFIG)).not.toMatch(/crossModel/);
+  });
+});
