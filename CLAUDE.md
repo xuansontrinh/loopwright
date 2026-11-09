@@ -19,9 +19,9 @@ npm run dev -- init --dry-run     # build and run CLI on cwd
 
 Unit tests import `src/`. E2E tests spawn `dist/cli.js` in temp git repos; hook tests spawn `content/hooks/*.mjs`. Rebuild before running vitest directly, or e2e uses stale output.
 
-CI: `.github/workflows/ci.yml` runs typecheck + tests on every PR and push to `main`, on Node 22.14 (`engines` floor), 24, 26. `.github/dependabot.yml` opens weekly, cooldown-delayed PRs for npm and Actions. Pin actions to commit SHAs with a `# vX.Y.Z` comment; keep `npm ci --ignore-scripts`. See README.md → "Dependencies and supply chain".
+CI: `.github/workflows/ci.yml` runs typecheck + tests on every PR and push to `main`, on Node 22.14 (`engines` floor), 24, 26. `.github/dependabot.yml` opens weekly, cooldown-delayed PRs for npm and Actions. Pin actions to commit SHAs with a `# vX.Y.Z` comment; keep `npm ci --ignore-scripts`. See docs/releasing.md → "Dependencies and supply chain".
 
-Releases: `main` is PR-only. Release = merged PR bumping `package.json` `version` (`npm version patch --no-git-tag-version`). After `ci.yml` passes on `main`, `.github/workflows/publish.yml` (`workflow_run`) runs for a version with no GitHub release: `npm stage publish` via OIDC (skipped if already on npm), then creates the `vX.Y.Z` tag and GitHub release. A maintainer approves the staged version on npmjs.com with 2FA. See README.md → "Releasing (maintainers)".
+Releases: `main` is PR-only. Release = merged PR bumping `package.json` `version` (`npm version patch --no-git-tag-version`). After `ci.yml` passes on `main`, `.github/workflows/publish.yml` (`workflow_run`) runs for a version with no GitHub release: `npm stage publish` via OIDC (skipped if already on npm), then creates the `vX.Y.Z` tag and GitHub release. A maintainer approves the staged version on npmjs.com with 2FA. See docs/releasing.md.
 
 ## Architecture
 
@@ -37,6 +37,7 @@ Releases: `main` is PR-only. Release = merged PR bumping `package.json` `version
 ## Conventions
 
 - Content phrase assertions live in `test/content.test.ts` and `test/agents.test.ts`. Change them with any `content/` wording change.
+- Docs (`README.md`, `docs/*.md`): follow `docs/writing-documentation-guidelines.md` and re-read it before any docs change. Essentials: README is a landing page (what/why, then a short tested quick start, then links); reference detail lives in `docs/`; never mix tutorial, how-to, reference and explanation in one section; every command must work as written; keep maintainer material out of the user path. Test phrase assertions read `README.md` + `docs/configuration.md`; move assertions with the text.
 - Keep `README.md`, `HELP` in `src/cli.ts`, and the install summary in `src/commands/init.ts` in sync with CLI flags and workflow behavior.
 - Relative imports in `src/` use `.js` extensions. No runtime deps (dev only).
 - Write user-global config only in `--global` mode. Never delete settings files, `.loopwright/tasks/`, or `AGENTS.md`/`CLAUDE.md` content.

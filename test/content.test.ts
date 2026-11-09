@@ -203,15 +203,15 @@ describe('cross-agent rename', () => {
     expect(b).toContain('`models.crossAgentReviewer`');
   });
 
-  it('README uses the new keys and support-table label', () => {
-    const r = readFileSync(root + 'README.md', 'utf8');
+  it('docs use the new keys and README the support-table label', () => {
+    const r = readFileSync(root + 'README.md', 'utf8') + readFileSync(root + 'docs/configuration.md', 'utf8');
     expect(r).toContain('"crossAgentReview": "off"');
     expect(r).toContain('"crossAgentReviewer"');
     expect(r).toContain('Cross-agent review');
   });
 
   it('no cross-model wording remains', () => {
-    const targets = [...files(root + 'src'), ...files(root + 'content'), root + 'README.md', root + 'CLAUDE.md', root + 'docs/dogfood-checklist.md'];
+    const targets = [...files(root + 'src'), ...files(root + 'content'), root + 'README.md', root + 'CLAUDE.md', ...readdirSync(root + 'docs').filter((n) => n.endsWith('.md')).map((n) => root + 'docs/' + n)];
     for (const f of targets) expect(readFileSync(f, 'utf8'), f).not.toMatch(/cross[-_ ]?model/i);
   });
 });
@@ -233,14 +233,14 @@ describe('effort profiles content', () => {
     expect(b).toMatch(/fall ?back|falls back|reject/i);
   });
   it('AC7: README documents profiles and the subagent-only caveat', () => {
-    const r = readFileSync(join(__dirname, '..', 'README.md'), 'utf8');
+    const r = readFileSync(join(__dirname, '..', 'README.md'), 'utf8') + readFileSync(join(__dirname, '..', 'docs', 'configuration.md'), 'utf8');
     expect(r).toContain('--profile');
     for (const n of ['lean', 'balanced', 'thorough', 'deep']) expect(r).toContain(n);
     expect(r).toMatch(/subagent/i);
     expect(r).toMatch(/main[- ]thread/i);
   });
   it('AC7: README says there is no profile config key and config.json stays free of it', () => {
-    const r = readFileSync(join(__dirname, '..', 'README.md'), 'utf8');
+    const r = readFileSync(join(__dirname, '..', 'README.md'), 'utf8') + readFileSync(join(__dirname, '..', 'docs', 'configuration.md'), 'utf8');
     expect(r).not.toMatch(/^- `profile`:/m);
     expect(r).toMatch(/no `profile` (config )?key|`profile` is not a config|no profile (config )?key|config\.json[^.\n]*(never|not|free of)[^.\n]*profile/i);
   });
