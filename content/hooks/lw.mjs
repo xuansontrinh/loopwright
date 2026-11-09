@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Loopwright state tool. Usage: node lw.mjs <cmd> [args]
-import { copyFileSync, existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { fingerprint, gitTopLevel, loopwrightDir, loopwrightPath, readState, repoRelative, sha256File, statePath, worktreeId, writeState } from './lib.mjs';
+import { PROFILES, fingerprint, gitTopLevel, loopwrightDir, loopwrightPath, readState, repoRelative, sha256File, statePath, worktreeId, writeState } from './lib.mjs';
 
 const STAGES = ['plan', 'test', 'build', 'review', 'done'];
 const cwd = process.cwd();
@@ -48,7 +48,7 @@ function ctx(create = false) {
     if (!create) fail('loopwright: no active task (no .loopwright directory yet; lw.mjs start creates it)');
     scaffold(path);
     dir = path;
-  }
+  } else if (create) scaffold(dir); // idempotent: seeds a config.json missing from an existing .loopwright/
   return { dir, id: worktreeId(cwd) };
 }
 
@@ -57,6 +57,31 @@ function requireState() {
   const state = readState(dir, id);
   if (!state) fail('loopwright: no active task (run lw.mjs start <task-file>)');
   return { dir, id, state };
+}
+
+/** Effort for a role: the task header's `profile:`, else the manifest's recorded profile, else balanced. */
+function effortFor(role) {
+  if (!Object.hasOwn(PROFILES.balanced, role)) fail(`loopwright: usage: effort <${Object.keys(PROFILES.balanced).join('|')}>`);
+  // Works before `start` (Plan's scout spawn): no task or repo state just means no header.
+  let name;
+  let dir = null;
+  try {
+    dir = loopwrightDir(cwd);
+    const state = dir && readState(dir, worktreeId(cwd));
+    if (state?.task && existsSync(join(dir, state.task))) {
+      name = /^profile:\s*(\S+)\s*$/m.exec(readFileSync(join(dir, state.task), 'utf8').split(/^## /m)[0])?.[1];
+    }
+  } catch {}
+  // Repo manifest first, then the global one (global installs record it under ~/.config/loopwright).
+  for (const m of [dir && join(dir, 'manifest.json'), join(homedir(), '.config', 'loopwright', 'manifest.json')]) {
+    if (name || !m || !existsSync(m)) continue;
+    try {
+      name = JSON.parse(readFileSync(m, 'utf8')).options?.profile;
+    } catch {}
+  }
+  name ??= 'balanced';
+  if (!Object.hasOwn(PROFILES, name)) fail(`loopwright: unknown profile '${name}' (allowed: ${Object.keys(PROFILES).join(', ')})`);
+  return PROFILES[name][role];
 }
 
 const gitOut = (args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -194,6 +219,9 @@ try {
       out(state);
       break;
     }
+    case 'effort':
+      process.stdout.write(effortFor(rest[0]) + '\n');
+      break;
     case 'status': {
       out(requireState().state);
       break;
@@ -208,7 +236,7 @@ try {
       break;
     }
     default:
-      fail('loopwright: usage: lw.mjs <dir|start|stage|lock|check-locks|fingerprint|verdict|await-user|resume|status|done>');
+      fail('loopwright: usage: lw.mjs <dir|start|stage|lock|check-locks|fingerprint|verdict|await-user|resume|status|effort|done>');
   }
 } catch (err) {
   fail(`loopwright: ${err instanceof Error ? err.message : String(err)}`);

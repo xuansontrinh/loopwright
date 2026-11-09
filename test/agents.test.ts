@@ -48,7 +48,11 @@ describe('readConfig', () => {
   const tmp = () => mkdtempSync(join(tmpdir(), 'lw-cfg-'));
 
   it('returns default when missing', () => {
-    expect(readConfig(join(tmp(), 'nope.json'))).toEqual(DEFAULT_CONFIG);
+    const c = readConfig(join(tmp(), 'nope.json'));
+    expect(c.models.claude.effort).toEqual({ scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' });
+    expect({ ...c, models: { ...c.models, claude: { ...c.models.claude, effort: undefined }, codex: { ...c.models.codex, effort: undefined }, junie: { ...c.models.junie, effort: undefined }, crossAgentReviewer: { ...c.models.crossAgentReviewer, effort: undefined } } }).toEqual(
+      JSON.parse(JSON.stringify({ ...DEFAULT_CONFIG, models: { ...DEFAULT_CONFIG.models, claude: { ...DEFAULT_CONFIG.models.claude, effort: undefined }, codex: { ...DEFAULT_CONFIG.models.codex, effort: undefined }, junie: { ...DEFAULT_CONFIG.models.junie, effort: undefined }, crossAgentReviewer: { ...DEFAULT_CONFIG.models.crossAgentReviewer, effort: undefined } } })),
+    );
   });
 
   it('merges partial config', () => {
@@ -71,7 +75,7 @@ describe('readConfig', () => {
 describe('DEFAULT_CONFIG cross-agent keys', () => {
   it('uses crossAgent* names with unchanged defaults', () => {
     expect(DEFAULT_CONFIG.crossAgentReview).toBe('off');
-    expect(DEFAULT_CONFIG.models.crossAgentReviewer).toEqual({ claude: 'opus', codex: 'inherit', effort: { claude: 'high' } });
+    expect(DEFAULT_CONFIG.models.crossAgentReviewer).toEqual({ claude: 'opus', codex: 'inherit' });
     expect(JSON.stringify(DEFAULT_CONFIG)).not.toMatch(/crossModel/);
   });
 });

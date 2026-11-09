@@ -35,6 +35,7 @@ export function withRecordedOptions(opts: CommandOptions, recorded: Manifest['op
     hook: opts.explicit?.hook ? opts.hook : recorded.hook,
     symlink: opts.explicit?.symlink ? opts.symlink : recorded.symlink,
     experimental: opts.explicit?.experimental ? opts.experimental : (recorded.experimental ?? []),
+    profile: opts.explicit?.profile ? opts.profile : recorded.profile,
   };
 }
 
@@ -64,7 +65,7 @@ export async function runInstall(opts: CommandOptions, doneVerb: string, isInit 
       return 1;
     }
     if (targets.mode === 'repo' && targets.stateDir) scaffoldLoopwrightDir(targets.stateDir, opts.dryRun);
-    const config = readConfig(targets.configPath);
+    const config = readConfig(targets.configPath, opts.profile);
 
     if (targets.mode === 'global' && !opts.dryRun && !opts.force) {
       log.info('The following changes would be made to your user configuration:');
@@ -79,12 +80,13 @@ export async function runInstall(opts: CommandOptions, doneVerb: string, isInit 
 
     const writer = makeWriter(targets, opts);
     const changed = await installAll(targets, writer, config, opts, link);
-    if (!opts.dryRun) writeManifest(targets.manifestPath, { ...writer.result(), options: { hook: opts.hook, symlink: opts.symlink, ...(opts.experimental?.length ? { experimental: opts.experimental } : {}) } });
+    if (!opts.dryRun) writeManifest(targets.manifestPath, { ...writer.result(), options: { hook: opts.hook, symlink: opts.symlink, ...(opts.experimental?.length ? { experimental: opts.experimental } : {}), ...(opts.profile ? { profile: opts.profile } : {}) } });
 
     if (!changed) log.success('loopwright is already up to date.');
     else if (!opts.dryRun) log.success(`loopwright ${doneVerb}.`);
     if (targets.mode === 'repo' && opts.hook) log.info('Codex: trust this project and approve loopwright hooks via /hooks.');
     log.info('Junie (WIP/EAP): subagents installed to .junie/agents; skills are read from .agents/skills.');
+    if (opts.profile) log.info(`Effort profile: ${opts.profile}. Claude Code can also set it per task at Plan; run \`npx loopwright update\` after changing it.`);
     for (const f of opts.experimental ?? []) {
       log.warn(`Experimental feature "${f}" is unstable and may change or break.`);
       if (f === 'junie-hooks') {

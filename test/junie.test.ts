@@ -24,8 +24,8 @@ describe('AC1: junie config defaults', () => {
   it('AC1: DEFAULT_CONFIG.models.junie has D9 defaults', () => {
     expect(DEFAULT_CONFIG.models.junie).toMatchObject({
       scout: 'opus', tester: 'sonnet', implementer: 'sonnet', reviewer: 'gpt',
-      effort: { scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' },
     });
+    expect((DEFAULT_CONFIG.models.junie as any).effort).toBeUndefined();
   });
   it('AC1: default-config.json deep-equals DEFAULT_CONFIG', () => {
     expect(JSON.parse(read('../content/hooks/default-config.json'))).toEqual(DEFAULT_CONFIG);

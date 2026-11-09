@@ -23,7 +23,7 @@ Plan runs in this main thread. You state assumptions; the user decides. Do not e
 
 ## 2. Scout
 
-Before writing any assumption, spawn the `loopwright-scout` subagent and wait for its result. Give it only the goal text or the spec path.
+Before writing any assumption, spawn the `loopwright-scout` subagent and wait for its result. Give it only the goal text or the spec path. On Claude Code pass `effort` = the output of `node "{{LW_HOME}}/hooks/lw.mjs" effort scout` on the spawn; if the spawn rejects `effort`, fall back to spawning without it (the agent file's effort applies).
 Never ask the user a question the repo can answer. If the scout report leaves a repo fact open, look it up yourself or spawn the `loopwright-scout` subagent and wait for its result again with that one question.
 
 ## 3. Assumption ledger
@@ -51,6 +51,7 @@ Write the result immediately: accepted → `[batch-confirmed]`, changed by the u
 
 In one message, propose and explain each in one line:
 - **tier**: `small` (one area, few files, low risk; no acceptance-test stage, the implementer writes tests for every AC), `standard` (default; tests first, then build), `large` (several separable parts; split into ordered slices, each run Test → Build → Review, then one whole-branch review).
+- **profile**: `lean` (trivial or mechanical), `balanced` (default; most tasks), `thorough` (cross-module work, risky changes), `deep` (major refactors, complex redesigns). It sets subagent effort for the task; the user confirms. Written as `profile: <name>` in the header; Test, Build and Review read it via `lw.mjs effort <role>`.
 - **two-pass** review on/off: on when the implementer's claims matter beyond what tests show (performance, migrations, concurrency, external APIs); otherwise off.
 - **fix-round cap**: default `maxFixRounds` from config; may be lower for small tasks.
 - **check commands**: exact lint / typecheck / test commands from the scout report.
@@ -74,6 +75,7 @@ status: active
 stage: plan
 plan: draft
 tier: <small|standard|large>
+profile: <lean|balanced|thorough|deep>
 two-pass: <on|off>
 fix-round cap: <n>
 checks: `<lint>` · `<typecheck>` · `<test>`

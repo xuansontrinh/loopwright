@@ -7,13 +7,7 @@
       "scout": "opus",
       "tester": "sonnet",
       "implementer": "sonnet",
-      "reviewer": "opus",
-      "effort": {
-        "scout": "medium",
-        "tester": "medium",
-        "implementer": "medium",
-        "reviewer": "high"
-      }
+      "reviewer": "opus"
     },
     "codex": {
       "scout": "inherit",
@@ -25,20 +19,11 @@
       "scout": "opus",
       "tester": "sonnet",
       "implementer": "sonnet",
-      "reviewer": "gpt",
-      "effort": {
-        "scout": "medium",
-        "tester": "medium",
-        "implementer": "medium",
-        "reviewer": "high"
-      }
+      "reviewer": "gpt"
     },
     "crossAgentReviewer": {
       "claude": "opus",
-      "codex": "inherit",
-      "effort": {
-        "claude": "high"
-      }
+      "codex": "inherit"
     }
   }
 }

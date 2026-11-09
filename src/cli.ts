@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import type { CommandOptions } from './core/options.js';
 import { EXPERIMENTAL_FEATURES, parseExperimental } from './core/experimental.js';
+import { PROFILE_NAMES } from './core/profiles.js';
 import { runInit } from './commands/init.js';
 import { runUpdate } from './commands/update.js';
 import { runUninstall } from './commands/uninstall.js';
@@ -24,6 +25,10 @@ Options:
                   Enable unstable features (comma-separated, or 'all'): ${EXPERIMENTAL_FEATURES.join(', ')}.
                   junie-hooks: wire Junie CLI hooks (Early Access; needs --config-location).
                   update keeps the recorded list; --experimental '' turns all off
+  --profile <name>
+                  Effort profile for the subagents: ${PROFILE_NAMES.join(', ')} (default balanced).
+                  Per-task profiles are chosen at Plan on Claude Code; this is the install-time
+                  default (and the only setting for Junie). update keeps the recorded profile
   --dry-run       Show what would change without writing
   --force         Overwrite conflicting files without prompting
   -v, --version   Print version
@@ -49,6 +54,7 @@ export async function main(argv: string[]): Promise<number> {
         'dry-run': { type: 'boolean', default: false },
         force: { type: 'boolean', default: false },
         experimental: { type: 'string' },
+        profile: { type: 'string' },
         version: { type: 'boolean', short: 'v', default: false },
         help: { type: 'boolean', short: 'h', default: false },
       },
@@ -77,6 +83,11 @@ export async function main(argv: string[]): Promise<number> {
     return 1;
   }
 
+  if (values.profile !== undefined && !PROFILE_NAMES.includes(values.profile)) {
+    console.error(`Invalid --profile ${JSON.stringify(values.profile)} (allowed: ${PROFILE_NAMES.join(', ')})`);
+    return 1;
+  }
+
   const opts: CommandOptions = {
     mode: values.global ? 'global' : 'repo',
     cwd: process.cwd(),
@@ -86,7 +97,8 @@ export async function main(argv: string[]): Promise<number> {
     hook: !values['no-hook'],
     symlink: !values['no-symlink'],
     experimental,
-    explicit: { hook: values['no-hook'], symlink: values['no-symlink'], experimental: values.experimental !== undefined },
+    profile: values.profile,
+    explicit: { hook: values['no-hook'], symlink: values['no-symlink'], experimental: values.experimental !== undefined, profile: values.profile !== undefined },
   };
 
   switch (command) {

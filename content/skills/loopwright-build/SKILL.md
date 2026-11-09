@@ -19,7 +19,7 @@ The implementer subagent writes the code. This thread dispatches it and hands th
 ## Steps
 
 1. `node "{{LW_HOME}}/hooks/lw.mjs" stage build`, and set `stage: build` in the task file header.
-2. Now spawn the `loopwright-implementer` subagent and wait for its result. The prompt contains only:
+2. Now spawn the `loopwright-implementer` subagent and wait for its result. On Claude Code pass `effort` = the output of `node "{{LW_HOME}}/hooks/lw.mjs" effort implementer` on the spawn; if the spawn rejects `effort`, fall back to spawning without it (the agent file's effort applies). The prompt contains only:
    - the absolute task file path (`<lw>/<task>`);
    - large tier: "Implement slice S<n> only.";
    - small tier (no locked tests): "This task has no locked acceptance tests. Write tests covering each acceptance criterion (AC…) as part of your change.";

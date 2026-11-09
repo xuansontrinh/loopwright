@@ -8,7 +8,7 @@ export interface Manifest {
   files: { path: string; sha256: string }[];
   config: { file: string; kind: 'claude-hooks' | 'codex-block' | 'junie-hooks' }[];
   /** Install options recorded at init/update, reused by update. */
-  options?: { hook: boolean; symlink: boolean; experimental?: string[] };
+  options?: { hook: boolean; symlink: boolean; experimental?: string[]; profile?: string };
 }
 
 export function sha256(text: string): string {

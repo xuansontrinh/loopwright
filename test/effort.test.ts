@@ -27,38 +27,24 @@ describe('AC1: renderClaudeAgent effort', () => {
 });
 
 describe('AC2: defaults', () => {
-  it('AC2: DEFAULT_CONFIG claude effort and cross-agent reviewer effort', () => {
+  it('AC2: DEFAULT_CONFIG carries no effort maps', () => {
     const m = DEFAULT_CONFIG.models as any;
-    expect(m.claude.effort).toEqual({ scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' });
-    expect(m.crossAgentReviewer.effort).toEqual({ claude: 'high' });
+    expect(m.claude.effort).toBeUndefined();
+    expect(m.crossAgentReviewer.effort).toBeUndefined();
   });
   it('AC2: default-config.json equals DEFAULT_CONFIG', () => {
     expect(JSON.parse(read('../content/hooks/default-config.json'))).toEqual(DEFAULT_CONFIG);
   });
 });
 
-describe('AC3: readConfig effort validation', () => {
-  it.each(['low', 'medium', 'high', 'xhigh', 'max', ''])('AC3: accepts claude effort %j', (v) => {
-    expect(() => readConfig(cfg({ models: { claude: { effort: { scout: v } } } }))).not.toThrow();
-  });
-  it.each(['minimal', 'none', 'bogus', 'inherit'])('AC3: rejects claude effort %j naming path and key', (v) => {
-    const p = cfg({ models: { claude: { effort: { scout: v } } } });
-    expect(() => readConfig(p)).toThrow(p);
-    expect(() => readConfig(p)).toThrow(/effort/);
-  });
-  it.each(['minimal', 'low', 'medium', 'high', 'xhigh', 'max', ''])('AC3: accepts junie effort %j', (v) => {
-    expect(() => readConfig(cfg({ models: { junie: { effort: { tester: v } } } }))).not.toThrow();
-  });
-  it.each(['none', 'bogus'])('AC3: rejects junie effort %j naming path', (v) => {
-    const p = cfg({ models: { junie: { effort: { tester: v } } } });
-    expect(() => readConfig(p)).toThrow(p);
-  });
-  it('AC3: codex effort is unvalidated', () => {
-    expect(() => readConfig(cfg({ models: { codex: { effort: { scout: 'whatever' } } } }))).not.toThrow();
-  });
-  it('AC3: rejects invalid cross-agent reviewer claude effort', () => {
-    const p = cfg({ models: { crossAgentReviewer: { effort: { claude: 'bogus' } } } });
-    expect(() => readConfig(p)).toThrow(p);
+describe('AC3: readConfig ignores per-role effort keys', () => {
+  it('AC3: invalid effort keys do not throw and are not applied', () => {
+    const c = readConfig(
+      cfg({ models: { claude: { effort: { scout: 'bogus' } }, junie: { effort: { tester: 'none' } }, crossAgentReviewer: { effort: { claude: 'bogus' } } } }),
+    );
+    expect(c.models.claude.effort).toEqual({ scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' });
+    expect(c.models.junie.effort?.tester).toBe('medium');
+    expect(c.models.crossAgentReviewer.effort?.claude).toBe('high');
   });
 });
 
@@ -71,7 +57,7 @@ describe('AC4: init/update write effort', () => {
     for (const role of ['scout', 'tester', 'implementer']) expect(frontmatter(agentFile(repo, role))).toMatch(/^effort: medium$/m);
     expect(frontmatter(agentFile(repo, 'reviewer'))).toMatch(/^effort: high$/m);
   });
-  it('AC4: update honors a changed config, and empty omits effort', () => {
+  it('AC4: update ignores effort keys in config.json', () => {
     const repo = createTempGitRepo('lw-eff-');
     const home = mkdtempSync(join(tmpdir(), 'lw-h-'));
     expect(runCli(repo, ['init'], { home }).exitCode).toBe(0);
@@ -82,16 +68,17 @@ describe('AC4: init/update write effort', () => {
     );
     const r = runCli(repo, ['update'], { home });
     expect(r.exitCode, r.stderr).toBe(0);
-    expect(frontmatter(agentFile(repo, 'scout'))).toMatch(/^effort: max$/m);
-    expect(agentFile(repo, 'reviewer')).not.toContain('effort:');
+    expect(frontmatter(agentFile(repo, 'scout'))).toMatch(/^effort: medium$/m);
+    expect(frontmatter(agentFile(repo, 'reviewer'))).toMatch(/^effort: high$/m);
   });
 });
 
 describe('AC5: review skill headless effort', () => {
-  it('AC5: headless claude -p call passes --effort from crossAgentReviewer.effort.claude', () => {
+  it('AC5: headless claude -p call passes --effort from lw.mjs effort reviewer', () => {
     const s = read('../content/skills/loopwright-review/SKILL.md');
     const line = s.split('\n').find((l) => l.includes('claude -p'))!;
     expect(line).toContain('--effort');
-    expect(s).toContain('crossAgentReviewer.effort.claude');
+    expect(s).toContain('output of `lw.mjs effort reviewer`');
+    expect(s).not.toContain('crossAgentReviewer.effort');
   });
 });

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { PROFILE_NAMES, resolveProfile } from './profiles.js';
 
 export type Role = 'scout' | 'tester' | 'implementer' | 'reviewer';
 
@@ -24,7 +25,6 @@ export const DEFAULT_CONFIG: LoopwrightConfig = {
       tester: 'sonnet',
       implementer: 'sonnet',
       reviewer: 'opus',
-      effort: { scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' },
     },
     codex: { scout: 'inherit', tester: 'inherit', implementer: 'inherit', reviewer: 'inherit' },
     junie: {
@@ -32,9 +32,8 @@ export const DEFAULT_CONFIG: LoopwrightConfig = {
       tester: 'sonnet',
       implementer: 'sonnet',
       reviewer: 'gpt',
-      effort: { scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' },
     },
-    crossAgentReviewer: { claude: 'opus', codex: 'inherit', effort: { claude: 'high' } },
+    crossAgentReviewer: { claude: 'opus', codex: 'inherit' },
   },
 };
 
@@ -49,29 +48,27 @@ function merge(base: unknown, over: unknown): unknown {
   return out;
 }
 
-const CLAUDE_EFFORT = ['low', 'medium', 'high', 'xhigh', 'max'];
-const JUNIE_EFFORT = ['minimal', ...CLAUDE_EFFORT];
-
-function validateEffort(path: string, key: string, values: unknown, allowed: string[]): void {
-  if (!isPlainObject(values)) return;
-  for (const [role, v] of Object.entries(values)) {
-    if (v === '' || (typeof v === 'string' && allowed.includes(v))) continue;
-    throw new Error(`Invalid ${key}.${role} in ${path}: ${JSON.stringify(v)} (allowed: ${allowed.join(', ')}, or "")`);
+/** Efforts come only from `profile` (--profile, default balanced); effort keys in the file are ignored. Models are never touched. */
+export function readConfig(path: string, profile?: string): LoopwrightConfig {
+  profile ??= 'balanced';
+  if (!PROFILE_NAMES.includes(profile)) {
+    throw new Error(`Invalid profile in ${path}: ${JSON.stringify(profile)} (allowed: ${PROFILE_NAMES.join(', ')})`);
   }
-}
-
-export function readConfig(path: string): LoopwrightConfig {
-  if (!existsSync(path)) return structuredClone(DEFAULT_CONFIG);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(readFileSync(path, 'utf8'));
-  } catch (e) {
-    throw new Error(`Invalid JSON in ${path}: ${(e as Error).message}`);
+  let config: unknown = structuredClone(DEFAULT_CONFIG);
+  if (existsSync(path)) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(readFileSync(path, 'utf8'));
+    } catch (e) {
+      throw new Error(`Invalid JSON in ${path}: ${(e as Error).message}`);
+    }
+    config = merge(config, parsed);
   }
-  const config = merge(structuredClone(DEFAULT_CONFIG), parsed) as LoopwrightConfig;
-  const m = config.models;
-  validateEffort(path, 'models.claude.effort', m.claude?.effort, CLAUDE_EFFORT);
-  validateEffort(path, 'models.junie.effort', m.junie?.effort, JUNIE_EFFORT);
-  validateEffort(path, 'models.crossAgentReviewer.effort', m.crossAgentReviewer?.effort, CLAUDE_EFFORT);
-  return config;
+  const efforts = resolveProfile(profile);
+  const m = (config as LoopwrightConfig).models;
+  m.claude.effort = { ...efforts };
+  m.junie.effort = { ...efforts };
+  m.codex.effort = { ...efforts };
+  m.crossAgentReviewer.effort = { claude: efforts.reviewer };
+  return config as LoopwrightConfig;
 }

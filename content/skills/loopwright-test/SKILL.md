@@ -19,7 +19,7 @@ The tester writes acceptance tests from the confirmed ACs and locks them. This t
 ## Steps
 
 1. `node "{{LW_HOME}}/hooks/lw.mjs" stage test`, and set `stage: test` in the task file header.
-2. Now spawn the `loopwright-tester` subagent and wait for its result. Give it only the absolute task file path (`<lw>/<task>`) and, for large tier, "Write tests only for slice S<n>: AC…". No chat history, no implementation hints.
+2. Now spawn the `loopwright-tester` subagent and wait for its result. Give it only the absolute task file path (`<lw>/<task>`) and, for large tier, "Write tests only for slice S<n>: AC…". No chat history, no implementation hints. On Claude Code pass `effort` = the output of `node "{{LW_HOME}}/hooks/lw.mjs" effort tester` on the spawn; if the spawn rejects `effort`, fall back to spawning without it (the agent file's effort applies).
 3. Verify the report:
    - `node "{{LW_HOME}}/hooks/lw.mjs" status` → `lockedTests` must contain every test file and fixture the report lists. A reported file missing from the locks → run `node "{{LW_HOME}}/hooks/lw.mjs" lock <file>` yourself.
    - Every in-scope AC has a test, and each failure excerpt shows the expected reason (missing behavior, missing module/export at the named path), not a syntax or setup error. Otherwise spawn the `loopwright-tester` subagent and wait for its result again, naming the problem.

@@ -4,6 +4,14 @@ import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
+/** Mirror of PROFILES in src/core/profiles.ts (a test pins them equal). */
+export const PROFILES = {
+  lean: { scout: 'low', tester: 'low', implementer: 'low', reviewer: 'medium' },
+  balanced: { scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' },
+  thorough: { scout: 'high', tester: 'high', implementer: 'high', reviewer: 'xhigh' },
+  deep: { scout: 'xhigh', tester: 'xhigh', implementer: 'xhigh', reviewer: 'xhigh' },
+};
+
 const MAX_BUFFER = 1024 * 1024 * 1024;
 
 function git(cwd, args) {

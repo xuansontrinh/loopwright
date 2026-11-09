@@ -215,3 +215,33 @@ describe('cross-agent rename', () => {
     for (const f of targets) expect(readFileSync(f, 'utf8'), f).not.toMatch(/cross[-_ ]?model/i);
   });
 });
+
+describe('effort profiles content', () => {
+  it('AC6: plan skill proposes a profile and writes the profile header', () => {
+    const b = skill('loopwright-plan');
+    expect(b).toMatch(/profile:/);
+    for (const n of ['lean', 'balanced', 'thorough', 'deep']) expect(b).toContain(n);
+  });
+  it.each([
+    ['loopwright-plan', 'scout'],
+    ['loopwright-test', 'tester'],
+    ['loopwright-build', 'implementer'],
+    ['loopwright-review', 'reviewer'],
+  ])('AC6: %s spawn passes effort from lw.mjs effort %s with fallback', (s, role) => {
+    const b = skill(s);
+    expect(b).toMatch(new RegExp(`lw\\.mjs"? effort ${role}`));
+    expect(b).toMatch(/fall ?back|falls back|reject/i);
+  });
+  it('AC7: README documents profiles and the subagent-only caveat', () => {
+    const r = readFileSync(join(__dirname, '..', 'README.md'), 'utf8');
+    expect(r).toContain('--profile');
+    for (const n of ['lean', 'balanced', 'thorough', 'deep']) expect(r).toContain(n);
+    expect(r).toMatch(/subagent/i);
+    expect(r).toMatch(/main[- ]thread/i);
+  });
+  it('AC7: README says there is no profile config key and config.json stays free of it', () => {
+    const r = readFileSync(join(__dirname, '..', 'README.md'), 'utf8');
+    expect(r).not.toMatch(/^- `profile`:/m);
+    expect(r).toMatch(/no `profile` (config )?key|`profile` is not a config|no profile (config )?key|config\.json[^.\n]*(never|not|free of)[^.\n]*profile/i);
+  });
+});
