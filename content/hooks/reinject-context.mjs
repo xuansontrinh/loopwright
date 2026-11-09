@@ -33,7 +33,7 @@ exitIfHooksOff();
 try {
   const tool = process.argv.includes('--tool') ? process.argv[process.argv.indexOf('--tool') + 1] : 'claude';
   const input = await readStdinJson();
-  const cwd = input.cwd || process.cwd();
+  const cwd = input.project_path || input.cwd || process.cwd();
   const dir = loopwrightDir(cwd);
   if (!dir) allow();
   const state = readState(dir, worktreeId(cwd));

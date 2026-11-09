@@ -6,6 +6,8 @@ export interface CommandOptions {
   force: boolean;
   hook: boolean;
   symlink: boolean;
+  /** Enabled experimental feature names (explicit, `all` already expanded). */
+  experimental?: string[];
   /** Which of hook/symlink were set by an explicit flag (update reuses recorded values otherwise). */
-  explicit?: { hook: boolean; symlink: boolean };
+  explicit?: { hook: boolean; symlink: boolean; experimental?: boolean };
 }

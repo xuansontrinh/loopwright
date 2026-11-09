@@ -8,7 +8,7 @@ exitIfHooksOff();
 
 try {
   const input = await readStdinJson();
-  const cwd = input.cwd || process.cwd();
+  const cwd = input.project_path || input.cwd || process.cwd();
   const dir = loopwrightDir(cwd);
   if (!dir) allow();
   const id = worktreeId(cwd);

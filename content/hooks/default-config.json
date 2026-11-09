@@ -15,6 +15,18 @@
       "implementer": "inherit",
       "reviewer": "inherit"
     },
+    "junie": {
+      "scout": "opus",
+      "tester": "sonnet",
+      "implementer": "sonnet",
+      "reviewer": "gpt",
+      "effort": {
+        "scout": "medium",
+        "tester": "medium",
+        "implementer": "medium",
+        "reviewer": "high"
+      }
+    },
     "crossModelReviewer": {
       "claude": "opus",
       "codex": "inherit"

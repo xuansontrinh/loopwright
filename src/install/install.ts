@@ -5,40 +5,68 @@ import type { Targets } from '../core/targets.js';
 import type { LoopwrightConfig, Role } from '../core/config.js';
 import type { InstallWriter } from '../core/writer.js';
 import { listContent, readContent, renderTemplate } from '../core/content.js';
-import { parseAgentSource, renderClaudeAgent, renderCodexAgent } from '../generate/agents.js';
+import { parseAgentSource, renderClaudeAgent, renderCodexAgent, renderJunieAgent } from '../generate/agents.js';
 import { hookCommand, hookSpecs } from './hook-wiring.js';
 import { mergeClaudeHooks } from './claude-settings.js';
+import { removeJunieHooks, upsertJunieHooks } from './junie-config.js';
+import { MANAGED_HOOK_HINT } from './hook-wiring.js';
 import { renderCodexHookBlock, upsertCodexBlock } from './codex-config.js';
 import { applyLink, type LinkAction } from './symlink.js';
 import { log } from '../utils/log.js';
 
 export interface WiringPlan {
   file: string;
-  kind: 'claude-hooks' | 'codex-block';
+  kind: 'claude-hooks' | 'codex-block' | 'junie-hooks';
+  /** False when the feature is off and the plan only strips a previously managed block. */
+  managed: boolean;
   cur: string;
   out: string;
 }
 
 /** Compute hook wiring results without writing. Throws SettingsParseError on malformed files. */
 export function planWiring(targets: Targets, opts: CommandOptions): WiringPlan[] {
-  if (!opts.hook) return [];
   const read = (f: string): string => (existsSync(f) ? readFileSync(f, 'utf8') : '');
-  const cs = read(targets.claudeSettingsPath);
-  const cc = read(targets.codexConfigPath);
-  return [
-    {
-      file: targets.claudeSettingsPath,
-      kind: 'claude-hooks',
-      cur: cs,
-      out: mergeClaudeHooks(cs, hookSpecs('claude'), (s) => hookCommand('claude', targets, s.script), targets.claudeSettingsPath),
-    },
-    {
-      file: targets.codexConfigPath,
-      kind: 'codex-block',
-      cur: cc,
-      out: upsertCodexBlock(cc, renderCodexHookBlock(hookSpecs('codex'), (s) => hookCommand('codex', targets, s.script))),
-    },
-  ];
+  const plans: WiringPlan[] = [];
+  if (opts.hook) {
+    const cs = read(targets.claudeSettingsPath);
+    const cc = read(targets.codexConfigPath);
+    plans.push(
+      {
+        file: targets.claudeSettingsPath,
+        kind: 'claude-hooks',
+        managed: true,
+        cur: cs,
+        out: mergeClaudeHooks(cs, hookSpecs('claude'), (s) => hookCommand('claude', targets, s.script), targets.claudeSettingsPath),
+      },
+      {
+        file: targets.codexConfigPath,
+        kind: 'codex-block',
+        managed: true,
+        cur: cc,
+        out: upsertCodexBlock(cc, renderCodexHookBlock(hookSpecs('codex'), (s) => hookCommand('codex', targets, s.script))),
+      },
+    );
+  }
+  const jc = read(targets.junieConfigPath);
+  if (opts.experimental?.includes('junie-hooks')) {
+    plans.push({
+      file: targets.junieConfigPath,
+      kind: 'junie-hooks',
+      managed: true,
+      cur: jc,
+      out: upsertJunieHooks(jc, hookSpecs('junie'), (s) => hookCommand('junie', targets, s.script), targets.junieConfigPath),
+    });
+  } else if (jc.includes(MANAGED_HOOK_HINT)) {
+    // Feature dropped: strip the block we wrote earlier.
+    plans.push({
+      file: targets.junieConfigPath,
+      kind: 'junie-hooks',
+      managed: false,
+      cur: jc,
+      out: removeJunieHooks(jc, MANAGED_HOOK_HINT, targets.junieConfigPath),
+    });
+  }
+  return plans;
 }
 
 /** Install every file under content/ plus agents and hook wiring. Returns whether anything changed. */
@@ -78,6 +106,10 @@ export async function installAll(
       join(targets.codexAgentsDir, `${src.name}.toml`),
       renderCodexAgent(src, config.models.codex[role] ?? 'inherit', config.models.codex.effort?.[role]),
     );
+    await put(
+      join(targets.junieAgentsDir, `${src.name}.md`),
+      renderJunieAgent(src, config.models.junie[role] ?? 'inherit', config.models.junie.effort?.[role], targets.lwHomeRef),
+    );
   }
 
   for (const sub of ['hooks', 'prompts', 'schemas']) {
@@ -91,9 +123,9 @@ export async function installAll(
     if (applyLink(targets.root, link, opts.dryRun)) changed = true;
   }
 
-  if (!opts.hook) writer.carryPriorConfig();
+  if (!opts.hook) writer.carryPriorConfig(['claude-hooks', 'codex-block']);
   for (const w of wiring) {
-    writer.recordConfig({ file: w.file, kind: w.kind });
+    if (w.managed) writer.recordConfig({ file: w.file, kind: w.kind });
     if (w.out === w.cur) continue;
     changed = true;
     log.dim(`  ${opts.dryRun ? 'Would update' : 'Updated'} ${w.file}`);

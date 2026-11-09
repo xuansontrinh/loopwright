@@ -17,9 +17,11 @@ export interface Targets {
   claudeSkillsMode: 'symlink' | 'copy' | 'none';
   claudeAgentsDir: string;
   codexAgentsDir: string;
+  junieAgentsDir: string;
   lwHome: string;
   lwHomeRef: string;
   claudeSettingsPath: string;
+  junieConfigPath: string;
   codexConfigPath: string;
   manifestPath: string;
   configPath: string;
@@ -38,9 +40,11 @@ export function resolveTargets(opts: CommandOptions): Targets {
       claudeSkillsMode: 'copy',
       claudeAgentsDir: join(h, '.claude/agents'),
       codexAgentsDir: join(h, '.codex/agents'),
+      junieAgentsDir: join(h, '.junie/agents'),
       lwHome: lw,
       lwHomeRef: lw,
       claudeSettingsPath: join(h, '.claude/settings.json'),
+      junieConfigPath: join(h, '.junie/config.json'),
       codexConfigPath: join(h, '.codex/config.toml'),
       manifestPath: join(lw, 'manifest.json'),
       configPath: join(lw, 'config.json'),
@@ -64,9 +68,11 @@ export function resolveTargets(opts: CommandOptions): Targets {
     claudeSkillsMode: opts.symlink ? 'symlink' : 'none',
     claudeAgentsDir: join(root, '.claude/agents'),
     codexAgentsDir: join(root, '.codex/agents'),
+    junieAgentsDir: join(root, '.junie/agents'),
     lwHome: join(root, '.agents/loopwright'),
     lwHomeRef: '.agents/loopwright',
     claudeSettingsPath: join(root, '.claude/settings.json'),
+    junieConfigPath: join(root, '.junie/config.json'),
     codexConfigPath: join(root, '.codex/config.toml'),
     manifestPath: join(stateDir, 'manifest.json'),
     configPath: join(stateDir, 'config.json'),

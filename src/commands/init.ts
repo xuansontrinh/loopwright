@@ -1,6 +1,7 @@
 import { relative } from 'node:path';
 import type { CommandOptions } from '../core/options.js';
 import { NotAGitRepoError, resolveTargets, type Targets } from '../core/targets.js';
+import { EXPERIMENTAL_FEATURES } from '../core/experimental.js';
 import { readConfig } from '../core/config.js';
 import { readManifest, writeManifest, type Manifest } from '../core/manifest.js';
 import { InstallWriter } from '../core/writer.js';
@@ -33,6 +34,7 @@ export function withRecordedOptions(opts: CommandOptions, recorded: Manifest['op
     ...opts,
     hook: opts.explicit?.hook ? opts.hook : recorded.hook,
     symlink: opts.explicit?.symlink ? opts.symlink : recorded.symlink,
+    experimental: opts.explicit?.experimental ? opts.experimental : (recorded.experimental ?? []),
   };
 }
 
@@ -77,11 +79,18 @@ export async function runInstall(opts: CommandOptions, doneVerb: string, isInit 
 
     const writer = makeWriter(targets, opts);
     const changed = await installAll(targets, writer, config, opts, link);
-    if (!opts.dryRun) writeManifest(targets.manifestPath, { ...writer.result(), options: { hook: opts.hook, symlink: opts.symlink } });
+    if (!opts.dryRun) writeManifest(targets.manifestPath, { ...writer.result(), options: { hook: opts.hook, symlink: opts.symlink, ...(opts.experimental?.length ? { experimental: opts.experimental } : {}) } });
 
     if (!changed) log.success('loopwright is already up to date.');
     else if (!opts.dryRun) log.success(`loopwright ${doneVerb}.`);
     if (targets.mode === 'repo' && opts.hook) log.info('Codex: trust this project and approve loopwright hooks via /hooks.');
+    log.info('Junie (WIP/EAP): subagents installed to .junie/agents; skills are read from .agents/skills.');
+    for (const f of opts.experimental ?? []) {
+      log.warn(`Experimental feature "${f}" is unstable and may change or break.`);
+      if (f === 'junie-hooks') {
+        log.info(`Junie hooks are written to ${targets.junieConfigPath}. Junie ignores project hooks unless started with --config-location (e.g. junie --config-location .junie).`);
+      }
+    }
     return 0;
   } catch (e) {
     if (e instanceof SettingsParseError) {

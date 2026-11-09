@@ -5,6 +5,7 @@ import { NotAGitRepoError, resolveTargets, type Targets } from '../core/targets.
 import { readManifest, sha256, type Manifest } from '../core/manifest.js';
 import { removeClaudeHooks, SettingsParseError } from '../install/claude-settings.js';
 import { removeCodexBlock } from '../install/codex-config.js';
+import { removeJunieHooks } from '../install/junie-config.js';
 import { confirm } from '../utils/prompt.js';
 import { log } from '../utils/log.js';
 
@@ -67,12 +68,15 @@ export async function runUninstall(opts: CommandOptions): Promise<number> {
   for (const c of manifest.config) configs.set(resolve(abs(c.file)), c.kind);
   configs.set(resolve(targets.claudeSettingsPath), 'claude-hooks');
   configs.set(resolve(targets.codexConfigPath), 'codex-block');
+  configs.set(resolve(targets.junieConfigPath), 'junie-hooks');
   for (const [file, kind] of configs) {
     if (!existsSync(file)) continue;
     const cur = readFileSync(file, 'utf-8');
     let out: string;
     try {
-      out = kind === 'claude-hooks' ? removeClaudeHooks(cur, 'loopwright/hooks/', file) : removeCodexBlock(cur);
+      if (kind === 'claude-hooks') out = removeClaudeHooks(cur, 'loopwright/hooks/', file);
+      else if (kind === 'junie-hooks') out = removeJunieHooks(cur, 'loopwright/hooks/', file);
+      else out = removeCodexBlock(cur);
     } catch (e) {
       if (e instanceof SettingsParseError) {
         log.warn(`left ${file} untouched: ${e.message}`);
@@ -83,7 +87,7 @@ export async function runUninstall(opts: CommandOptions): Promise<number> {
     if (out === cur) continue;
     log.dim(`  ${dry ? 'Would update' : 'Updated'} ${file}`);
     if (dry) continue;
-    writeFileSync(file, kind === 'claude-hooks' && out.trim() === '{}' ? '{}\n' : out, 'utf-8');
+    writeFileSync(file, kind !== 'codex-block' && out.trim() === '{}' ? '{}\n' : out, 'utf-8');
   }
 
   const link = targets.claudeSkillsDir;

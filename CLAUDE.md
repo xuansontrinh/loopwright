@@ -40,3 +40,5 @@ Releases: `main` is PR-only; a release is a merged PR bumping `package.json` `ve
 - Keep `README.md`, the `HELP` text in `src/cli.ts`, and the install summary in `src/commands/init.ts` in sync with CLI flags and workflow behavior.
 - Relative imports in `src/` use `.js` extensions. Do not add runtime dependencies (dev dependencies only).
 - Never write user-global config except in `--global` mode, and never delete settings files, `.loopwright/tasks/`, or `AGENTS.md`/`CLAUDE.md` content.
+- Junie CLI hooks run with `cwd=~/.junie`: find the repo from the payload's `project_path`; edits arrive as `apply_patch` with `tool_input.patch`; hooks in a project's `.junie/config.json` only run when passed with `--config-location` (or from `~/.junie/config.json` with `--global`).
+- Unstable or opt-in features go in the `--experimental` registry (`src/core/experimental.ts`), never as their own CLI flag; `all` expands to explicit names at invocation so future experiments are not enabled silently.

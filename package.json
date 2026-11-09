@@ -2,7 +2,7 @@
   "name": "loopwright",
   "author": "Xuan Son Trinh",
   "version": "0.1.1",
-  "description": "Agent workflow installer for Claude Code and Codex",
+  "description": "Agent workflow installer for Claude Code, Codex and Junie",
   "type": "module",
   "bin": {
     "loopwright": "./dist/cli.js"

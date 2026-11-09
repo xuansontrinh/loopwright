@@ -6,16 +6,18 @@ Agents tend to bake silent assumptions into a plan, write tests to fit their own
 
 ## Support
 
-| Feature | Claude Code | Codex |
-|---|---|---|
-| Skills install | Supported, tested | WIP: installed, not tested end-to-end |
-| Subagents (scout, tester, implementer, reviewer) | Supported, tested | WIP: installed, not tested end-to-end |
-| Hook enforcement (locked-test guard, stop gate, context reinjection) | Supported, tested | WIP: installed, not tested end-to-end |
-| Structured questions | `AskUserQuestion` | Plain-text fallback (numbered options) |
-| Cross-model review (as the reviewer) | Supported, tested | WIP: untested |
-| Global install | Supported, tested | WIP: installed, not tested end-to-end |
+| Feature | Claude Code | Codex | Junie CLI |
+|---|---|---|---|
+| Skills install | Supported, tested | WIP: installed, not tested end-to-end | WIP: reads `.agents/skills` |
+| Subagents (scout, tester, implementer, reviewer) | Supported, tested | WIP: installed, not tested end-to-end | WIP: `.junie/agents` |
+| Hook enforcement (locked-test guard, stop gate, context reinjection) | Supported, tested | WIP: installed, not tested end-to-end | Experimental (`--experimental junie-hooks`, Early Access) |
+| Structured questions | `AskUserQuestion` | Plain-text fallback (numbered options) | Plain-text fallback |
+| Cross-model review (as the reviewer) | Supported, tested | WIP: untested | Not supported |
+| Global install | Supported, tested | WIP: installed, not tested end-to-end | WIP: `~/.junie/agents` |
 
 **Codex support is work in progress.** Its behavior was derived from Codex source and CLI help; no real Codex session has been run against loopwright yet. Expect rough edges.
+
+**Junie CLI support is work in progress (and its hooks are Early Access).** Subagents are installed with per-role models from `models.junie` (default: scout `opus`, tester and implementer `sonnet`, reviewer `gpt`, so the review comes from a different vendor than the code). If your Junie plan cannot use a model, the stage skills retry the subagent without a model (Junie's default).
 
 ## Install
 
@@ -42,14 +44,14 @@ Requires Node >= 22.14. Repo mode needs a git repository; `--global` does not.
 Repo install:
 
 - `.agents/skills/loopwright-{flow,plan,test,build,review,done}/SKILL.md`, and `.claude/skills` as a symlink to `../.agents/skills` (existing directories or other symlinks are prompted about unless `--force`)
-- `.claude/agents/loopwright-<role>.md` and `.codex/agents/loopwright-<role>.toml` for `scout`, `tester`, `implementer`, `reviewer`
+- `.claude/agents/loopwright-<role>.md` and `.codex/agents/loopwright-<role>.toml`, and `.junie/agents/loopwright-<role>.md` for `scout`, `tester`, `implementer`, `reviewer`
 - `.agents/loopwright/` with `hooks/`, `prompts/reviewer.md`, `schemas/verdict.json`
 - hook wiring (unless `--no-hook`): entries in `.claude/settings.json`, and a `# BEGIN loopwright` ... `# END loopwright` block in `.codex/config.toml`
 - `.loopwright/` (in the main worktree) with its own `.gitignore` (`*`), `config.json`, `manifest.json`, `tasks/`, `state/`
 
 In a repo without `.loopwright/` (a global install, or a fresh clone, since `.loopwright/` ignores itself), the first task start creates it: `.gitignore`, `tasks/`, `state/` and a `config.json` seeded from `~/.config/loopwright/config.json` if that exists, else the defaults.
 
-Global install writes the equivalents to `~/.agents/skills`, `~/.claude/skills` (copies, not a symlink), `~/.claude/agents`, `~/.codex/agents`, `~/.claude/settings.json`, `~/.codex/config.toml`, and `~/.config/loopwright/` (hooks, prompts, schemas, `manifest.json`). It does not create `~/.config/loopwright/config.json`; that file is optional (see Configuration).
+Global install writes the equivalents to `~/.agents/skills`, `~/.claude/skills` (copies, not a symlink), `~/.claude/agents`, `~/.codex/agents`, `~/.junie/agents`, `~/.claude/settings.json`, `~/.codex/config.toml`, and `~/.config/loopwright/` (hooks, prompts, schemas, `manifest.json`). It does not create `~/.config/loopwright/config.json`; that file is optional (see Configuration).
 
 ## The loop
 
@@ -94,6 +96,7 @@ Global installs read `~/.config/loopwright/config.json` if you create it (it is 
   "models": {
     "claude": { "scout": "opus", "tester": "sonnet", "implementer": "sonnet", "reviewer": "opus" },
     "codex":  { "scout": "inherit", "tester": "inherit", "implementer": "inherit", "reviewer": "inherit" },
+    "junie":  { "scout": "opus", "tester": "sonnet", "implementer": "sonnet", "reviewer": "gpt", "effort": { "scout": "medium", "tester": "medium", "implementer": "medium", "reviewer": "high" } },
     "crossModelReviewer": { "claude": "opus", "codex": "inherit" }
   }
 }
@@ -102,7 +105,7 @@ Global installs read `~/.config/loopwright/config.json` if you create it (it is 
 - `maxFixRounds`: default fix-round cap; Plan may propose a lower one per task.
 - `crossModelReview`: `"off"`, `"codex"` or `"claude"`. When set, the review also runs the same reviewer prompt headlessly through the other CLI (`codex exec` or `claude -p`) and both verdicts must pass. A missing or failing CLI is skipped with a note in the review log; it never blocks.
 - `docsDir`: where Done puts longer standards docs linked from `AGENTS.md`.
-- `models`: per tool and role; tool-native aliases or full IDs, or `inherit` (the session model). Codex also accepts `models.codex.effort.<role>`. Editing generated agent files directly counts as a user modification and is kept on update.
+- `models`: per tool and role; tool-native aliases or full IDs, or `inherit` (the session model). Codex and Junie also accept `models.<tool>.effort.<role>`. Editing generated agent files directly counts as a user modification and is kept on update.
 - Plan runs in your main thread, so it uses your session's model. Start the session on the model you want for planning.
 
 ## Enforcement and its limits
@@ -182,3 +185,9 @@ Then **approve the staged version**: on npmjs.com → `loopwright` → **Staged 
 ## License
 
 MIT
+
+## Experimental
+
+`init` and `update` take `--experimental <name>[,name]` (or `all`, which expands to the current names and records them). Features are unstable and may change or break. `update` keeps the recorded list; `--experimental ''` turns all off and removes their config blocks.
+
+- `junie-hooks`: writes the loopwright hooks into Junie's `config.json` (`.junie/config.json` in repo mode, `~/.junie/config.json` with `--global`). Junie hooks are Early Access, and Junie ignores project-level hooks unless started with `--config-location`, for example `junie --config-location .junie`. The guard recognizes Junie's `apply_patch` edits only; hooks fail open.

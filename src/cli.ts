@@ -3,11 +3,12 @@ import { parseArgs } from 'node:util';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import type { CommandOptions } from './core/options.js';
+import { EXPERIMENTAL_FEATURES, parseExperimental } from './core/experimental.js';
 import { runInit } from './commands/init.js';
 import { runUpdate } from './commands/update.js';
 import { runUninstall } from './commands/uninstall.js';
 
-const HELP = `loopwright - agent workflow installer for Claude Code and Codex
+const HELP = `loopwright - agent workflow installer for Claude Code, Codex and Junie (WIP)
 
 Usage:
   loopwright init        Install the workflow into the current repo (or globally)
@@ -19,6 +20,10 @@ Options:
   --global        Install into the user home instead of the current repo
   --no-hook       Skip hook wiring
   --no-symlink    Skip the .claude/skills symlink
+  --experimental <names>
+                  Enable unstable features (comma-separated, or 'all'): ${EXPERIMENTAL_FEATURES.join(', ')}.
+                  junie-hooks: wire Junie CLI hooks (Early Access; needs --config-location).
+                  update keeps the recorded list; --experimental '' turns all off
   --dry-run       Show what would change without writing
   --force         Overwrite conflicting files without prompting
   -v, --version   Print version
@@ -43,6 +48,7 @@ export async function main(argv: string[]): Promise<number> {
         'no-symlink': { type: 'boolean', default: false },
         'dry-run': { type: 'boolean', default: false },
         force: { type: 'boolean', default: false },
+        experimental: { type: 'string' },
         version: { type: 'boolean', short: 'v', default: false },
         help: { type: 'boolean', short: 'h', default: false },
       },
@@ -63,6 +69,14 @@ export async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
+  let experimental: string[] = [];
+  try {
+    if (values.experimental !== undefined) experimental = parseExperimental(values.experimental);
+  } catch (err) {
+    console.error((err as Error).message);
+    return 1;
+  }
+
   const opts: CommandOptions = {
     mode: values.global ? 'global' : 'repo',
     cwd: process.cwd(),
@@ -71,7 +85,8 @@ export async function main(argv: string[]): Promise<number> {
     force: values.force,
     hook: !values['no-hook'],
     symlink: !values['no-symlink'],
-    explicit: { hook: values['no-hook'], symlink: values['no-symlink'] },
+    experimental,
+    explicit: { hook: values['no-hook'], symlink: values['no-symlink'], experimental: values.experimental !== undefined },
   };
 
   switch (command) {

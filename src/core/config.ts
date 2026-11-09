@@ -9,6 +9,7 @@ export interface LoopwrightConfig {
   models: {
     claude: Record<Role, string>;
     codex: Record<Role, string> & { effort?: Partial<Record<Role, string>> };
+    junie: Record<Role, string> & { effort?: Partial<Record<Role, string>> };
     crossModelReviewer: { claude: string; codex: string };
   };
 }
@@ -20,6 +21,13 @@ export const DEFAULT_CONFIG: LoopwrightConfig = {
   models: {
     claude: { scout: 'opus', tester: 'sonnet', implementer: 'sonnet', reviewer: 'opus' },
     codex: { scout: 'inherit', tester: 'inherit', implementer: 'inherit', reviewer: 'inherit' },
+    junie: {
+      scout: 'opus',
+      tester: 'sonnet',
+      implementer: 'sonnet',
+      reviewer: 'gpt',
+      effort: { scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' },
+    },
     crossModelReviewer: { claude: 'opus', codex: 'inherit' },
   },
 };
