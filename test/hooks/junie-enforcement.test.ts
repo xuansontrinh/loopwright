@@ -41,7 +41,7 @@ function setup(stage: string): string {
   runLw(repo, ['stage', 'test']);
   mkdirSync(join(repo, 'test'));
   writeFileSync(join(repo, 'test/t.test.ts'), 'x');
-  runLw(repo, ['lock', 'test/t.test.ts']);
+  expect(runLw(repo, ['lock', 'test/t.test.ts']).code).toBe(0);
   if (stage !== 'test') runLw(repo, ['stage', stage]);
   return repo;
 }

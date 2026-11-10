@@ -12,6 +12,6 @@ export function gitTopLevel(cwd: string): string {
 
 export function mainWorktreeRoot(cwd: string): string {
   const common = git(cwd, ['rev-parse', '--path-format=absolute', '--git-common-dir']);
-  if (basename(common) === '.git') return dirname(common);
+  if (basename(common) === '.git') return resolve(dirname(common));
   return gitTopLevel(cwd);
 }

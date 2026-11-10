@@ -23,7 +23,7 @@ const opts = (o: Partial<CommandOptions>): CommandOptions => ({
 
 describe('targets', () => {
   it('repo targets', () => {
-    const repo = realpathSync(createTempGitRepo());
+    const repo = realpathSync.native(createTempGitRepo());
     const t = resolveTargets(opts({ cwd: repo }));
     expect(t.root).toBe(repo);
     expect(t.skillsDir).toBe(join(repo, '.agents/skills'));
@@ -60,9 +60,9 @@ describe('targets', () => {
   });
 
   it('main worktree from secondary worktree', () => {
-    const repo = realpathSync(createTempGitRepo());
+    const repo = realpathSync.native(createTempGitRepo());
     git(repo, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '--allow-empty', '-m', 'init');
-    const wt = join(realpathSync(mkdtempSync(join(tmpdir(), 'lw-wt-'))), 'wt');
+    const wt = join(realpathSync.native(mkdtempSync(join(tmpdir(), 'lw-wt-'))), 'wt');
     git(repo, 'worktree', 'add', wt, '-b', 'feat');
     expect(mainWorktreeRoot(wt)).toBe(repo);
     const t = resolveTargets(opts({ cwd: wt }));
@@ -72,23 +72,23 @@ describe('targets', () => {
   });
 
   it('bare repo fallback', () => {
-    const dir = realpathSync(mkdtempSync(join(tmpdir(), 'lw-bare-')));
+    const dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'lw-bare-')));
     git(dir, 'init', '--bare');
     // common dir is not named .git: falls back to show-toplevel, which fails in a bare repo
     expect(() => mainWorktreeRoot(dir)).toThrow();
   });
 
   it('bare repo linked worktree falls back to its own top-level', () => {
-    const repo = realpathSync(createTempGitRepo());
+    const repo = realpathSync.native(createTempGitRepo());
     git(repo, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '--allow-empty', '-m', 'init');
-    const base = realpathSync(mkdtempSync(join(tmpdir(), 'lw-bw-')));
+    const base = realpathSync.native(mkdtempSync(join(tmpdir(), 'lw-bw-')));
     const bare = join(base, 'b.git');
     git(base, 'clone', '--bare', repo, bare);
     const wt = join(base, 'wt');
     git(bare, 'worktree', 'add', wt, 'HEAD', '--detach');
-    expect(realpathSync(mainWorktreeRoot(wt))).toBe(realpathSync(wt));
+    expect(realpathSync.native(mainWorktreeRoot(wt))).toBe(realpathSync.native(wt));
     const t = resolveTargets(opts({ cwd: wt }));
-    expect(t.stateDir).toBe(join(realpathSync(wt), '.loopwright'));
+    expect(t.stateDir).toBe(join(realpathSync.native(wt), '.loopwright'));
   });
 
   it('renderTemplate replaces and rejects unknown placeholders', () => {
@@ -107,7 +107,7 @@ describe('targets', () => {
   });
 
   it('repo mode outside git throws NotAGitRepoError', () => {
-    const dir = realpathSync(mkdtempSync(join(tmpdir(), 'lw-nogit-')));
+    const dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'lw-nogit-')));
     expect(() => resolveTargets(opts({ cwd: dir }))).toThrow(NotAGitRepoError);
   });
 });

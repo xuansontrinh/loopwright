@@ -32,9 +32,9 @@ export function gitTopLevel(cwd) {
   return resolve(git(cwd, ['rev-parse', '--show-toplevel']));
 }
 
-function mainWorktreeRoot(cwd) {
+export function mainWorktreeRoot(cwd) {
   const common = git(cwd, ['rev-parse', '--path-format=absolute', '--git-common-dir']);
-  if (basename(common) === '.git') return dirname(common);
+  if (basename(common) === '.git') return resolve(dirname(common));
   return gitTopLevel(cwd);
 }
 
@@ -169,13 +169,22 @@ export function failOpen(err) {
   process.exit(0);
 }
 
+/** Native realpath expands Windows 8.3 short names (RUNNER~1) the way git reports them; JS realpath keeps them. Falls back so a native throw cannot fail the guard open. */
+export function realpathResolve(path, impl = realpathSync.native) {
+  try {
+    return impl(path);
+  } catch {
+    return realpathSync(path);
+  }
+}
+
 /** realpath of the nearest existing ancestor, with the not-yet-existing tail re-appended. */
 export function realpathLoose(abs) {
   const tail = [];
   let cur = abs;
   for (;;) {
     try {
-      return join(realpathSync(cur), ...tail.reverse());
+      return join(realpathResolve(cur), ...tail.reverse());
     } catch {
       const parent = dirname(cur);
       if (parent === cur) return abs;
@@ -187,7 +196,7 @@ export function realpathLoose(abs) {
 
 /** Worktree-top-relative POSIX path of p (relative to cwd if not absolute), symlinks resolved. May start with '..' if outside. */
 export function repoRelative(cwd, p, platform = process.platform) {
-  const top = realpathSync(gitTopLevel(cwd));
+  const top = realpathResolve(gitTopLevel(cwd));
   const abs = realpathLoose(isAbsolute(p) ? resolve(p) : resolve(cwd, p));
   const rel = relative(top, abs).split(sep).join('/');
   // Windows paths are case-insensitive: fold so Test/T.test.ts matches a locked test/t.test.ts.

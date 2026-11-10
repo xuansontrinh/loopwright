@@ -49,7 +49,7 @@ describe('symlink conflict handling', () => {
     mkdirSync(join(tmpDir, 'other'), { recursive: true });
     symlinkSync('../other', join(tmpDir, '.claude', 'skills'), 'dir');
     await link();
-    expect(readlinkSync(join(tmpDir, '.claude', 'skills'))).toBe('../.agents/skills');
+    expect(sameLinkTarget(readlinkSync(join(tmpDir, '.claude', 'skills')), '../.agents/skills')).toBe(true);
   });
 
   it('force-merges .claude/skills/ directory with content', async () => {

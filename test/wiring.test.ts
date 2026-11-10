@@ -82,7 +82,7 @@ describe('codex config', () => {
     expect(p.hooks.PreToolUse[0].matcher).toBe('^apply_patch$');
     expect(p.hooks.PreToolUse[0].hooks[0].type).toBe('command');
     expect(p.hooks.Stop[0].hooks[0].command).toContain(
-      `"${join('/tmp/a b/', '.config', 'loopwright', 'hooks', 'stop-gate.mjs')}"`,
+      `"${join('/tmp/a b/', '.config', 'loopwright')}/hooks/stop-gate.mjs"`,
     );
     expect(p.hooks.SessionStart[0].matcher).toBe('compact');
   });
@@ -126,7 +126,7 @@ describe('codex config', () => {
 describe('hook commands', () => {
   it('quotes hook commands with spaces', () => {
     const c = hookCommand('claude', globalT('/tmp/a b/'), 'stop-gate.mjs');
-    expect(c).toContain(`"${join('/tmp/a b/', '.config', 'loopwright', 'hooks', 'stop-gate.mjs')}"`);
+    expect(c).toContain(`"${join('/tmp/a b/', '.config', 'loopwright')}/hooks/stop-gate.mjs"`);
     expect(c).toMatch(/--tool claude$/);
   });
   it('repo commands', () => {

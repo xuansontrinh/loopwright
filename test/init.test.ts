@@ -12,6 +12,7 @@ import {
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { sameLinkTarget } from '../src/utils/fs.js';
 import { createTempGitRepo, readJson, runCli } from './helpers.js';
 import { listContent } from '../src/core/content.js';
 
@@ -79,7 +80,7 @@ describe('init', () => {
     init();
     const p = join(repo, '.claude/skills');
     expect(lstatSync(p).isSymbolicLink()).toBe(true);
-    expect(readlinkSync(p)).toBe('../.agents/skills');
+    expect(sameLinkTarget(readlinkSync(p), '../.agents/skills')).toBe(true);
     expect(existsSync(join(p, 'loopwright-flow/SKILL.md'))).toBe(true);
   });
 

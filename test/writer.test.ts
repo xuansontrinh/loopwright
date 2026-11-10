@@ -22,7 +22,7 @@ function make(opts: { manifest?: Manifest | null; dryRun?: boolean; force?: bool
       asked.push(q);
       return opts.answer ?? false;
     },
-    toKey: (abs) => relative(root, abs),
+    toKey: (abs) => relative(root, abs).split('\\').join('/'),
   });
 }
 const manifestFor = (path: string, content: string): Manifest => ({

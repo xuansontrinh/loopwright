@@ -28,7 +28,7 @@ export function git(cwd: string, args: string[]): string {
 
 /** A committed repo with no .loopwright/ (fresh clone / global install). */
 export function makeBareRepo(): string {
-  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'lw-hooks-')));
+  const dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'lw-hooks-')));
   git(dir, ['init', '-q', '-b', 'main']);
   writeFileSync(join(dir, 'a.txt'), 'one\n');
   git(dir, ['add', '.']);
@@ -37,7 +37,7 @@ export function makeBareRepo(): string {
 }
 
 export function makeRepo(): string {
-  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'lw-hooks-')));
+  const dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'lw-hooks-')));
   git(dir, ['init', '-q', '-b', 'main']);
   writeFileSync(join(dir, 'a.txt'), 'one\n');
   git(dir, ['add', '.']);
@@ -55,7 +55,7 @@ export function scaffoldLoopwright(dir: string): void {
 
 /** Process env with HOME and USERPROFILE pointing at a fresh temp dir, so hooks never read or write the real home. */
 export function isolatedEnv(env?: Record<string, string>): NodeJS.ProcessEnv {
-  const home = realpathSync(mkdtempSync(join(tmpdir(), 'lw-home-')));
+  const home = realpathSync.native(mkdtempSync(join(tmpdir(), 'lw-home-')));
   return { ...process.env, HOME: home, USERPROFILE: home, ...env };
 }
 
