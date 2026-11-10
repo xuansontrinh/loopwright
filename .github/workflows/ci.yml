@@ -12,8 +12,6 @@ jobs:
   test:
     name: Typecheck & test · ${{ matrix.os }} · Node ${{ matrix.node-version }}
     runs-on: ${{ matrix.os }}
-    # Windows is informational until the suite is green there; flip to required by removing this line.
-    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     strategy:
       fail-fast: false
       matrix:

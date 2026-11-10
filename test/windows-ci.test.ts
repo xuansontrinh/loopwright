@@ -10,12 +10,15 @@ describe('AC14: Windows CI and portable tests', () => {
     expect(read('.gitattributes')).toMatch(/^\*\s+text=auto\s+eol=lf\s*$/m);
   });
 
-  it('AC14: ci.yml has an os matrix with windows continue-on-error', () => {
+  it('AC14: ci.yml has an os matrix including windows-latest', () => {
     const ci = read('.github/workflows/ci.yml');
-    expect(ci).toMatch(/os:\s*\[[^\]]*ubuntu-latest[^\]]*windows-latest[^\]]*\]|windows-latest/);
     expect(ci).toContain('windows-latest');
     expect(ci).toMatch(/runs-on:\s*\$\{\{\s*matrix\.os\s*\}\}/);
-    expect(ci).toMatch(/continue-on-error:.*windows/);
+  });
+
+  it('AC5: ci.yml has no continue-on-error, so the Windows job is required', () => {
+    const ci = read('.github/workflows/ci.yml');
+    expect(ci).not.toMatch(/continue-on-error/);
   });
 
   it('AC14: content.test.ts uses fileURLToPath, not URL.pathname', () => {
