@@ -27,9 +27,11 @@ If `CLAUDE.md` exists and has no line `@AGENTS.md`, propose adding that import l
 
 ## 2. Commit message and PR description
 
+Never write task ids (AC, D, S shorthands) into tests, code, comments, commit messages or PR drafts. Describe decisions in words.
+
 Draft both and show them to the user:
 - Commit: imperative subject ≤ 72 chars; body says why, the key decisions, and the rejected options with the reason.
-- PR: summary of intent; decisions and rejected options (`D…`); notable assumptions the reviewer should know; how it was verified (check commands, acceptance tests, review rounds from the log). Do not list the diff file by file.
+- PR: summary of intent; decisions and rejected options; notable assumptions the reviewer should know; how it was verified (check commands, acceptance tests, review rounds from the log). Do not list the diff file by file.
 
 ## 3. Close
 

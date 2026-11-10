@@ -29,5 +29,6 @@ The tester writes acceptance tests from the confirmed ACs and locks them. This t
 
 ## Rules
 
+- Never write task ids (AC, D, S shorthands) into tests, code, comments, commit messages or PR drafts.
 - Lock only in this stage, and only the tests for this stage's scope (the task, or the current slice). Never re-lock an existing locked test; if one is wrong, tell the user and let them decide.
 - Do not read the implementation to judge the tests; the ACs are the contract.

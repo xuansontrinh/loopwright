@@ -202,8 +202,8 @@ describe('init', () => {
   });
 });
 
-describe('AC4: installAll when symlinks are unavailable', () => {
-  it('AC4: still writes hooks and manifest', async () => {
+describe('installAll when symlinks are unavailable', () => {
+  it('still writes hooks and manifest', async () => {
     const { runInit } = await import('../src/commands/init.js');
     const { installAll } = await import('../src/install/install.js');
     const { resolveTargets } = await import('../src/core/targets.js');

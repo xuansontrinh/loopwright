@@ -303,7 +303,7 @@ describe('cross-agent rename', () => {
 });
 
 describe('effort profiles content', () => {
-  it('AC6: plan skill proposes a profile and writes the profile header', () => {
+  it('plan skill proposes a profile and writes the profile header', () => {
     const b = skill('loopwright-plan');
     expect(b).toMatch(/profile:/);
     for (const n of ['lean', 'balanced', 'thorough', 'deep']) expect(b).toContain(n);
@@ -313,12 +313,12 @@ describe('effort profiles content', () => {
     ['loopwright-test', 'tester'],
     ['loopwright-build', 'implementer'],
     ['loopwright-review', 'reviewer'],
-  ])('AC6: %s spawn passes effort from lw.mjs effort %s with fallback', (s, role) => {
+  ])('%s spawn passes effort from lw.mjs effort %s with fallback', (s, role) => {
     const b = skill(s);
     expect(b).toMatch(new RegExp(`lw\\.mjs"? effort ${role}`));
     expect(b).toMatch(/fall ?back|falls back|reject/i);
   });
-  it('AC7: README documents profiles and the subagent-only caveat', () => {
+  it('README documents profiles and the subagent-only caveat', () => {
     const r =
       readFileSync(join(__dirname, '..', 'README.md'), 'utf8') +
       readFileSync(join(__dirname, '..', 'docs', 'configuration.md'), 'utf8');
@@ -327,7 +327,7 @@ describe('effort profiles content', () => {
     expect(r).toMatch(/subagent/i);
     expect(r).toMatch(/main[- ]thread/i);
   });
-  it('AC7: README says there is no profile config key and config.json stays free of it', () => {
+  it('README says there is no profile config key and config.json stays free of it', () => {
     const r =
       readFileSync(join(__dirname, '..', 'README.md'), 'utf8') +
       readFileSync(join(__dirname, '..', 'docs', 'configuration.md'), 'utf8');
@@ -335,5 +335,30 @@ describe('effort profiles content', () => {
     expect(r).toMatch(
       /no `profile` (config )?key|`profile` is not a config|no profile (config )?key|config\.json[^.\n]*(never|not|free of)[^.\n]*profile/i,
     );
+  });
+});
+
+describe('task ids stay out of shipped work', () => {
+  const RULE = 'Never write task ids (AC, D, S shorthands) into tests, code, comments, commit messages or PR drafts.';
+  const files: Record<string, () => string> = {
+    'agents/tester.md': () => read('agents/tester.md'),
+    'agents/implementer.md': () => read('agents/implementer.md'),
+    'prompts/reviewer.md': () => read('prompts/reviewer.md'),
+    'skills/loopwright-test': () => skill('loopwright-test'),
+    'skills/loopwright-build': () => skill('loopwright-build'),
+    'skills/loopwright-done': () => skill('loopwright-done'),
+  };
+
+  for (const [name, get] of Object.entries(files)) {
+    it(`${name} states the no-task-ids rule`, () => {
+      expect(get()).toContain(RULE);
+    });
+  }
+
+  it('tester names tests by behavior and no longer asks for an id in test names', () => {
+    const b = agent('tester').body;
+    expect(b).toContain('Name each test by the behavior it checks');
+    expect(b).not.toContain('so the AC id is visible');
+    expect(b).not.toMatch(/`AC\d+: /);
   });
 });

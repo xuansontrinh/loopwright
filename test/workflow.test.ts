@@ -83,19 +83,19 @@ function runDetect(s: Setup) {
 }
 
 describe('publish.yml tag guard', () => {
-  it('AC8: references git ls-remote and the peeled tag in the detect step', () => {
+  it('references git ls-remote and the peeled tag in the detect step', () => {
     const script = stepScript('Detect unreleased version');
     expect(script).toContain('ls-remote');
     expect(script).toContain('^{}');
   });
 
-  it('AC8: no remote tag releases normally', () => {
+  it('no remote tag releases normally', () => {
     const r = runDetect(setup());
     expect(r.status).toBe(0);
     expect(r.output).toContain('release=true');
   });
 
-  it('AC8: lightweight remote tag at the release SHA passes', () => {
+  it('lightweight remote tag at the release SHA passes', () => {
     const s = setup();
     git(s.work, 'tag', 'v0.1.5', s.sha);
     git(s.work, 'push', '-q', 'origin', 'v0.1.5');
@@ -104,7 +104,7 @@ describe('publish.yml tag guard', () => {
     expect(r.output).toContain('release=true');
   });
 
-  it('AC8: annotated remote tag peeling to the release SHA passes', () => {
+  it('annotated remote tag peeling to the release SHA passes', () => {
     const s = setup();
     git(s.work, 'tag', '-a', 'v0.1.5', '-m', 'v0.1.5', s.sha);
     git(s.work, 'push', '-q', 'origin', 'v0.1.5');
@@ -113,7 +113,7 @@ describe('publish.yml tag guard', () => {
     expect(r.output).toContain('release=true');
   });
 
-  it('AC8: lightweight remote tag at another commit fails', () => {
+  it('lightweight remote tag at another commit fails', () => {
     const s = setup();
     git(s.work, 'tag', 'v0.1.5', s.other);
     git(s.work, 'push', '-q', 'origin', 'v0.1.5');
@@ -122,7 +122,7 @@ describe('publish.yml tag guard', () => {
     expect(r.output).not.toContain('release=true');
   });
 
-  it('AC8: annotated remote tag peeling to another commit fails', () => {
+  it('annotated remote tag peeling to another commit fails', () => {
     const s = setup();
     git(s.work, 'tag', '-a', 'v0.1.5', '-m', 'old', s.other);
     git(s.work, 'push', '-q', 'origin', 'v0.1.5');
@@ -131,7 +131,7 @@ describe('publish.yml tag guard', () => {
     expect(r.output).not.toContain('release=true');
   });
 
-  it('AC8: fails when git ls-remote fails', () => {
+  it('fails when git ls-remote fails', () => {
     const s = setup();
     git(s.work, 'remote', 'set-url', 'origin', join(s.work, '..', 'does-not-exist.git'));
     const r = runDetect(s);
@@ -141,7 +141,7 @@ describe('publish.yml tag guard', () => {
 });
 
 describe('publish.yml npm pin', () => {
-  it('AC9: pins npm@11.15.0 and no longer installs npm@latest', () => {
+  it('pins npm@11.15.0 and no longer installs npm@latest', () => {
     expect(PUBLISH).toContain('npm@11.15.0');
     expect(PUBLISH).not.toContain('npm@latest');
   });

@@ -46,8 +46,8 @@ function setup(stage: string): string {
   return repo;
 }
 
-describe('AC7: hooks with --tool junie', () => {
-  it('AC7: guard denies apply_patch touching a locked test during build (path relative to project_path)', () => {
+describe('hooks with --tool junie', () => {
+  it('guard denies apply_patch touching a locked test during build (path relative to project_path)', () => {
     const repo = setup('build');
     const r = run('guard-locked-tests.mjs', payload('pretooluse', repo));
     expect(r.code).toBe(2);
@@ -55,21 +55,21 @@ describe('AC7: hooks with --tool junie', () => {
       'loopwright: test/t.test.ts is a locked acceptance test. Ask the user before changing it.',
     );
   });
-  it('AC7: guard denies when the locked file is one of several in the patch', () => {
+  it('guard denies when the locked file is one of several in the patch', () => {
     const repo = setup('build');
     const input = payload('pretooluse', repo, (p) => {
       p.tool_input.patch = patch('*** Add File: src/new.ts', '+a', '*** Update File: test/t.test.ts', '@@', '-x', '+y');
     });
     expect(run('guard-locked-tests.mjs', input).code).toBe(2);
   });
-  it('AC7: guard denies a delete of a locked file', () => {
+  it('guard denies a delete of a locked file', () => {
     const repo = setup('build');
     const input = payload('pretooluse', repo, (p) => {
       p.tool_input.patch = patch('*** Delete File: test/t.test.ts');
     });
     expect(run('guard-locked-tests.mjs', input).code).toBe(2);
   });
-  it('AC7: guard allows locked test outside build and non-locked paths', () => {
+  it('guard allows locked test outside build and non-locked paths', () => {
     expect(run('guard-locked-tests.mjs', payload('pretooluse', setup('review'))).code).toBe(0);
     const repo = setup('build');
     const input = payload('pretooluse', repo, (p) => {
@@ -82,7 +82,7 @@ describe('AC7: hooks with --tool junie', () => {
     });
     expect(run('guard-locked-tests.mjs', read).code).toBe(0);
   });
-  it('AC7: stop-gate finds the repo from project_path, blocks without verdict, allows after pass', () => {
+  it('stop-gate finds the repo from project_path, blocks without verdict, allows after pass', () => {
     const repo = setup('build');
     const input = payload('stop', repo);
     const r = run('stop-gate.mjs', input);
@@ -91,14 +91,14 @@ describe('AC7: hooks with --tool junie', () => {
     runLw(repo, ['verdict', 'pass', '--round', '1']);
     expect(run('stop-gate.mjs', input).code).toBe(0);
   });
-  it('AC7: reinject finds the repo from project_path and prints active task and stage', () => {
+  it('reinject finds the repo from project_path and prints active task and stage', () => {
     const repo = setup('build');
     const r = run('reinject-context.mjs', payload('compact', repo));
     expect(r.code).toBe(0);
     expect(r.stdout).toContain('loopwright: active task');
     expect(r.stdout).toContain('Stage: build');
   });
-  it('AC7: fails open on garbage input and under LOOPWRIGHT_HOOKS=off', () => {
+  it('fails open on garbage input and under LOOPWRIGHT_HOOKS=off', () => {
     const repo = setup('build');
     for (const s of ['guard-locked-tests.mjs', 'stop-gate.mjs', 'reinject-context.mjs']) {
       expect(run(s, '{not json').code, s).toBe(0);
@@ -109,8 +109,8 @@ describe('AC7: hooks with --tool junie', () => {
   });
 });
 
-describe('AC7: junie hook wiring', () => {
-  it('AC7: hookSpecs(junie) matches apply_patch for the guard', () => {
+describe('junie hook wiring', () => {
+  it('hookSpecs(junie) matches apply_patch for the guard', () => {
     const specs = hookSpecs('junie' as any);
     const guard = specs.find((s) => s.script === 'guard-locked-tests.mjs');
     expect(guard?.event).toBe('PreToolUse');
@@ -125,7 +125,7 @@ describe('AC7: junie hook wiring', () => {
       'stop-gate.mjs',
     ]);
   });
-  it('AC7: hookCommand(junie) uses an absolute script path and no git rev-parse (repo mode)', () => {
+  it('hookCommand(junie) uses an absolute script path and no git rev-parse (repo mode)', () => {
     const t = resolveTargets({ mode: 'repo', cwd: makeRepo() } as any);
     const c = hookCommand('junie' as any, t, 'stop-gate.mjs');
     expect(c).toContain(`"${t.lwHome}/hooks/stop-gate.mjs"`);
@@ -133,7 +133,7 @@ describe('AC7: junie hook wiring', () => {
     expect(c).not.toContain('$');
     expect(c).toMatch(/--tool junie$/);
   });
-  it('AC7: hookCommand(junie) uses an absolute path in global mode', () => {
+  it('hookCommand(junie) uses an absolute path in global mode', () => {
     const t = resolveTargets({ mode: 'global', home: '/tmp/h/' } as any);
     const c = hookCommand('junie' as any, t, 'stop-gate.mjs');
     expect(c).toContain(`"${t.lwHome}/hooks/stop-gate.mjs"`);

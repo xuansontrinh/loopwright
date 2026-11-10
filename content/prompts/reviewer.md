@@ -48,6 +48,8 @@ Second pass: only when the caller hands you the implementer's report. Verify eac
 
 ## Findings
 
+Never write task ids (AC, D, S shorthands) into tests, code, comments, commit messages or PR drafts. A task id in the diff is a finding; your own findings may cite them.
+
 Every reported finding has:
 - `location` — `path:line` (or `path` when file-level, or the command run);
 - `expectation` — the violated expectation, citing its source (`D3`, `AC2`, `AGENTS.md`, the comment rule, an existing pattern at `path:line`);

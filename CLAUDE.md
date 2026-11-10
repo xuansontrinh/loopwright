@@ -41,6 +41,7 @@ Releases: `main` is PR-only. Release = merged PR bumping `package.json` `version
 
 - Content phrase assertions live in `test/content.test.ts` and `test/agents.test.ts`. Change them with any `content/` wording change.
 - Docs (`README.md`, `docs/*.md`): follow `docs/writing-documentation-guidelines.md` and re-read it before any docs change. Essentials: README is a landing page (what/why, then a short tested quick start, then links); reference detail lives in `docs/`; never mix tutorial, how-to, reference and explanation in one section; every command must work as written; keep maintainer material out of the user path. Test phrase assertions read `README.md` + `docs/configuration.md`; move assertions with the text.
+- Task ids (AC, D, S and similar shorthands) live only in the task file. Never write them into tests, code, comments, commit messages or PR descriptions; name tests by behavior.
 - Keep `README.md`, `HELP` in `src/cli.ts`, and the install summary in `src/commands/init.ts` in sync with CLI flags and workflow behavior.
 - Relative imports in `src/` use `.js` extensions. No runtime deps (dev only).
 - Write user-global config only in `--global` mode. Never delete settings files, `.loopwright/tasks/`, or `AGENTS.md`/`CLAUDE.md` content.
@@ -49,5 +50,5 @@ Releases: `main` is PR-only. Release = merged PR bumping `package.json` `version
 - Effort comes only from named profiles (`src/core/profiles.ts`, mirrored in `content/hooks/lib.mjs`; a test pins them equal); `config.json` has no per-role effort keys. Claude spawns pass `effort` from `lw.mjs effort <role>` (a spawn `effort` beats the agent file's, tested on Claude Code 2.1.321); Junie and Codex get it only at `init`/`update`.
 - `AGENTS.md` is a symlink to `CLAUDE.md`: edit `CLAUDE.md` only. `sed -i` or bulk replace on `AGENTS.md` turns the link into a regular file; exclude it or use `--follow-symlinks`.
 - `npm run format:check` covers `test/`: run `npm run format` before `lw.mjs lock`, or a later format rewrites locked tests and breaks their hashes.
-- On Windows git prints `C:/a/b` and Node uses `C:\a\b`: wrap git output in `path.resolve` before comparing or storing it.
+- On Windows git prints `C:/a/b` and Node uses `C:\a\b`: wrap git output in `path.resolve` before comparing or storing it. Temp dirs use 8.3 short names (`RUNNER~1`) while git returns long ones: resolve both sides of a path comparison with `realpathSync.native`.
 - After `npm install --ignore-scripts`, `tsc` may be unlinked: run `npm rebuild typescript`.

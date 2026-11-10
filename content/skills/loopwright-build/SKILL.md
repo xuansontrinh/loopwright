@@ -31,5 +31,6 @@ The implementer subagent writes the code. This thread dispatches it and hands th
 
 ## Rules
 
+- Never write task ids (AC, D, S shorthands) into tests, code, comments, commit messages or PR drafts.
 - Never edit locked tests or ask the implementer to. A locked test that looks wrong goes to the user.
 - Do not run `lw.mjs verdict` here; only Review records verdicts.

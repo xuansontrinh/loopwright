@@ -62,22 +62,22 @@ describe('symlink conflict handling', () => {
   });
 });
 
-describe('AC1: sameLinkTarget', () => {
-  it('AC1: ignores backslash vs slash only on win32', () => {
+describe('sameLinkTarget', () => {
+  it('ignores backslash vs slash only on win32', () => {
     expect(sameLinkTarget('..\\.agents\\skills', '../.agents/skills', 'win32')).toBe(true);
     expect(sameLinkTarget('..\\.agents\\skills', '../.agents/skills', 'linux')).toBe(false);
     expect(sameLinkTarget('../.agents/skills', '../.agents/skills', 'linux')).toBe(true);
     expect(sameLinkTarget('../.agents/skills', '../.agents/skills', 'win32')).toBe(true);
   });
 
-  it('AC1: rejects null and different targets', () => {
+  it('rejects null and different targets', () => {
     expect(sameLinkTarget(null, '../.agents/skills', 'win32')).toBe(false);
     expect(sameLinkTarget(null, '../.agents/skills', 'linux')).toBe(false);
     expect(sameLinkTarget('..\\other', '../.agents/skills', 'win32')).toBe(false);
   });
 });
 
-describe('AC2: merge keeps differing skills', () => {
+describe('merge keeps differing skills', () => {
   let tmpDir: string;
   beforeEach(() => {
     tmpDir = createTempGitRepo('lw-merge-');
@@ -91,7 +91,7 @@ describe('AC2: merge keeps differing skills', () => {
   };
   const link = () => linkClaude({ root: tmpDir, dryRun: false, force: true });
 
-  it('AC2: a differing skill keeps .claude/skills and skips the symlink', async () => {
+  it('a differing skill keeps .claude/skills and skips the symlink', async () => {
     skill('.agents', 'foo', 'agents version');
     skill('.claude', 'foo', 'claude version');
     await link();
@@ -100,7 +100,7 @@ describe('AC2: merge keeps differing skills', () => {
     expect(readFileSync(join(tmpDir, '.agents', 'skills', 'foo', 'SKILL.md'), 'utf8')).toBe('agents version');
   });
 
-  it('AC2: identical skills merge and the symlink is created', async () => {
+  it('identical skills merge and the symlink is created', async () => {
     skill('.agents', 'foo', 'same');
     skill('.claude', 'foo', 'same');
     await link();
@@ -108,7 +108,7 @@ describe('AC2: merge keeps differing skills', () => {
     expect(readFileSync(join(tmpDir, '.agents', 'skills', 'foo', 'SKILL.md'), 'utf8')).toBe('same');
   });
 
-  it('AC2: a dangling symlink at the destination is a conflict', async () => {
+  it('a dangling symlink at the destination is a conflict', async () => {
     skill('.claude', 'foo', 'claude version');
     mkdirSync(join(tmpDir, '.agents', 'skills'), { recursive: true });
     symlinkSync(join(tmpDir, 'nowhere'), join(tmpDir, '.agents', 'skills', 'foo'));
@@ -119,7 +119,7 @@ describe('AC2: merge keeps differing skills', () => {
   });
 });
 
-describe('AC3: applyLink when symlinks are unavailable', () => {
+describe('applyLink when symlinks are unavailable', () => {
   let tmpDir: string;
   beforeEach(() => {
     tmpDir = createTempGitRepo('lw-unavail-');
@@ -134,7 +134,7 @@ describe('AC3: applyLink when symlinks are unavailable', () => {
   });
   const canChmod = process.platform !== 'win32' && process.getuid?.() !== 0;
 
-  it.skipIf(!canChmod)('AC3: throws SymlinkUnavailableError before deleting anything', () => {
+  it.skipIf(!canChmod)('throws SymlinkUnavailableError before deleting anything', () => {
     const dir = join(tmpDir, '.claude', 'skills', 'mine');
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, 'SKILL.md'), 'keep me');
@@ -146,8 +146,8 @@ describe('AC3: applyLink when symlinks are unavailable', () => {
   });
 });
 
-describe('AC5: uninstall with backslash link target', () => {
-  it('AC5: removes a link whose target uses backslashes on win32', async () => {
+describe('uninstall with backslash link target', () => {
+  it('removes a link whose target uses backslashes on win32', async () => {
     const repo = createTempGitRepo('lw-un-');
     const home = mkdtempSync(join(tmpdir(), 'lw-unh-'));
     const r = runCli(repo, ['init'], { home });

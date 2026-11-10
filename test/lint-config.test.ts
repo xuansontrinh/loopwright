@@ -9,14 +9,14 @@ const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const run = (script: string) =>
   spawnSync(npm, ['run', script], { cwd: root, encoding: 'utf8', shell: process.platform === 'win32' });
 
-describe('AC15: format scripts', () => {
-  it('AC15: package.json has format and format:check scripts', () => {
+describe('format scripts', () => {
+  it('package.json has format and format:check scripts', () => {
     const pkg = JSON.parse(read('package.json'));
     expect(pkg.scripts.format).toMatch(/prettier.*--write/);
     expect(pkg.scripts['format:check']).toMatch(/prettier.*--check/);
   });
 
-  it('AC15: ci.yml runs format:check before tests', () => {
+  it('ci.yml runs format:check before tests', () => {
     const ci = read('.github/workflows/ci.yml');
     const fmt = ci.indexOf('npm run format:check');
     const test = ci.indexOf('npm test');
@@ -25,8 +25,8 @@ describe('AC15: format scripts', () => {
   });
 });
 
-describe('AC16: prettier config, no ESLint', () => {
-  it('AC16: .prettierrc exists with single quotes, semicolons, trailing commas, width 120', () => {
+describe('prettier config, no ESLint', () => {
+  it('.prettierrc exists with single quotes, semicolons, trailing commas, width 120', () => {
     expect(existsSync(join(root, '.prettierrc'))).toBe(true);
     const cfg = JSON.parse(read('.prettierrc'));
     expect(cfg.singleQuote).toBe(true);
@@ -35,12 +35,12 @@ describe('AC16: prettier config, no ESLint', () => {
     expect(cfg.printWidth).toBe(120);
   });
 
-  it('AC16: npm run format:check exits 0', () => {
+  it('npm run format:check exits 0', () => {
     const r = run('format:check');
     expect(r.status, r.stdout + r.stderr).toBe(0);
   }, 120_000);
 
-  it('AC16: no eslint config, lint script or ESLint dependency exists', () => {
+  it('no eslint config, lint script or ESLint dependency exists', () => {
     for (const f of [
       'eslint.config.js',
       'eslint.config.mjs',
@@ -65,21 +65,21 @@ describe('AC16: prettier config, no ESLint', () => {
     expect(names.filter((n) => /eslint/i.test(n))).toEqual([]);
   });
 
-  it('AC16: ci.yml does not run lint', () => {
+  it('ci.yml does not run lint', () => {
     expect(read('.github/workflows/ci.yml')).not.toMatch(/npm run lint|eslint/);
   });
 });
 
-describe('AC17: ignores', () => {
+describe('ignores', () => {
   const dirs = ['dist', '.loopwright', 'research', '.claude', '.codex', '.junie', 'node_modules'];
 
-  it('AC17: .prettierignore lists generated and local dirs and AGENTS.md', () => {
+  it('.prettierignore lists generated and local dirs and AGENTS.md', () => {
     expect(existsSync(join(root, '.prettierignore'))).toBe(true);
     const s = read('.prettierignore');
     for (const d of [...dirs, 'AGENTS.md']) expect(s, d).toMatch(new RegExp(`^/?${d.replace('.', '\\.')}/?\\s*$`, 'm'));
   });
 
-  it('AC17: AGENTS.md is still a symlink after format:check', () => {
+  it('AGENTS.md is still a symlink after format:check', () => {
     run('format:check');
     expect(lstatSync(join(root, 'AGENTS.md')).isSymbolicLink()).toBe(true);
   }, 120_000);

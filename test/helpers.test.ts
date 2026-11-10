@@ -29,7 +29,7 @@ describe('test helpers home isolation', () => {
     }
   });
 
-  it('AC6: runCli sets HOME and USERPROFILE to the same isolated home', () => {
+  it('runCli sets HOME and USERPROFILE to the same isolated home', () => {
     const repo = createTempGitRepo('lw-h-');
     const realish = mkdtempSync(join(tmpdir(), 'lw-real-'));
     process.env.HOME = realish;
@@ -41,7 +41,7 @@ describe('test helpers home isolation', () => {
     expect(env.HOME).not.toBe(realish);
   });
 
-  it('AC6: runCli honors opts.home for both variables', () => {
+  it('runCli honors opts.home for both variables', () => {
     const repo = createTempGitRepo('lw-h-');
     const home = mkdtempSync(join(tmpdir(), 'lw-given-'));
     runCli(repo, ['--help'], { home });
@@ -49,7 +49,7 @@ describe('test helpers home isolation', () => {
     expect(last().USERPROFILE).toBe(home);
   });
 
-  it('AC6: init --global leaves the real home untouched', () => {
+  it('init --global leaves the real home untouched', () => {
     const repo = createTempGitRepo('lw-h-');
     const realish = mkdtempSync(join(tmpdir(), 'lw-real-'));
     process.env.HOME = realish;
@@ -59,7 +59,7 @@ describe('test helpers home isolation', () => {
     expect(last().USERPROFILE).not.toBe(realish);
   });
 
-  it('AC7: runLw without env gets an isolated HOME and USERPROFILE', () => {
+  it('runLw without env gets an isolated HOME and USERPROFILE', () => {
     const repo = makeBareRepo();
     const realish = mkdtempSync(join(tmpdir(), 'lw-real-'));
     process.env.HOME = realish;
@@ -71,7 +71,7 @@ describe('test helpers home isolation', () => {
     expect(env.HOME).not.toBe(realish);
   });
 
-  it('AC7: runLw keeps explicitly passed env values', () => {
+  it('runLw keeps explicitly passed env values', () => {
     const repo = makeBareRepo();
     const home = mkdtempSync(join(tmpdir(), 'lw-given-'));
     runLw(repo, ['status'], undefined, { HOME: home, USERPROFILE: home });

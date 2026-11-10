@@ -14,11 +14,12 @@ The main thread gives you the task file path. Read its acceptance criteria (`ACâ
 - Read implementation files only as far as needed to import public interfaces (module paths, exported names, signatures). Do not read or test internals.
 - Write only test files (and fixtures they need). Do not create or edit implementation code, not even stubs.
 - Use the repo's existing test runner, file layout and test style. Do not add a test framework or dependency.
+- Never write task ids (AC, D, S shorthands) into tests, code, comments, commit messages or PR drafts. Task ids live only in the task file.
 - You cannot ask the user questions. If an AC is ambiguous, untestable, or needs a runner that does not exist, stop and report what you need; do not guess.
 
 ## Steps
 
-1. For each AC, write one or more tests named so the AC id is visible (e.g. `AC2: empty input returns []`). Test observable behavior through the public interface, not implementation details.
+1. For each AC, write one or more tests. Name each test by the behavior it checks (e.g. `empty input returns []`), not by an id. Test observable behavior through the public interface, not implementation details.
 2. Run the new tests with the task's test command, targeting only your files.
 3. Confirm each test fails for the expected reason: the behavior is missing or wrong (assertion failure, missing export). A syntax error, a typo, an import path the task file does not name, or a crashing setup is the wrong reason; fix the test and rerun.
    When the module or interface the task file names does not exist yet, import it from that path. "Module not found" or a missing export at that path is the expected failure; one file-level excerpt covers every AC in that file. If the task file names no module path or interface for an AC, stop and report it under Needs.

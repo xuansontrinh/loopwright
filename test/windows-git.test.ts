@@ -25,14 +25,14 @@ afterEach(() => {
 });
 
 // Git on Windows prints forward-slash paths; resolve() normalises them to the platform form.
-describe.skipIf(process.platform === 'win32')('AC10: gitTopLevel resolves git-returned paths', () => {
+describe.skipIf(process.platform === 'win32')('gitTopLevel resolves git-returned paths', () => {
   const raw = '/lw-x/a/../repo/';
-  it('AC10: src/core/git.ts gitTopLevel returns a path.resolve d path', () => {
+  it('src/core/git.ts gitTopLevel returns a path.resolve d path', () => {
     fakeGit(raw);
     expect(gitTopLevel('/')).toBe(resolve(raw));
   });
 
-  it('AC10: content/hooks/lib.mjs gitTopLevel returns a path.resolve d path', async () => {
+  it('content/hooks/lib.mjs gitTopLevel returns a path.resolve d path', async () => {
     fakeGit(raw);
     const lib = await import(pathToFileURL(LIB).href);
     expect(lib.gitTopLevel('/')).toBe(resolve(raw));

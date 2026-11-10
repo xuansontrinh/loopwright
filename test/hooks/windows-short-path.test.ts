@@ -8,8 +8,8 @@ import { git, isolatedEnv, runLw, scaffoldLoopwright } from './helpers.js';
 const GUARD = resolve(__dirname, '../../content/hooks/guard-locked-tests.mjs');
 
 // On Windows os.tmpdir() is an 8.3 short path (RUNNER~1) while git reports the long form.
-describe.skipIf(process.platform !== 'win32')('AC2: short-form temp paths', () => {
-  it('AC2: lw lock accepts a short-form path and the guard denies an edit through it', () => {
+describe.skipIf(process.platform !== 'win32')('short-form temp paths', () => {
+  it('lw lock accepts a short-form path and the guard denies an edit through it', () => {
     const repo = mkdtempSync(join(tmpdir(), 'lw-short-')); // deliberately NOT realpath'd
     git(repo, ['init', '-q', '-b', 'main']);
     writeFileSync(join(repo, 'a.txt'), 'one\n');

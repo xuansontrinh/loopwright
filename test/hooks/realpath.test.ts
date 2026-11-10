@@ -10,8 +10,8 @@ afterEach(() => {
   while (dirs.length) rmSync(dirs.pop()!, { recursive: true, force: true });
 });
 
-describe('AC1: realpathResolve', () => {
-  it('AC1: returns the impl (native) result when it succeeds', async () => {
+describe('realpathResolve', () => {
+  it('returns the impl (native) result when it succeeds', async () => {
     const lib = await import(pathToFileURL(LIB).href);
     const seen: string[] = [];
     const out = lib.realpathResolve('/some/where', (p: string) => {
@@ -22,7 +22,7 @@ describe('AC1: realpathResolve', () => {
     expect(seen).toEqual(['/some/where']);
   });
 
-  it('AC1: falls back to JS realpathSync when impl throws', async () => {
+  it('falls back to JS realpathSync when impl throws', async () => {
     const lib = await import(pathToFileURL(LIB).href);
     const dir = mkdtempSync(join(tmpdir(), 'lw-rp-'));
     dirs.push(dir);
@@ -32,7 +32,7 @@ describe('AC1: realpathResolve', () => {
     expect(out).toBe(realpathSync(dir));
   });
 
-  it('AC1: still throws when both native and JS realpath fail', async () => {
+  it('still throws when both native and JS realpath fail', async () => {
     const lib = await import(pathToFileURL(LIB).href);
     expect(typeof lib.realpathResolve).toBe('function');
     expect(() =>

@@ -14,14 +14,14 @@ afterEach(() => {
   while (dirs.length) rmSync(dirs.pop()!, { recursive: true, force: true });
 });
 
-describe('AC11: repoRelative is case-insensitive on win32', () => {
-  it('AC11: Test/T.test.ts and test/t.test.ts map to the same key on win32', async () => {
+describe('repoRelative is case-insensitive on win32', () => {
+  it('Test/T.test.ts and test/t.test.ts map to the same key on win32', async () => {
     const repo = makeRepo();
     const lib = await import(LIB_URL);
     expect(lib.repoRelative(repo, 'Test/T.test.ts', 'win32')).toBe(lib.repoRelative(repo, 'test/t.test.ts', 'win32'));
   });
 
-  it('AC11: case still matters on linux', async () => {
+  it('case still matters on linux', async () => {
     const repo = makeRepo();
     const lib = await import(LIB_URL);
     expect(lib.repoRelative(repo, 'Test/T.test.ts', 'linux')).not.toBe(
@@ -31,8 +31,8 @@ describe('AC11: repoRelative is case-insensitive on win32', () => {
   });
 });
 
-describe('AC12: reinject-context handles CRLF task files', () => {
-  it('AC12: output has no carriage returns and keeps goal and decisions', () => {
+describe('reinject-context handles CRLF task files', () => {
+  it('output has no carriage returns and keeps goal and decisions', () => {
     const repo = makeRepo();
     const body = '# Title\n\n## Goal\n\nShip the widget.\n\n## Decisions\n\n- D1: use sqlite\n- D2: no cache\n';
     writeFileSync(join(repo, '.loopwright', TASK), body.replace(/\n/g, '\r\n'));
@@ -51,7 +51,7 @@ describe('AC12: reinject-context handles CRLF task files', () => {
   });
 });
 
-describe('AC13: writeState retries renameSync on EPERM', () => {
+describe('writeState retries renameSync on EPERM', () => {
   function drive(failures: number) {
     const tmp = realpathSync(mkdtempSync(join(tmpdir(), 'lw-ws-')));
     dirs.push(tmp);
@@ -77,13 +77,13 @@ syncBuiltinESMExports();
     return { r, file: join(tmp, 'state', 'abc.json') };
   }
 
-  it('AC13: transient EPERM is retried and the state file is written', () => {
+  it('transient EPERM is retried and the state file is written', () => {
     const { r, file } = drive(2);
     expect(r.status, r.stderr).toBe(0);
     expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ a: 1 });
   });
 
-  it('AC13: persistent EPERM eventually throws', () => {
+  it('persistent EPERM eventually throws', () => {
     const { r } = drive(1_000_000);
     expect(r.status).not.toBe(0);
     expect(r.stderr).toContain('EPERM');

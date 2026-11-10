@@ -25,42 +25,42 @@ function setup(opts: { config?: object; header?: string; manifestProfile?: strin
   return repo;
 }
 
-describe('AC5: lw.mjs effort', () => {
-  it('AC5: task profile header wins over the manifest profile', () => {
+describe('lw.mjs effort', () => {
+  it('task profile header wins over the manifest profile', () => {
     const repo = setup({ manifestProfile: 'lean', header: 'profile: deep' });
     for (const r of ROLES) expect(runLw(repo, ['effort', r]).stdout.trim()).toBe((PROFILES as any).deep[r]);
   });
-  it('AC5: falls back to the manifest recorded profile', () => {
+  it('falls back to the manifest recorded profile', () => {
     const repo = setup({ manifestProfile: 'thorough' });
     expect(runLw(repo, ['effort', 'scout']).stdout.trim()).toBe('high');
     expect(runLw(repo, ['effort', 'reviewer']).stdout.trim()).toBe('xhigh');
   });
-  it('AC5: a config.json profile key is ignored', () => {
+  it('a config.json profile key is ignored', () => {
     const repo = setup({ config: { profile: 'deep' } });
     expect(runLw(repo, ['effort', 'scout']).stdout.trim()).toBe('medium');
   });
-  it('AC5: no header and no manifest profile is balanced', () => {
+  it('no header and no manifest profile is balanced', () => {
     const repo = setup({ config: {} });
     expect(runLw(repo, ['effort', 'tester']).stdout.trim()).toBe('medium');
     expect(runLw(repo, ['effort', 'reviewer']).stdout.trim()).toBe('high');
   });
-  it('AC5: mirrored table in content/hooks equals PROFILES', async () => {
+  it('mirrored table in content/hooks equals PROFILES', async () => {
     const mod: any = await import(resolve(__dirname, '../../content/hooks/lib.mjs')).catch(() => ({}));
     const mirrored =
       mod.PROFILES ?? (await import(resolve(__dirname, '../../content/hooks/lw.mjs')).catch(() => ({}))).PROFILES;
     expect(mirrored).toEqual(PROFILES);
   });
-  it('AC8: default-config.json has no effort maps', () => {
+  it('default-config.json has no effort maps', () => {
     const j = JSON.parse(readFileSync(resolve(__dirname, '../../content/hooks/default-config.json'), 'utf8'));
     for (const t of ['claude', 'codex', 'junie', 'crossAgentReviewer']) expect(j.models[t].effort).toBeUndefined();
   });
-  it('AC8: scaffolded config.json (lw start) carries no effort maps and effort still resolves to balanced', () => {
+  it('scaffolded config.json (lw start) carries no effort maps and effort still resolves to balanced', () => {
     const repo = setup({});
     const j = JSON.parse(readFileSync(join(repo, '.loopwright/config.json'), 'utf8'));
     for (const t of ['claude', 'junie', 'crossAgentReviewer']) expect(j.models?.[t]?.effort).toBeUndefined();
     expect(runLw(repo, ['effort', 'scout']).stdout.trim()).toBe('medium');
   });
-  it('AC5: default-config.json equals DEFAULT_CONFIG', () => {
+  it('default-config.json equals DEFAULT_CONFIG', () => {
     expect(JSON.parse(readFileSync(resolve(__dirname, '../../content/hooks/default-config.json'), 'utf8'))).toEqual(
       DEFAULT_CONFIG,
     );
