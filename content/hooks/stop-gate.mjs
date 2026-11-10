@@ -1,6 +1,17 @@
 #!/usr/bin/env node
 // Stop hook: block stopping in build/review without a passing review for the current code.
-import { allow, exitIfHooksOff, deny, failOpen, fingerprint, loopwrightDir, readState, readStdinJson, worktreeId, writeState } from './lib.mjs';
+import {
+  allow,
+  exitIfHooksOff,
+  deny,
+  failOpen,
+  fingerprint,
+  loopwrightDir,
+  readState,
+  readStdinJson,
+  worktreeId,
+  writeState,
+} from './lib.mjs';
 
 const CAP = 3;
 
@@ -29,9 +40,17 @@ try {
     allow();
   }
   state.stopBlocks = blocks + 1;
-  (state.history ??= []).push({ event: 'stop-blocked', detail: String(state.stopBlocks), at: new Date().toISOString() });
+  (state.history ??= []).push({
+    event: 'stop-blocked',
+    detail: String(state.stopBlocks),
+    at: new Date().toISOString(),
+  });
   writeState(dir, id, state);
-  deny('', '', 'loopwright: no passing review for the current code. Run /loopwright-review (or finish the fix loop) before stopping.');
+  deny(
+    '',
+    '',
+    'loopwright: no passing review for the current code. Run /loopwright-review (or finish the fix loop) before stopping.',
+  );
 } catch (err) {
   failOpen(err);
 }

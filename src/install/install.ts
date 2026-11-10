@@ -11,7 +11,7 @@ import { mergeClaudeHooks } from './claude-settings.js';
 import { removeJunieHooks, upsertJunieHooks } from './junie-config.js';
 import { MANAGED_HOOK_HINT } from './hook-wiring.js';
 import { renderCodexHookBlock, upsertCodexBlock } from './codex-config.js';
-import { applyLink, type LinkAction } from './symlink.js';
+import { applyLink, SymlinkUnavailableError, type LinkAction } from './symlink.js';
 import { log } from '../utils/log.js';
 
 export interface WiringPlan {
@@ -36,14 +36,22 @@ export function planWiring(targets: Targets, opts: CommandOptions): WiringPlan[]
         kind: 'claude-hooks',
         managed: true,
         cur: cs,
-        out: mergeClaudeHooks(cs, hookSpecs('claude'), (s) => hookCommand('claude', targets, s.script), targets.claudeSettingsPath),
+        out: mergeClaudeHooks(
+          cs,
+          hookSpecs('claude'),
+          (s) => hookCommand('claude', targets, s.script),
+          targets.claudeSettingsPath,
+        ),
       },
       {
         file: targets.codexConfigPath,
         kind: 'codex-block',
         managed: true,
         cur: cc,
-        out: upsertCodexBlock(cc, renderCodexHookBlock(hookSpecs('codex'), (s) => hookCommand('codex', targets, s.script))),
+        out: upsertCodexBlock(
+          cc,
+          renderCodexHookBlock(hookSpecs('codex'), (s) => hookCommand('codex', targets, s.script)),
+        ),
       },
     );
   }
@@ -54,7 +62,12 @@ export function planWiring(targets: Targets, opts: CommandOptions): WiringPlan[]
       kind: 'junie-hooks',
       managed: true,
       cur: jc,
-      out: upsertJunieHooks(jc, hookSpecs('junie'), (s) => hookCommand('junie', targets, s.script), targets.junieConfigPath),
+      out: upsertJunieHooks(
+        jc,
+        hookSpecs('junie'),
+        (s) => hookCommand('junie', targets, s.script),
+        targets.junieConfigPath,
+      ),
     });
   } else if (jc.includes(MANAGED_HOOK_HINT)) {
     // Feature dropped: strip the block we wrote earlier.
@@ -101,14 +114,22 @@ export async function installAll(
     if (!f.endsWith('.md')) continue;
     const role = basename(f, '.md') as Role;
     const src = parseAgentSource(role, renderTemplate(readContent(`agents/${f}`), vars));
-    await put(join(targets.claudeAgentsDir, `${src.name}.md`), renderClaudeAgent(src, config.models.claude[role] ?? 'inherit', config.models.claude.effort?.[role]));
+    await put(
+      join(targets.claudeAgentsDir, `${src.name}.md`),
+      renderClaudeAgent(src, config.models.claude[role] ?? 'inherit', config.models.claude.effort?.[role]),
+    );
     await put(
       join(targets.codexAgentsDir, `${src.name}.toml`),
       renderCodexAgent(src, config.models.codex[role] ?? 'inherit', config.models.codex.effort?.[role]),
     );
     await put(
       join(targets.junieAgentsDir, `${src.name}.md`),
-      renderJunieAgent(src, config.models.junie[role] ?? 'inherit', config.models.junie.effort?.[role], targets.lwHomeRef),
+      renderJunieAgent(
+        src,
+        config.models.junie[role] ?? 'inherit',
+        config.models.junie.effort?.[role],
+        targets.lwHomeRef,
+      ),
     );
   }
 
@@ -120,7 +141,12 @@ export async function installAll(
   }
 
   if (targets.claudeSkillsMode === 'symlink') {
-    if (applyLink(targets.root, link, opts.dryRun)) changed = true;
+    try {
+      if (applyLink(targets.root, link, opts.dryRun)) changed = true;
+    } catch (e) {
+      if (!(e instanceof SymlinkUnavailableError)) throw e;
+      log.warn(`${e.message}; leaving .claude/skills as-is (enable Developer Mode or run elevated on Windows)`);
+    }
   }
 
   if (!opts.hook) writer.carryPriorConfig(['claude-hooks', 'codex-block']);

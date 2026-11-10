@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { contentRoot, listContent, renderTemplate } from '../src/core/content.js';
 import { parseAgentSource } from '../src/generate/agents.js';
@@ -40,7 +41,18 @@ describe('content', () => {
 
   it('reviewer prompt carries the review procedure', () => {
     const p = read('prompts/reviewer.md');
-    for (const s of ['Blocking', 'Undecided', 'proof', 'check-locks', "Don't report anything", 'lockedAfterBuild', 'forcedRestartAfterBuild', 'task state was force-restarted after Build began; user must confirm locked tests', 'schemas/verdict.json', '`droppedCount` is a non-negative integer']) {
+    for (const s of [
+      'Blocking',
+      'Undecided',
+      'proof',
+      'check-locks',
+      "Don't report anything",
+      'lockedAfterBuild',
+      'forcedRestartAfterBuild',
+      'task state was force-restarted after Build began; user must confirm locked tests',
+      'schemas/verdict.json',
+      '`droppedCount` is a non-negative integer',
+    ]) {
       expect(p, s).toContain(s);
     }
   });
@@ -68,7 +80,9 @@ describe('content', () => {
   it('tester treats an absent named module as the expected failure', () => {
     const b = agent('tester').body;
     expect(b).toContain('"Module not found" or a missing export at that path is the expected failure');
-    expect(b).toContain('If the task file names no module path or interface for an AC, stop and report it under Needs.');
+    expect(b).toContain(
+      'If the task file names no module path or interface for an AC, stop and report it under Needs.',
+    );
   });
 
   it('verdict schema is valid JSON with required keys', () => {
@@ -114,7 +128,8 @@ describe('content', () => {
     });
 
     it('no unknown placeholders', () => {
-      for (const n of SKILLS) expect(() => renderTemplate(skill(n), { LW_HOME: '.agents/loopwright' }), n).not.toThrow();
+      for (const n of SKILLS)
+        expect(() => renderTemplate(skill(n), { LW_HOME: '.agents/loopwright' }), n).not.toThrow();
     });
 
     it('every skill runs lw.mjs from the worktree root and tells agents to spawn subagents', () => {
@@ -149,21 +164,84 @@ describe('content', () => {
     });
 
     const phrases: Record<string, string[]> = {
-      'loopwright-flow': ['rebuild state', 'loopwright/hooks/', 'lw.mjs" status', '--base', ...SKILLS.filter((s) => s !== 'loopwright-flow')],
+      'loopwright-flow': [
+        'rebuild state',
+        'loopwright/hooks/',
+        'lw.mjs" status',
+        '--base',
+        ...SKILLS.filter((s) => s !== 'loopwright-flow'),
+      ],
       'loopwright-plan': [
-        'Assumption ledger', '-2', 'high-impact', 'low-impact', 'loopwright-scout', 'small', 'standard', 'large',
-        'two-pass', 'maxFixRounds', 'AskUserQuestion', '/plan', 'asked', 'batch-confirmed', 'overridden',
-        'lw.mjs" start', 'lw.mjs" dir', 'creates `.loopwright/`', '## Goal', 'plan: draft', 'plan: confirmed', '--force',
+        'Assumption ledger',
+        '-2',
+        'high-impact',
+        'low-impact',
+        'loopwright-scout',
+        'small',
+        'standard',
+        'large',
+        'two-pass',
+        'maxFixRounds',
+        'AskUserQuestion',
+        '/plan',
+        'asked',
+        'batch-confirmed',
+        'overridden',
+        'lw.mjs" start',
+        'lw.mjs" dir',
+        'creates `.loopwright/`',
+        '## Goal',
+        'plan: draft',
+        'plan: confirmed',
+        '--force',
       ],
       'loopwright-test': ['lw.mjs" stage test', 'lw.mjs" status', 'lockedTests', 'plan: confirmed'],
-      'loopwright-build': ['lw.mjs" stage build', 'task file path', 'chat history', 'slice', 'plan: confirmed', 'lw.mjs" await-user', 'lw.mjs" resume', 'AskUserQuestion'],
-      'loopwright-review': [
-        'lw.mjs" stage review', 'Blocking', 'Undecided', 'crossAgentReview', 'crossAgentReviewer', 'verdict pass',
-        'verdict fail', '{{LW_HOME}}/prompts/reviewer.md', '{{LW_HOME}}/schemas/verdict.json', 'structured_output',
-        'LOOPWRIGHT_HOOKS=off codex exec --sandbox read-only --output-schema', 'LOOPWRIGHT_HOOKS=off claude -p', '--effort', '--json-schema', 'implementer report', 'Review log', 'whole-branch',
-        'lw.mjs" await-user', 'lw.mjs" resume', 'Second pass.', '--allowedTools', '--disallowedTools', ' -- "$PROMPT"', '-o ', 'sandbox',
+      'loopwright-build': [
+        'lw.mjs" stage build',
+        'task file path',
+        'chat history',
+        'slice',
+        'plan: confirmed',
+        'lw.mjs" await-user',
+        'lw.mjs" resume',
+        'AskUserQuestion',
       ],
-      'loopwright-done': ['AGENTS.md', 'docs/agents', '@AGENTS.md', 'do not commit', 'status: done', 'lw.mjs" done', 'rejected'],
+      'loopwright-review': [
+        'lw.mjs" stage review',
+        'Blocking',
+        'Undecided',
+        'crossAgentReview',
+        'crossAgentReviewer',
+        'verdict pass',
+        'verdict fail',
+        '{{LW_HOME}}/prompts/reviewer.md',
+        '{{LW_HOME}}/schemas/verdict.json',
+        'structured_output',
+        'LOOPWRIGHT_HOOKS=off codex exec --sandbox read-only --output-schema',
+        'LOOPWRIGHT_HOOKS=off claude -p',
+        '--effort',
+        '--json-schema',
+        'implementer report',
+        'Review log',
+        'whole-branch',
+        'lw.mjs" await-user',
+        'lw.mjs" resume',
+        'Second pass.',
+        '--allowedTools',
+        '--disallowedTools',
+        ' -- "$PROMPT"',
+        '-o ',
+        'sandbox',
+      ],
+      'loopwright-done': [
+        'AGENTS.md',
+        'docs/agents',
+        '@AGENTS.md',
+        'do not commit',
+        'status: done',
+        'lw.mjs" done',
+        'rejected',
+      ],
     };
     it('cross-agent claude allowlist permits only read-only lw.mjs subcommands, quoted and unquoted', () => {
       const b = skill('loopwright-review');
@@ -193,7 +271,7 @@ describe('content', () => {
 });
 
 describe('cross-agent rename', () => {
-  const root = new URL('../', import.meta.url).pathname;
+  const root = fileURLToPath(new URL('../', import.meta.url));
   const files = (dir: string): string[] =>
     readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : [join(dir, n)]));
 
@@ -211,7 +289,15 @@ describe('cross-agent rename', () => {
   });
 
   it('no cross-model wording remains', () => {
-    const targets = [...files(root + 'src'), ...files(root + 'content'), root + 'README.md', root + 'CLAUDE.md', ...readdirSync(root + 'docs').filter((n) => n.endsWith('.md')).map((n) => root + 'docs/' + n)];
+    const targets = [
+      ...files(root + 'src'),
+      ...files(root + 'content'),
+      root + 'README.md',
+      root + 'CLAUDE.md',
+      ...readdirSync(root + 'docs')
+        .filter((n) => n.endsWith('.md'))
+        .map((n) => root + 'docs/' + n),
+    ];
     for (const f of targets) expect(readFileSync(f, 'utf8'), f).not.toMatch(/cross[-_ ]?model/i);
   });
 });
@@ -233,15 +319,21 @@ describe('effort profiles content', () => {
     expect(b).toMatch(/fall ?back|falls back|reject/i);
   });
   it('AC7: README documents profiles and the subagent-only caveat', () => {
-    const r = readFileSync(join(__dirname, '..', 'README.md'), 'utf8') + readFileSync(join(__dirname, '..', 'docs', 'configuration.md'), 'utf8');
+    const r =
+      readFileSync(join(__dirname, '..', 'README.md'), 'utf8') +
+      readFileSync(join(__dirname, '..', 'docs', 'configuration.md'), 'utf8');
     expect(r).toContain('--profile');
     for (const n of ['lean', 'balanced', 'thorough', 'deep']) expect(r).toContain(n);
     expect(r).toMatch(/subagent/i);
     expect(r).toMatch(/main[- ]thread/i);
   });
   it('AC7: README says there is no profile config key and config.json stays free of it', () => {
-    const r = readFileSync(join(__dirname, '..', 'README.md'), 'utf8') + readFileSync(join(__dirname, '..', 'docs', 'configuration.md'), 'utf8');
+    const r =
+      readFileSync(join(__dirname, '..', 'README.md'), 'utf8') +
+      readFileSync(join(__dirname, '..', 'docs', 'configuration.md'), 'utf8');
     expect(r).not.toMatch(/^- `profile`:/m);
-    expect(r).toMatch(/no `profile` (config )?key|`profile` is not a config|no profile (config )?key|config\.json[^.\n]*(never|not|free of)[^.\n]*profile/i);
+    expect(r).toMatch(
+      /no `profile` (config )?key|`profile` is not a config|no profile (config )?key|config\.json[^.\n]*(never|not|free of)[^.\n]*profile/i,
+    );
   });
 });

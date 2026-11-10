@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { join } from 'node:path';
 import { parse } from 'smol-toml';
 import { mergeClaudeHooks, removeClaudeHooks, SettingsParseError } from '../src/install/claude-settings.js';
 import { upsertCodexBlock, removeCodexBlock, renderCodexHookBlock } from '../src/install/codex-config.js';
@@ -46,20 +47,30 @@ describe('claude settings', () => {
     expect(JSON.parse(removeClaudeHooks(a, HINT))).toEqual({ model: 'x' });
   });
   it('keeps a mixed group containing a foreign hook', () => {
-    const mixed = { hooks: { Stop: [{ hooks: [
-      { type: 'command', command: 'echo hi' },
-      { type: 'command', command: 'node /x/loopwright/hooks/stop-gate.mjs' },
-    ] }] } };
+    const mixed = {
+      hooks: {
+        Stop: [
+          {
+            hooks: [
+              { type: 'command', command: 'echo hi' },
+              { type: 'command', command: 'node /x/loopwright/hooks/stop-gate.mjs' },
+            ],
+          },
+        ],
+      },
+    };
     const text = JSON.stringify(mixed);
     const merged = JSON.parse(mergeClaudeHooks(text, hookSpecs('claude'), cmdFor('claude')));
     expect(merged.hooks.Stop[0]).toEqual(mixed.hooks.Stop[0]);
     expect(JSON.parse(removeClaudeHooks(text, HINT))).toEqual(mixed);
   });
   it('throws on invalid JSON without writing', () => {
-    expect(() => mergeClaudeHooks('{nope', hookSpecs('claude'), cmdFor('claude'), '/r/.claude/settings.json'))
-      .toThrow(SettingsParseError);
-    expect(() => mergeClaudeHooks('{nope', hookSpecs('claude'), cmdFor('claude'), '/r/.claude/settings.json'))
-      .toThrow(/\/r\/\.claude\/settings\.json/);
+    expect(() => mergeClaudeHooks('{nope', hookSpecs('claude'), cmdFor('claude'), '/r/.claude/settings.json')).toThrow(
+      SettingsParseError,
+    );
+    expect(() => mergeClaudeHooks('{nope', hookSpecs('claude'), cmdFor('claude'), '/r/.claude/settings.json')).toThrow(
+      /\/r\/\.claude\/settings\.json/,
+    );
     expect(() => removeClaudeHooks('[1]', HINT)).toThrow(SettingsParseError);
   });
 });
@@ -70,15 +81,18 @@ describe('codex config', () => {
     const p: any = parse(block());
     expect(p.hooks.PreToolUse[0].matcher).toBe('^apply_patch$');
     expect(p.hooks.PreToolUse[0].hooks[0].type).toBe('command');
-    expect(p.hooks.Stop[0].hooks[0].command).toContain('"/tmp/a b/.config/loopwright/hooks/stop-gate.mjs"');
+    expect(p.hooks.Stop[0].hooks[0].command).toContain(
+      `"${join('/tmp/a b/', '.config', 'loopwright', 'hooks', 'stop-gate.mjs')}"`,
+    );
     expect(p.hooks.SessionStart[0].matcher).toBe('compact');
   });
   it('parses repo-mode commands with $(...) and quotes', () => {
     const t = { mode: 'repo' } as any;
     const b = renderCodexHookBlock(hookSpecs('codex'), (s) => hookCommand('codex', t, s.script));
     const p: any = parse(b);
-    expect(p.hooks.Stop[0].hooks[0].command)
-      .toBe('node "$(git rev-parse --show-toplevel)/.agents/loopwright/hooks/stop-gate.mjs" --tool codex');
+    expect(p.hooks.Stop[0].hooks[0].command).toBe(
+      'node "$(git rev-parse --show-toplevel)/.agents/loopwright/hooks/stop-gate.mjs" --tool codex',
+    );
   });
   it('falls back to escaped basic string when command has a single quote', () => {
     const b = renderCodexHookBlock([{ event: 'Stop', script: 's.mjs' }], () => `node "/it's/x" \\y`);
@@ -112,12 +126,14 @@ describe('codex config', () => {
 describe('hook commands', () => {
   it('quotes hook commands with spaces', () => {
     const c = hookCommand('claude', globalT('/tmp/a b/'), 'stop-gate.mjs');
-    expect(c).toContain('"/tmp/a b/.config/loopwright/hooks/stop-gate.mjs"');
+    expect(c).toContain(`"${join('/tmp/a b/', '.config', 'loopwright', 'hooks', 'stop-gate.mjs')}"`);
     expect(c).toMatch(/--tool claude$/);
   });
   it('repo commands', () => {
     const t = { mode: 'repo' } as any;
-    expect(hookCommand('claude', t, 'x.mjs')).toBe('node "$CLAUDE_PROJECT_DIR/.agents/loopwright/hooks/x.mjs" --tool claude');
+    expect(hookCommand('claude', t, 'x.mjs')).toBe(
+      'node "$CLAUDE_PROJECT_DIR/.agents/loopwright/hooks/x.mjs" --tool claude',
+    );
   });
   it('specs', () => {
     expect(hookSpecs('codex').map((s) => s.matcher)).toEqual(['^apply_patch$', undefined, 'compact']);

@@ -27,9 +27,7 @@ function parseObject(text: string, filePath?: string): JsonObject {
 
 function isManagedGroup(group: Json, hint: string): boolean {
   if (!isObj(group) || !Array.isArray(group['hooks']) || group['hooks'].length === 0) return false;
-  return group['hooks'].every(
-    (h) => isObj(h) && typeof h['command'] === 'string' && h['command'].includes(hint),
-  );
+  return group['hooks'].every((h) => isObj(h) && typeof h['command'] === 'string' && h['command'].includes(hint));
 }
 
 function hooksOf(obj: JsonObject, filePath?: string): JsonObject | undefined {

@@ -9,7 +9,16 @@ describe('cli', () => {
   it('prints help', () => {
     const r = runCli(createTempGitRepo(), ['--help']);
     expect(r.exitCode).toBe(0);
-    for (const s of ['loopwright init', 'update', 'uninstall', '--global', '--no-hook', '--no-symlink', '--dry-run', '--force']) {
+    for (const s of [
+      'loopwright init',
+      'update',
+      'uninstall',
+      '--global',
+      '--no-hook',
+      '--no-symlink',
+      '--dry-run',
+      '--force',
+    ]) {
       expect(r.stdout).toContain(s);
     }
   });

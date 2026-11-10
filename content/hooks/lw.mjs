@@ -5,7 +5,19 @@ import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { PROFILES, fingerprint, gitTopLevel, loopwrightDir, loopwrightPath, readState, repoRelative, sha256File, statePath, worktreeId, writeState } from './lib.mjs';
+import {
+  PROFILES,
+  fingerprint,
+  gitTopLevel,
+  loopwrightDir,
+  loopwrightPath,
+  readState,
+  repoRelative,
+  sha256File,
+  statePath,
+  worktreeId,
+  writeState,
+} from './lib.mjs';
 
 const STAGES = ['plan', 'test', 'build', 'review', 'done'];
 const cwd = process.cwd();
@@ -61,7 +73,8 @@ function requireState() {
 
 /** Effort for a role: the task header's `profile:`, else the manifest's recorded profile, else balanced. */
 function effortFor(role) {
-  if (!Object.hasOwn(PROFILES.balanced, role)) fail(`loopwright: usage: effort <${Object.keys(PROFILES.balanced).join('|')}>`);
+  if (!Object.hasOwn(PROFILES.balanced, role))
+    fail(`loopwright: usage: effort <${Object.keys(PROFILES.balanced).join('|')}>`);
   // Works before `start` (Plan's scout spawn): no task or repo state just means no header.
   let name;
   let dir = null;
@@ -71,16 +84,21 @@ function effortFor(role) {
     if (state?.task && existsSync(join(dir, state.task))) {
       name = /^profile:\s*(\S+)\s*$/m.exec(readFileSync(join(dir, state.task), 'utf8').split(/^## /m)[0])?.[1];
     }
-  } catch {}
+  } catch {
+    // Unreadable task or state: fall through to the manifest profile.
+  }
   // Repo manifest first, then the global one (global installs record it under ~/.config/loopwright).
   for (const m of [dir && join(dir, 'manifest.json'), join(homedir(), '.config', 'loopwright', 'manifest.json')]) {
     if (name || !m || !existsSync(m)) continue;
     try {
       name = JSON.parse(readFileSync(m, 'utf8')).options?.profile;
-    } catch {}
+    } catch {
+      // Unreadable manifest: try the next one.
+    }
   }
   name ??= 'balanced';
-  if (!Object.hasOwn(PROFILES, name)) fail(`loopwright: unknown profile '${name}' (allowed: ${Object.keys(PROFILES).join(', ')})`);
+  if (!Object.hasOwn(PROFILES, name))
+    fail(`loopwright: unknown profile '${name}' (allowed: ${Object.keys(PROFILES).join(', ')})`);
   return PROFILES[name][role];
 }
 
@@ -192,7 +210,8 @@ try {
       if (result !== 'pass' && result !== 'fail') fail('loopwright: usage: verdict <pass|fail> --round <n>');
       const roundRaw = flag(rest, '--round');
       const round = Number(roundRaw);
-      if (roundRaw === undefined || !Number.isInteger(round) || round < 0) fail('loopwright: verdict requires --round <n>');
+      if (roundRaw === undefined || !Number.isInteger(round) || round < 0)
+        fail('loopwright: verdict requires --round <n>');
       const { dir, id, state } = requireState();
       state.verdict = { pass: result === 'pass', fingerprint: fingerprint(cwd, state.baseCommit), round };
       delete state.awaitingUser;
@@ -236,7 +255,9 @@ try {
       break;
     }
     default:
-      fail('loopwright: usage: lw.mjs <dir|start|stage|lock|check-locks|fingerprint|verdict|await-user|resume|status|effort|done>');
+      fail(
+        'loopwright: usage: lw.mjs <dir|start|stage|lock|check-locks|fingerprint|verdict|await-user|resume|status|effort|done>',
+      );
   }
 } catch (err) {
   fail(`loopwright: ${err instanceof Error ? err.message : String(err)}`);

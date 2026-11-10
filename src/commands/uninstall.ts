@@ -1,4 +1,14 @@
-import { existsSync, lstatSync, readFileSync, readdirSync, readlinkSync, rmSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  rmdirSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { sameLinkTarget, symlinkTarget } from '../utils/fs.js';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { CommandOptions } from '../core/options.js';
 import { NotAGitRepoError, resolveTargets, type Targets } from '../core/targets.js';
@@ -91,7 +101,10 @@ export async function runUninstall(opts: CommandOptions): Promise<number> {
   }
 
   const link = targets.claudeSkillsDir;
-  if (lstatSync(link, { throwIfNoEntry: false })?.isSymbolicLink() && readlinkSync(link) === '../.agents/skills') {
+  if (
+    lstatSync(link, { throwIfNoEntry: false })?.isSymbolicLink() &&
+    sameLinkTarget(symlinkTarget(link), '../.agents/skills')
+  ) {
     log.dim(`  ${would} ${link}`);
     if (!dry) {
       unlinkSync(link);
@@ -103,7 +116,9 @@ export async function runUninstall(opts: CommandOptions): Promise<number> {
     rmSync(targets.manifestPath, { force: true });
     dirsToPrune.add(dirname(targets.manifestPath));
     const r = targets.root;
-    const stops = new Set([r, join(r, '.agents'), join(r, '.claude'), join(r, '.codex'), join(r, '.config')].map((p) => resolve(p)));
+    const stops = new Set(
+      [r, join(r, '.agents'), join(r, '.claude'), join(r, '.codex'), join(r, '.config')].map((p) => resolve(p)),
+    );
     // .loopwright (repo state) is never removed: it holds config/state/tasks.
     if (targets.stateDir) stops.add(resolve(targets.stateDir));
     for (const d of dirsToPrune) pruneEmptyDirs(d, stops);

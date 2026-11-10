@@ -10,12 +10,12 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
-  workflow_dispatch:  # retry a failed release of main's head from the Actions tab
+  workflow_dispatch: # retry a failed release of main's head from the Actions tab
 
 permissions:
-  id-token: write  # npm trusted publishing
-  contents: write  # create the tag and GitHub release
-  actions: read    # look up CI results for workflow_dispatch
+  id-token: write # npm trusted publishing
+  contents: write # create the tag and GitHub release
+  actions: read # look up CI results for workflow_dispatch
 
 concurrency:
   group: publish
@@ -77,19 +77,29 @@ jobs:
             echo "v$version already has a GitHub release (live on npm: $on_npm); nothing to do."
             echo "release=false" >> "$GITHUB_OUTPUT"
           else
+            # A leftover remote tag on another commit would make the release point at the wrong code.
+            tags=$(git ls-remote origin "refs/tags/v$version" "refs/tags/v$version^{}") || {
+              echo "::error::git ls-remote failed; cannot verify tag v$version."
+              exit 1
+            }
+            tag_sha=$(echo "$tags" | awk '/\^\{\}$/ {p=$1} !/\^\{\}$/ && NF {l=$1} END {print p ? p : l}')
+            if [ -n "$tag_sha" ] && [ "$tag_sha" != "$SHA" ]; then
+              echo "::error::Remote tag v$version points at $tag_sha, not $SHA; delete or fix the tag."
+              exit 1
+            fi
             echo "Releasing v$version (live on npm: $on_npm)."
             echo "release=true" >> "$GITHUB_OUTPUT"
           fi
 
       # CI already ran typecheck + tests for this commit; only the build is needed here.
-      # `npm stage` needs npm >= 11.15.0; don't depend on what Node 24 bundles.
+      # `npm stage` needs npm >= 11.15.0; pin it rather than depend on what Node 24 bundles.
       # A version already live on npm (e.g. published by hand) is not staged again.
       - name: Build and stage on npm
         if: steps.check.outputs.release == 'true' && steps.check.outputs.on_npm == 'false'
         run: |
           npm ci --ignore-scripts
           npm run build
-          npm install -g npm@latest
+          npm install -g npm@11.15.0
           npm stage publish --access public
 
       # Runs only after a successful stage, so a failed stage leaves no tag and can be retried.

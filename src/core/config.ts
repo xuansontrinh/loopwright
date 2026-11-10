@@ -60,7 +60,7 @@ export function readConfig(path: string, profile?: string): LoopwrightConfig {
     try {
       parsed = JSON.parse(readFileSync(path, 'utf8'));
     } catch (e) {
-      throw new Error(`Invalid JSON in ${path}: ${(e as Error).message}`);
+      throw new Error(`Invalid JSON in ${path}: ${(e as Error).message}`, { cause: e });
     }
     config = merge(config, parsed);
   }

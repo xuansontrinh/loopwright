@@ -1,10 +1,31 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, readdirSync, writeFileSync } from 'node:fs';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readlinkSync,
+  readdirSync,
+  writeFileSync,
+} from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createTempGitRepo, readJson, runCli } from './helpers.js';
 import { listContent } from '../src/core/content.js';
+
+const symState = vi.hoisted(() => ({ fail: false }));
+vi.mock('node:fs', async (orig) => {
+  const actual = await orig<typeof import('node:fs')>();
+  return {
+    ...actual,
+    symlinkSync: (...a: Parameters<typeof actual.symlinkSync>) => {
+      if (symState.fail) throw Object.assign(new Error('EPERM: operation not permitted, symlink'), { code: 'EPERM' });
+      return actual.symlinkSync(...a);
+    },
+  };
+});
 
 const SKILLS = ['flow', 'plan', 'test', 'build', 'review', 'done'].map((s) => `loopwright-${s}`);
 const ROLES = ['scout', 'tester', 'implementer', 'reviewer'];
@@ -142,7 +163,9 @@ describe('init', () => {
     }
     expect(existsSync(join(home, '.config/loopwright/manifest.json'))).toBe(true);
     expect(existsSync(join(home, '.config/loopwright/config.json'))).toBe(false);
-    expect(readFileSync(join(home, '.claude/skills/loopwright-flow/SKILL.md'), 'utf8')).toContain(join(home, '.config/loopwright'));
+    expect(readFileSync(join(home, '.claude/skills/loopwright-flow/SKILL.md'), 'utf8')).toContain(
+      join(home, '.config/loopwright'),
+    );
     expect(JSON.stringify(readJson(join(home, '.claude/settings.json')).hooks)).toContain('loopwright/hooks/');
     expect(readdirSync(repo).filter((f) => f !== '.git')).toEqual([]);
   });
@@ -175,5 +198,50 @@ describe('init', () => {
     expect(lstatSync(join(repo, '.claude/skills')).isDirectory()).toBe(true);
     expect(existsSync(join(repo, '.agents/skills/loopwright-flow/SKILL.md'))).toBe(true);
     expect(existsSync(join(repo, '.loopwright/manifest.json'))).toBe(true);
+  });
+});
+
+describe('AC4: installAll when symlinks are unavailable', () => {
+  it('AC4: still writes hooks and manifest', async () => {
+    const { runInit } = await import('../src/commands/init.js');
+    const { installAll } = await import('../src/install/install.js');
+    const { resolveTargets } = await import('../src/core/targets.js');
+    const { InstallWriter } = await import('../src/core/writer.js');
+    const { DEFAULT_CONFIG } = await import('../src/core/config.js');
+    const { relative } = await import('node:path');
+    const opts = { mode: 'repo' as const, cwd: '', home: '', dryRun: false, force: true, hook: true, symlink: true };
+
+    const repo1 = createTempGitRepo('lw-ac4a-');
+    const targets = resolveTargets({ ...opts, cwd: repo1, home: tmpHome() });
+    const writer = new InstallWriter({
+      manifest: null,
+      dryRun: false,
+      force: true,
+      confirm: async () => false,
+      toKey: (abs: string) => relative(targets.root, abs).split('\\').join('/'),
+      mode: 'repo',
+    });
+    symState.fail = true;
+    try {
+      await installAll(targets, writer, DEFAULT_CONFIG, { ...opts, cwd: repo1 }, 'create');
+    } finally {
+      symState.fail = false;
+    }
+    expect(JSON.stringify(readJson(join(repo1, '.claude/settings.json')).hooks)).toContain('loopwright/hooks/');
+    expect(existsSync(join(repo1, '.agents/skills/loopwright-flow/SKILL.md'))).toBe(true);
+    expect(writer.result().files.length).toBeGreaterThan(0);
+    expect(existsSync(join(repo1, '.claude/skills'))).toBe(false);
+
+    const repo2 = createTempGitRepo('lw-ac4b-');
+    symState.fail = true;
+    let code: number;
+    try {
+      code = await runInit({ ...opts, cwd: repo2, home: tmpHome() });
+    } finally {
+      symState.fail = false;
+    }
+    expect(code).toBe(0);
+    expect(existsSync(join(repo2, '.loopwright/manifest.json'))).toBe(true);
+    expect(existsSync(join(repo2, '.claude/settings.json'))).toBe(true);
   });
 });

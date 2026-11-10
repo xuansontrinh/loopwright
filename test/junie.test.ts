@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -23,7 +23,10 @@ const featureNames = (): string[] =>
 describe('AC1: junie config defaults', () => {
   it('AC1: DEFAULT_CONFIG.models.junie has D9 defaults', () => {
     expect(DEFAULT_CONFIG.models.junie).toMatchObject({
-      scout: 'opus', tester: 'sonnet', implementer: 'sonnet', reviewer: 'gpt',
+      scout: 'opus',
+      tester: 'sonnet',
+      implementer: 'sonnet',
+      reviewer: 'gpt',
     });
     expect((DEFAULT_CONFIG.models.junie as any).effort).toBeUndefined();
   });
@@ -52,14 +55,25 @@ describe('AC2: renderJunieAgent', () => {
     if (inline[1].trim() === '') {
       const block = /^tools:[ \t]*\n((?:[ \t]*-[ \t]*.*(?:\n|$))+)/m.exec(fm);
       expect(block).not.toBeNull();
-      items = block![1].split('\n').filter((l) => l.trim()).map((l) => l.replace(/^[ \t]*-[ \t]*/, '').trim());
+      items = block![1]
+        .split('\n')
+        .filter((l) => l.trim())
+        .map((l) => l.replace(/^[ \t]*-[ \t]*/, '').trim());
     } else {
       expect(inline[1].trim()).toMatch(/^\[.*\]$/);
-      items = inline[1].trim().slice(1, -1).split(',').map((s) => s.trim()).filter(Boolean);
+      items = inline[1]
+        .trim()
+        .slice(1, -1)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
     }
     items = items.map((s) => s.replace(/^["']|["']$/g, ''));
-    const source = /^tools:\s*(.*)$/m.exec(frontmatter(read('../content/agents/reviewer.md')))![1]
-      .split(',').map((s) => s.trim()).filter(Boolean);
+    const source = /^tools:\s*(.*)$/m
+      .exec(frontmatter(read('../content/agents/reviewer.md')))![1]
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     expect([...items].sort()).toEqual([...source].sort());
     for (const i of items) expect(documented).toContain(i);
   });
@@ -73,10 +87,26 @@ describe('AC2: renderJunieAgent', () => {
 describe('AC3: junie targets', () => {
   it('AC3: repo and global junie agents dirs', () => {
     const repo = createTempGitRepo();
-    const t: any = resolveTargets({ mode: 'repo', cwd: repo, home: '/h', dryRun: false, force: false, hook: true, symlink: true });
+    const t: any = resolveTargets({
+      mode: 'repo',
+      cwd: repo,
+      home: '/h',
+      dryRun: false,
+      force: false,
+      hook: true,
+      symlink: true,
+    });
     expect(t.junieAgentsDir).toBe(join(t.root, '.junie/agents'));
-    const g: any = resolveTargets({ mode: 'global', cwd: '/', home: '/home/u', dryRun: false, force: false, hook: true, symlink: true });
-    expect(g.junieAgentsDir).toBe('/home/u/.junie/agents');
+    const g: any = resolveTargets({
+      mode: 'global',
+      cwd: '/',
+      home: '/home/u',
+      dryRun: false,
+      force: false,
+      hook: true,
+      symlink: true,
+    });
+    expect(g.junieAgentsDir).toBe(join('/home/u', '.junie', 'agents'));
   });
 });
 
@@ -239,6 +269,8 @@ describe('junie install lifecycle', () => {
     const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
     expect(readme).toContain('Junie');
     expect(readme).toContain('Experimental');
-    expect(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).description).toContain('Junie');
+    expect(JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).description).toContain(
+      'Junie',
+    );
   });
 });

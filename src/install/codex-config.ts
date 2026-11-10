@@ -7,11 +7,7 @@ const BLOCK_RE = /^# BEGIN loopwright[ \t]*\r?\n[\s\S]*?^# END loopwright[ \t]*(
 
 function tomlString(value: string): string {
   if (!value.includes("'") && !/[\r\n]/.test(value)) return `'${value}'`;
-  const esc = value
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r');
+  const esc = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
   return `"${esc}"`;
 }
 

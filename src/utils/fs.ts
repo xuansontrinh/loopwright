@@ -21,6 +21,17 @@ export function symlinkTarget(path: string): string | null {
   }
 }
 
+/** Windows readlink may return backslashes for a link we created with slashes. */
+export function sameLinkTarget(
+  actual: string | null,
+  expected: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  if (actual === null) return false;
+  if (platform === 'win32') return actual.replaceAll('\\', '/') === expected.replaceAll('\\', '/');
+  return actual === expected;
+}
+
 export function isEmptyDir(path: string): boolean {
   try {
     return lstatSync(path).isDirectory() && readdirSync(path).length === 0;

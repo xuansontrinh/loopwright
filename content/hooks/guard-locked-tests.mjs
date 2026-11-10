@@ -1,6 +1,16 @@
 #!/usr/bin/env node
 // PreToolUse guard: block edits to locked acceptance tests during the build stage.
-import { allow, exitIfHooksOff, deny, failOpen, loopwrightDir, readState, readStdinJson, repoRelative, worktreeId } from './lib.mjs';
+import {
+  allow,
+  exitIfHooksOff,
+  deny,
+  failOpen,
+  loopwrightDir,
+  readState,
+  readStdinJson,
+  repoRelative,
+  worktreeId,
+} from './lib.mjs';
 
 function patchPaths(command) {
   const out = [];
@@ -24,15 +34,17 @@ try {
   if (!state || state.stage !== 'build' || !Array.isArray(state.lockedTests) || state.lockedTests.length === 0) allow();
 
   const ti = input.tool_input ?? {};
-  const raw = input.tool_name === 'apply_patch'
-    ? patchPaths(ti.patch ?? ti.command)
-    : ti.file_path && input.tool_name !== 'Read' // Junie fires PreToolUse for reads too; only edits are guarded
-      ? [ti.file_path]
-      : [];
+  const raw =
+    input.tool_name === 'apply_patch'
+      ? patchPaths(ti.patch ?? ti.command)
+      : ti.file_path && input.tool_name !== 'Read' // Junie fires PreToolUse for reads too; only edits are guarded
+        ? [ti.file_path]
+        : [];
   const locked = new Set(state.lockedTests.map((l) => l.path));
   for (const p of raw) {
     const rel = repoRelative(cwd, p);
-    if (locked.has(rel)) deny('', '', `loopwright: ${rel} is a locked acceptance test. Ask the user before changing it.`);
+    if (locked.has(rel))
+      deny('', '', `loopwright: ${rel} is a locked acceptance test. Ask the user before changing it.`);
   }
   allow();
 } catch (err) {

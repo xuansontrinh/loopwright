@@ -40,21 +40,34 @@ describe('AC2: defaults', () => {
 describe('AC3: readConfig ignores per-role effort keys', () => {
   it('AC3: invalid effort keys do not throw and are not applied', () => {
     const c = readConfig(
-      cfg({ models: { claude: { effort: { scout: 'bogus' } }, junie: { effort: { tester: 'none' } }, crossAgentReviewer: { effort: { claude: 'bogus' } } } }),
+      cfg({
+        models: {
+          claude: { effort: { scout: 'bogus' } },
+          junie: { effort: { tester: 'none' } },
+          crossAgentReviewer: { effort: { claude: 'bogus' } },
+        },
+      }),
     );
-    expect(c.models.claude.effort).toEqual({ scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' });
+    expect(c.models.claude.effort).toEqual({
+      scout: 'medium',
+      tester: 'medium',
+      implementer: 'medium',
+      reviewer: 'high',
+    });
     expect(c.models.junie.effort?.tester).toBe('medium');
     expect(c.models.crossAgentReviewer.effort?.claude).toBe('high');
   });
 });
 
 describe('AC4: init/update write effort', () => {
-  const agentFile = (repo: string, role: string) => readFileSync(join(repo, `.claude/agents/loopwright-${role}.md`), 'utf8');
+  const agentFile = (repo: string, role: string) =>
+    readFileSync(join(repo, `.claude/agents/loopwright-${role}.md`), 'utf8');
   it('AC4: init writes default effort into Claude agents', () => {
     const repo = createTempGitRepo('lw-eff-');
     const r = runCli(repo, ['init']);
     expect(r.exitCode, r.stderr).toBe(0);
-    for (const role of ['scout', 'tester', 'implementer']) expect(frontmatter(agentFile(repo, role))).toMatch(/^effort: medium$/m);
+    for (const role of ['scout', 'tester', 'implementer'])
+      expect(frontmatter(agentFile(repo, role))).toMatch(/^effort: medium$/m);
     expect(frontmatter(agentFile(repo, 'reviewer'))).toMatch(/^effort: high$/m);
   });
   it('AC4: update ignores effort keys in config.json', () => {

@@ -98,7 +98,12 @@ export async function main(argv: string[]): Promise<number> {
     symlink: !values['no-symlink'],
     experimental,
     profile: values.profile,
-    explicit: { hook: values['no-hook'], symlink: values['no-symlink'], experimental: values.experimental !== undefined, profile: values.profile !== undefined },
+    explicit: {
+      hook: values['no-hook'],
+      symlink: values['no-symlink'],
+      experimental: values.experimental !== undefined,
+      profile: values.profile !== undefined,
+    },
   };
 
   switch (command) {

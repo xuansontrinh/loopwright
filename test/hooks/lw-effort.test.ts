@@ -17,7 +17,10 @@ function setup(opts: { config?: object; header?: string; manifestProfile?: strin
     writeFileSync(mp, JSON.stringify(m));
   }
   if (opts.config) writeFileSync(join(repo, '.loopwright/config.json'), JSON.stringify(opts.config));
-  writeFileSync(join(repo, '.loopwright', TASK), `# T\n\nstatus: active\nstage: plan\n${opts.header ? opts.header + '\n' : ''}\n## Goal\n\nx\n`);
+  writeFileSync(
+    join(repo, '.loopwright', TASK),
+    `# T\n\nstatus: active\nstage: plan\n${opts.header ? opts.header + '\n' : ''}\n## Goal\n\nx\n`,
+  );
   expect(runLw(repo, ['start', TASK]).code).toBe(0);
   return repo;
 }
@@ -43,7 +46,8 @@ describe('AC5: lw.mjs effort', () => {
   });
   it('AC5: mirrored table in content/hooks equals PROFILES', async () => {
     const mod: any = await import(resolve(__dirname, '../../content/hooks/lib.mjs')).catch(() => ({}));
-    const mirrored = mod.PROFILES ?? (await import(resolve(__dirname, '../../content/hooks/lw.mjs')).catch(() => ({}))).PROFILES;
+    const mirrored =
+      mod.PROFILES ?? (await import(resolve(__dirname, '../../content/hooks/lw.mjs')).catch(() => ({}))).PROFILES;
     expect(mirrored).toEqual(PROFILES);
   });
   it('AC8: default-config.json has no effort maps', () => {
@@ -57,6 +61,8 @@ describe('AC5: lw.mjs effort', () => {
     expect(runLw(repo, ['effort', 'scout']).stdout.trim()).toBe('medium');
   });
   it('AC5: default-config.json equals DEFAULT_CONFIG', () => {
-    expect(JSON.parse(readFileSync(resolve(__dirname, '../../content/hooks/default-config.json'), 'utf8'))).toEqual(DEFAULT_CONFIG);
+    expect(JSON.parse(readFileSync(resolve(__dirname, '../../content/hooks/default-config.json'), 'utf8'))).toEqual(
+      DEFAULT_CONFIG,
+    );
   });
 });

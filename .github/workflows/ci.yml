@@ -10,11 +10,14 @@ permissions:
 
 jobs:
   test:
-    name: Typecheck & test · Node ${{ matrix.node-version }}
-    runs-on: ubuntu-latest
+    name: Typecheck & test · ${{ matrix.os }} · Node ${{ matrix.node-version }}
+    runs-on: ${{ matrix.os }}
+    # Windows is informational until the suite is green there; flip to required by removing this line.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
         # Lowest supported (engines >= 22.14), the release build's version (24), and the newest release.
         node-version: ['22.14', '24', '26']
     steps:
@@ -30,4 +33,5 @@ jobs:
       # No dependency needs install scripts; skipping them blocks a common malware vector.
       - run: npm ci --ignore-scripts
       - run: npm run typecheck
+      - run: npm run format:check
       - run: npm test

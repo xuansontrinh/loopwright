@@ -32,6 +32,10 @@ Repo install:
 - hook wiring (unless `--no-hook`): entries in `.claude/settings.json`, and a `# BEGIN loopwright` ... `# END loopwright` block in `.codex/config.toml`
 - `.loopwright/` (in the main worktree) with its own `.gitignore` (`*`), `config.json`, `manifest.json`, `tasks/`, `state/`
 
+If `.claude/skills/` already holds files, `init` asks whether to merge them into `.agents/skills/` (`--force` merges). A merge never overwrites or deletes a skill whose content differs between the two folders: `init` keeps `.claude/skills/` as a directory, skips the symlink and names the differing skills. Keep one version of each, then run `npx loopwright init` again.
+
+On Windows, creating the symlink needs Developer Mode or an administrator terminal. Without either, `init` warns, leaves `.claude/skills/` as it was, and still installs hooks and the manifest. Run `npx loopwright update` once symlinks work.
+
 In a repo without `.loopwright/` (a global install, or a fresh clone, since `.loopwright/` ignores itself), the first task start creates it: `.gitignore`, `tasks/`, `state/` and a `config.json` seeded from `~/.config/loopwright/config.json` if that exists, else the defaults.
 
 Global install writes the equivalents to `~/.agents/skills`, `~/.claude/skills` (copies, not a symlink), `~/.claude/agents`, `~/.codex/agents`, `~/.junie/agents`, `~/.claude/settings.json`, `~/.codex/config.toml`, and `~/.config/loopwright/` (hooks, prompts, schemas, `manifest.json`). It does not create `~/.config/loopwright/config.json`; that file is optional (see Configuration).

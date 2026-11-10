@@ -1,7 +1,16 @@
 // Loopwright hook runtime library. Only node:* imports.
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  renameSync,
+  writeFileSync,
+} from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 /** Mirror of PROFILES in src/core/profiles.ts (a test pins them equal). */
@@ -19,7 +28,8 @@ function git(cwd, args) {
 }
 
 export function gitTopLevel(cwd) {
-  return git(cwd, ['rev-parse', '--show-toplevel']);
+  // Git prints forward slashes on Windows; resolve() gives the platform form.
+  return resolve(git(cwd, ['rev-parse', '--show-toplevel']));
 }
 
 function mainWorktreeRoot(cwd) {
@@ -72,7 +82,16 @@ export function writeState(dir, id, state) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = `${path}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(state, null, 2) + '\n');
-  renameSync(tmp, path);
+  // Windows: rename fails with EPERM/EBUSY/EACCES while another process briefly holds the target.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      renameSync(tmp, path);
+      return;
+    } catch (err) {
+      if (attempt >= 5 || !['EPERM', 'EBUSY', 'EACCES'].includes(err?.code)) throw err;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20 * (attempt + 1));
+    }
+  }
 }
 
 export function sha256File(path) {
@@ -82,9 +101,28 @@ export function sha256File(path) {
 export function fingerprint(cwd, baseCommit) {
   const h = createHash('sha256');
   const top = gitTopLevel(cwd);
-  const diffArgs = ['-c', 'core.quotePath=false', 'diff', '--binary', '--no-color', '--no-ext-diff', '--no-textconv', '--no-renames', '--full-index', '--no-relative', '--src-prefix=a/', '--dst-prefix=b/', baseCommit];
+  const diffArgs = [
+    '-c',
+    'core.quotePath=false',
+    'diff',
+    '--binary',
+    '--no-color',
+    '--no-ext-diff',
+    '--no-textconv',
+    '--no-renames',
+    '--full-index',
+    '--no-relative',
+    '--src-prefix=a/',
+    '--dst-prefix=b/',
+    baseCommit,
+  ];
   h.update(execFileSync('git', diffArgs, { cwd: top, maxBuffer: MAX_BUFFER, stdio: ['ignore', 'pipe', 'pipe'] }));
-  const out = execFileSync('git', ['-c', 'core.quotePath=false', 'ls-files', '--others', '--exclude-standard', '-z'], { cwd: top, maxBuffer: MAX_BUFFER, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
+  const out = execFileSync('git', ['-c', 'core.quotePath=false', 'ls-files', '--others', '--exclude-standard', '-z'], {
+    cwd: top,
+    maxBuffer: MAX_BUFFER,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    encoding: 'utf8',
+  });
   const files = out.split('\0').filter(Boolean).sort();
   for (const f of files) {
     h.update(f + '\0');
@@ -148,8 +186,10 @@ export function realpathLoose(abs) {
 }
 
 /** Worktree-top-relative POSIX path of p (relative to cwd if not absolute), symlinks resolved. May start with '..' if outside. */
-export function repoRelative(cwd, p) {
+export function repoRelative(cwd, p, platform = process.platform) {
   const top = realpathSync(gitTopLevel(cwd));
   const abs = realpathLoose(isAbsolute(p) ? resolve(p) : resolve(cwd, p));
-  return relative(top, abs).split(sep).join('/');
+  const rel = relative(top, abs).split(sep).join('/');
+  // Windows paths are case-insensitive: fold so Test/T.test.ts matches a locked test/t.test.ts.
+  return platform === 'win32' ? rel.toLowerCase() : rel;
 }

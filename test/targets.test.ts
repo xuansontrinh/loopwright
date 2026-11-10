@@ -11,7 +11,14 @@ import type { CommandOptions } from '../src/core/options.js';
 
 const git = (cwd: string, ...a: string[]) => execFileSync('git', a, { cwd, stdio: 'pipe' }).toString();
 const opts = (o: Partial<CommandOptions>): CommandOptions => ({
-  mode: 'repo', cwd: '/', home: '/h', dryRun: false, force: false, hook: false, symlink: true, ...o,
+  mode: 'repo',
+  cwd: '/',
+  home: '/h',
+  dryRun: false,
+  force: false,
+  hook: false,
+  symlink: true,
+  ...o,
 });
 
 describe('targets', () => {

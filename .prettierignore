@@ -1,0 +1,12 @@
+dist/
+.loopwright/
+research/
+.claude/
+.codex/
+.junie/
+.agents/
+node_modules/
+AGENTS.md
+package-lock.json
+*.md
+test/fixtures/

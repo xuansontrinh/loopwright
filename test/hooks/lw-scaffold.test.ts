@@ -7,6 +7,7 @@ import { git, makeBareRepo, runLw } from './helpers.js';
 
 const TASK = 'tasks/2026-11-08-x.md';
 const emptyHome = () => realpathSync(mkdtempSync(join(tmpdir(), 'lw-home-')));
+const homeEnv = (h: string) => ({ HOME: h, USERPROFILE: h });
 
 describe('lw.mjs lazy .loopwright creation', () => {
   it('content/hooks/default-config.json equals DEFAULT_CONFIG', () => {
@@ -32,7 +33,7 @@ describe('lw.mjs lazy .loopwright creation', () => {
 
   it('start scaffolds .loopwright with self-ignoring .gitignore, tasks/, state/ and default config', () => {
     const repo = makeBareRepo();
-    const r = runLw(repo, ['start', TASK], undefined, { HOME: emptyHome() });
+    const r = runLw(repo, ['start', TASK], undefined, homeEnv(emptyHome()));
     expect(r.code, r.stderr).toBe(0);
     const lw = join(repo, '.loopwright');
     expect(readFileSync(join(lw, '.gitignore'), 'utf8')).toBe('*\n');
@@ -49,7 +50,7 @@ describe('lw.mjs lazy .loopwright creation', () => {
     mkdirSync(join(home, '.config/loopwright'), { recursive: true });
     const mine = '{ "maxFixRounds": 7 }\n';
     writeFileSync(join(home, '.config/loopwright/config.json'), mine);
-    expect(runLw(repo, ['start', TASK], undefined, { HOME: home }).code).toBe(0);
+    expect(runLw(repo, ['start', TASK], undefined, homeEnv(home)).code).toBe(0);
     expect(readFileSync(join(repo, '.loopwright/config.json'), 'utf8')).toBe(mine);
   });
 
@@ -57,7 +58,7 @@ describe('lw.mjs lazy .loopwright creation', () => {
     const repo = makeBareRepo();
     const wt = join(realpathSync(mkdtempSync(join(tmpdir(), 'lw-wt-'))), 'wt');
     git(repo, ['worktree', 'add', '-q', '-b', 'feat', wt]);
-    expect(runLw(wt, ['start', TASK], undefined, { HOME: emptyHome() }).code).toBe(0);
+    expect(runLw(wt, ['start', TASK], undefined, homeEnv(emptyHome())).code).toBe(0);
     expect(existsSync(join(repo, '.loopwright/.gitignore'))).toBe(true);
     expect(existsSync(join(wt, '.loopwright'))).toBe(false);
   });

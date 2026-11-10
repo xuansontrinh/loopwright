@@ -11,6 +11,7 @@ Guidance for Claude Code (claude.ai/code) in this repo.
 ```bash
 npm run build       # tsdown → dist/cli.js
 npm run typecheck   # tsc --noEmit
+npm run format:check # prettier --check; `npm run format` rewrites
 npm test            # pretest builds first, then vitest run
 npx vitest run test/cli.test.ts   # single file (build first)
 npx vitest run -t "is idempotent" # single test by name
@@ -19,7 +20,9 @@ npm run dev -- init --dry-run     # build and run CLI on cwd
 
 Unit tests import `src/`. E2E tests spawn `dist/cli.js` in temp git repos; hook tests spawn `content/hooks/*.mjs`. Rebuild before running vitest directly, or e2e uses stale output.
 
-CI: `.github/workflows/ci.yml` runs typecheck + tests on every PR and push to `main`, on Node 22.14 (`engines` floor), 24, 26. `.github/dependabot.yml` opens weekly, cooldown-delayed PRs for npm and Actions. Pin actions to commit SHAs with a `# vX.Y.Z` comment; keep `npm ci --ignore-scripts`. Dependabot PRs are reviewed and merged by hand, never auto-merged.
+ESLint is dropped until typescript-eslint supports TypeScript 7 (typescript-eslint#10940; tracked in #20).
+
+CI: `.github/workflows/ci.yml` runs typecheck + format:check + tests on every PR and push to `main`, on Node 22.14 (`engines` floor), 24, 26. `.github/dependabot.yml` opens weekly, cooldown-delayed PRs for npm and Actions. Pin actions to commit SHAs with a `# vX.Y.Z` comment; keep `npm ci --ignore-scripts`. Dependabot PRs are reviewed and merged by hand, never auto-merged.
 
 Releases: `main` is PR-only. Release = merged PR bumping `package.json` `version` (`npm version patch --no-git-tag-version`). After `ci.yml` passes on `main`, `.github/workflows/publish.yml` (`workflow_run`) runs for a version with no GitHub release: `npm stage publish` via OIDC (skipped if already on npm), then creates the `vX.Y.Z` tag and GitHub release. A maintainer approves the staged version on npmjs.com with 2FA. See docs/releasing.md.
 
@@ -45,3 +48,6 @@ Releases: `main` is PR-only. Release = merged PR bumping `package.json` `version
 - Unstable or opt-in features go in the `--experimental` registry (`src/core/experimental.ts`), never their own CLI flag. `all` expands to explicit names at invocation, so new experiments are not enabled silently.
 - Effort comes only from named profiles (`src/core/profiles.ts`, mirrored in `content/hooks/lib.mjs`; a test pins them equal); `config.json` has no per-role effort keys. Claude spawns pass `effort` from `lw.mjs effort <role>` (a spawn `effort` beats the agent file's, tested on Claude Code 2.1.321); Junie and Codex get it only at `init`/`update`.
 - `AGENTS.md` is a symlink to `CLAUDE.md`: edit `CLAUDE.md` only. `sed -i` or bulk replace on `AGENTS.md` turns the link into a regular file; exclude it or use `--follow-symlinks`.
+- `npm run format:check` covers `test/`: run `npm run format` before `lw.mjs lock`, or a later format rewrites locked tests and breaks their hashes.
+- On Windows git prints `C:/a/b` and Node uses `C:\a\b`: wrap git output in `path.resolve` before comparing or storing it.
+- After `npm install --ignore-scripts`, `tsc` may be unlinked: run `npm rebuild typescript`.

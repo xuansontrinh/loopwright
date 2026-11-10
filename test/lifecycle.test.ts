@@ -1,5 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync, lstatSync, readdirSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+  lstatSync,
+  readdirSync,
+} from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -108,7 +117,9 @@ describe('update/uninstall', () => {
     expect(declined.exitCode).toBe(0);
     const r = runCli(repo, ['uninstall', '--global', '--force'], { home: h });
     expect(r.exitCode, r.stderr).toBe(0);
-    expect(readdirSync(h).filter((n) => n !== '.config' && n !== '.claude' && n !== '.codex' && n !== '.agents')).toEqual([]);
+    expect(
+      readdirSync(h).filter((n) => n !== '.config' && n !== '.claude' && n !== '.codex' && n !== '.agents'),
+    ).toEqual([]);
     expect(existsSync(join(h, '.config/loopwright'))).toBe(false);
     expect(existsSync(join(h, '.claude/agents'))).toBe(false);
     expect(existsSync(join(h, '.claude/skills'))).toBe(false);
@@ -142,11 +153,15 @@ describe('global install end to end', () => {
   it('global init → fresh repo → lw.mjs start creates .loopwright/', () => {
     const h = realpathSync(mkdtempSync(join(tmpdir(), 'lw-gh-')));
     const repo = realpathSync(createTempGitRepo('lw-gfresh-'));
-    execFileSync('git', ['-c', 'user.name=T', '-c', 'user.email=t@e', 'commit', '-q', '--allow-empty', '-m', 'init'], { cwd: repo });
+    execFileSync('git', ['-c', 'user.name=T', '-c', 'user.email=t@e', 'commit', '-q', '--allow-empty', '-m', 'init'], {
+      cwd: repo,
+    });
     expect(runCli(repo, ['init', '--global', '--force'], { home: h }).exitCode).toBe(0);
     expect(existsSync(join(repo, '.loopwright'))).toBe(false);
     const r = spawnSync('node', [join(h, '.config/loopwright/hooks/lw.mjs'), 'start', 'tasks/x.md'], {
-      cwd: repo, encoding: 'utf8', env: { ...process.env, HOME: h },
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, HOME: h, USERPROFILE: h },
     });
     expect(r.status, r.stderr).toBe(0);
     expect(JSON.parse(r.stdout).task).toBe('tasks/x.md');
@@ -216,7 +231,9 @@ describe('worktree-relative config entries', () => {
   it('manifest config keys are relative; uninstall from A cleans A, not B', () => {
     const a = realpathSync(spacedRepo());
     const home = mkdtempSync(join(tmpdir(), 'lw-h-'));
-    execFileSync('git', ['-c', 'user.name=T', '-c', 'user.email=t@e', 'commit', '-q', '--allow-empty', '-m', 'init'], { cwd: a });
+    execFileSync('git', ['-c', 'user.name=T', '-c', 'user.email=t@e', 'commit', '-q', '--allow-empty', '-m', 'init'], {
+      cwd: a,
+    });
     const b = join(realpathSync(mkdtempSync(join(tmpdir(), 'lw-wtb-'))), 'b');
     execFileSync('git', ['worktree', 'add', '-q', '-b', 'feat', b], { cwd: a, stdio: 'pipe' });
     expect(runCli(a, ['init'], { home }).exitCode).toBe(0);

@@ -1,12 +1,13 @@
 import { execFileSync } from 'node:child_process';
-import { basename, dirname } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 
 function git(cwd: string, args: string[]): string {
   return execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' }).trim();
 }
 
 export function gitTopLevel(cwd: string): string {
-  return git(cwd, ['rev-parse', '--show-toplevel']);
+  // Git prints forward slashes on Windows; resolve() gives the platform form.
+  return resolve(git(cwd, ['rev-parse', '--show-toplevel']));
 }
 
 export function mainWorktreeRoot(cwd: string): string {

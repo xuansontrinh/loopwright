@@ -13,7 +13,7 @@ const NEXT = {
 };
 
 function goalParagraph(text) {
-  const lines = text.split('\n');
+  const lines = text.split(/\r?\n/);
   const i = lines.findIndex((l) => /^#{1,6}\s*goal\b/i.test(l.trim()));
   if (i === -1) return [];
   const out = [];
@@ -45,18 +45,23 @@ try {
     const text = readFileSync(file, 'utf8');
     lines.push(...goalParagraph(text));
     lines.push(`Stage: ${state.stage}`);
-    lines.push(...text.split('\n').filter((l) => l.startsWith('- D')));
+    lines.push(...text.split(/\r?\n/).filter((l) => l.startsWith('- D')));
   } else {
     lines.push(`Stage: ${state.stage}`);
   }
-  if (state.awaitingUser) lines.push(`Waiting on the user: ${state.awaitingUser} — do not proceed until they answer; then run lw.mjs resume.`);
+  if (state.awaitingUser)
+    lines.push(
+      `Waiting on the user: ${state.awaitingUser} — do not proceed until they answer; then run lw.mjs resume.`,
+    );
   else lines.push(NEXT[state.stage] ?? NEXT.plan);
   const body = lines.slice(0, 40);
   if (lines.length > 40) body[39] = lines[lines.length - 1];
   const out = body.join('\n');
 
   if (tool === 'codex') {
-    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: out } }) + '\n');
+    process.stdout.write(
+      JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: out } }) + '\n',
+    );
   } else {
     process.stdout.write(out + '\n');
   }

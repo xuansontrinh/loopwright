@@ -1,7 +1,6 @@
 import { relative } from 'node:path';
 import type { CommandOptions } from '../core/options.js';
 import { NotAGitRepoError, resolveTargets, type Targets } from '../core/targets.js';
-import { EXPERIMENTAL_FEATURES } from '../core/experimental.js';
 import { readConfig } from '../core/config.js';
 import { readManifest, writeManifest, type Manifest } from '../core/manifest.js';
 import { InstallWriter } from '../core/writer.js';
@@ -59,7 +58,10 @@ export async function runInstall(opts: CommandOptions, doneVerb: string, isInit 
   try {
     planWiring(targets, opts); // pre-flight: abort before writing anything if settings are malformed
     // Pre-flight: resolve the .claude/skills conflict (and any prompt) before writing anything.
-    const link = targets.claudeSkillsMode === 'symlink' ? await planLink({ root: targets.root, dryRun: opts.dryRun, force: opts.force }) : 'skip';
+    const link =
+      targets.claudeSkillsMode === 'symlink'
+        ? await planLink({ root: targets.root, dryRun: opts.dryRun, force: opts.force })
+        : 'skip';
     if (link === 'abort') {
       console.error('loopwright: aborted; nothing was written.');
       return 1;
@@ -80,17 +82,32 @@ export async function runInstall(opts: CommandOptions, doneVerb: string, isInit 
 
     const writer = makeWriter(targets, opts);
     const changed = await installAll(targets, writer, config, opts, link);
-    if (!opts.dryRun) writeManifest(targets.manifestPath, { ...writer.result(), options: { hook: opts.hook, symlink: opts.symlink, ...(opts.experimental?.length ? { experimental: opts.experimental } : {}), ...(opts.profile ? { profile: opts.profile } : {}) } });
+    if (!opts.dryRun)
+      writeManifest(targets.manifestPath, {
+        ...writer.result(),
+        options: {
+          hook: opts.hook,
+          symlink: opts.symlink,
+          ...(opts.experimental?.length ? { experimental: opts.experimental } : {}),
+          ...(opts.profile ? { profile: opts.profile } : {}),
+        },
+      });
 
     if (!changed) log.success('loopwright is already up to date.');
     else if (!opts.dryRun) log.success(`loopwright ${doneVerb}.`);
-    if (targets.mode === 'repo' && opts.hook) log.info('Codex: trust this project and approve loopwright hooks via /hooks.');
+    if (targets.mode === 'repo' && opts.hook)
+      log.info('Codex: trust this project and approve loopwright hooks via /hooks.');
     log.info('Junie (WIP/EAP): subagents installed to .junie/agents; skills are read from .agents/skills.');
-    if (opts.profile) log.info(`Effort profile: ${opts.profile}. Claude Code can also set it per task at Plan; run \`npx loopwright update\` after changing it.`);
+    if (opts.profile)
+      log.info(
+        `Effort profile: ${opts.profile}. Claude Code can also set it per task at Plan; run \`npx loopwright update\` after changing it.`,
+      );
     for (const f of opts.experimental ?? []) {
       log.warn(`Experimental feature "${f}" is unstable and may change or break.`);
       if (f === 'junie-hooks') {
-        log.info(`Junie hooks are written to ${targets.junieConfigPath}. Junie ignores project hooks unless started with --config-location (e.g. junie --config-location .junie).`);
+        log.info(
+          `Junie hooks are written to ${targets.junieConfigPath}. Junie ignores project hooks unless started with --config-location (e.g. junie --config-location .junie).`,
+        );
       }
     }
     return 0;

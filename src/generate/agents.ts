@@ -59,11 +59,20 @@ export function renderCodexAgent(src: AgentSource, model: string, effort?: strin
 }
 
 /** Junie takes the same tool labels as the role source, as a YAML list. */
-export function renderJunieAgent(src: AgentSource, model: string, effort?: string, lwHome = '.agents/loopwright'): string {
+export function renderJunieAgent(
+  src: AgentSource,
+  model: string,
+  effort?: string,
+  lwHome = '.agents/loopwright',
+): string {
   const lines = ['---', `name: ${src.name}`, `description: ${src.description}`];
   if (src.tools) {
     lines.push('tools:');
-    for (const t of src.tools.split(',').map((x) => x.trim()).filter(Boolean)) lines.push(`  - ${t}`);
+    for (const t of src.tools
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean))
+      lines.push(`  - ${t}`);
   }
   if (model !== 'inherit') lines.push(`model: ${model}`);
   if (effort) lines.push(`reasoningLevel: ${effort}`);

@@ -4,7 +4,10 @@ export type ExperimentalFeature = (typeof EXPERIMENTAL_FEATURES)[number];
 
 /** Parse a comma-separated `--experimental` value; `all` expands to every feature, in registry order. */
 export function parseExperimental(raw: string): ExperimentalFeature[] {
-  const names = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  const names = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   const out = new Set<ExperimentalFeature>();
   for (const n of names) {
     if (n === 'all') {

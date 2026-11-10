@@ -45,7 +45,14 @@ describe('AC2: readConfig(path, profile)', () => {
     expect(c.models.crossAgentReviewer.effort.claude).toBe(MATRIX[n]!.reviewer);
   });
   it('AC2: per-role effort keys in the file are ignored, even invalid ones', () => {
-    const file = { models: { claude: { effort: { scout: 'bogus' } }, junie: { effort: { reviewer: 'nonsense' } }, codex: { effort: { scout: 'bogus', reviewer: 'nonsense' } }, crossAgentReviewer: { effort: { claude: 'bogus' } } } };
+    const file = {
+      models: {
+        claude: { effort: { scout: 'bogus' } },
+        junie: { effort: { reviewer: 'nonsense' } },
+        codex: { effort: { scout: 'bogus', reviewer: 'nonsense' } },
+        crossAgentReviewer: { effort: { claude: 'bogus' } },
+      },
+    };
     for (const prof of ['deep', 'lean', undefined]) {
       const c = readConfig(cfg(file), prof) as any;
       const want = MATRIX[prof ?? 'balanced']!;
@@ -66,7 +73,10 @@ describe('AC2: readConfig(path, profile)', () => {
     expect(c.models.crossAgentReviewer.effort).toEqual({ claude: 'high' });
   });
   it('AC2: profile does not change codex models; a codex effort key (even invalid) is ignored', () => {
-    const c = readConfig(cfg({ models: { codex: { reviewer: 'gpt-x', effort: { reviewer: 'bogus' } } } }), 'thorough') as any;
+    const c = readConfig(
+      cfg({ models: { codex: { reviewer: 'gpt-x', effort: { reviewer: 'bogus' } } } }),
+      'thorough',
+    ) as any;
     expect(c.models.codex.reviewer).toBe('gpt-x');
     expect(c.models.codex.scout).toBe(DEFAULT_CONFIG.models.codex.scout);
     expect(c.models.codex.effort).toEqual(MATRIX.thorough);
@@ -112,7 +122,17 @@ describe('AC8: defaults carry no efforts; config efforts are explicit', () => {
     }
   });
   it('AC8: a config effort equal to a default value does not change the profile result', () => {
-    const c = readConfig(cfg({ models: { claude: { effort: { scout: 'medium', reviewer: 'high' } }, junie: { effort: { tester: 'medium' } }, codex: { effort: { tester: 'medium' } }, crossAgentReviewer: { effort: { claude: 'high' } } } }), 'deep') as any;
+    const c = readConfig(
+      cfg({
+        models: {
+          claude: { effort: { scout: 'medium', reviewer: 'high' } },
+          junie: { effort: { tester: 'medium' } },
+          codex: { effort: { tester: 'medium' } },
+          crossAgentReviewer: { effort: { claude: 'high' } },
+        },
+      }),
+      'deep',
+    ) as any;
     expect(c.models.claude.effort).toEqual(MATRIX.deep);
     expect(c.models.junie.effort).toEqual(MATRIX.deep);
     expect(c.models.codex.effort).toEqual(MATRIX.deep);

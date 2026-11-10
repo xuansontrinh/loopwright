@@ -22,7 +22,7 @@ export function runCli(
     cwd,
     input: opts.input,
     encoding: 'utf8',
-    env: { ...process.env, NO_COLOR: '1', HOME: home },
+    env: { ...process.env, NO_COLOR: '1', HOME: home, USERPROFILE: home },
   });
   return { stdout: r.stdout ?? '', stderr: r.stderr ?? '', exitCode: r.status ?? 1 };
 }

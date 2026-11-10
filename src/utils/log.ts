@@ -1,7 +1,6 @@
 const noColor = !!process.env['NO_COLOR'];
 
-const fmt = (code: string, text: string): string =>
-  noColor ? text : `\x1b[${code}m${text}\x1b[0m`;
+const fmt = (code: string, text: string): string => (noColor ? text : `\x1b[${code}m${text}\x1b[0m`);
 
 export const log = {
   info: (msg: string) => console.log(fmt('36', 'ℹ') + ' ' + msg),

@@ -1,9 +1,9 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { git, makeRepo, runLw } from './helpers.js';
+import { git, isolatedEnv, loadFixture, makeRepo, runLw } from './helpers.js';
 
 const HOOKS = resolve(__dirname, '../../content/hooks');
 const FIX = resolve(__dirname, '../fixtures/hooks');
@@ -11,20 +11,28 @@ const TASK = 'tasks/2026-11-08-x.md';
 const TOOLS = ['claude', 'codex'] as const;
 
 function payload(tool: string, kind: string, repo: string, edit?: (p: any) => void): string {
-  const p = JSON.parse(readFileSync(join(FIX, `${tool}-${kind}.json`), 'utf8').split('/REPO').join(repo));
+  const p = loadFixture(join(FIX, `${tool}-${kind}.json`), repo);
   edit?.(p);
   return JSON.stringify(p);
 }
 
 function run(script: string, tool: string, input: string, cwd: string, env?: Record<string, string>) {
   const t0 = Date.now();
-  const r = spawnSync('node', [join(HOOKS, script), '--tool', tool], { cwd, input, encoding: 'utf8', env: env ? { ...process.env, ...env } : process.env });
+  const r = spawnSync('node', [join(HOOKS, script), '--tool', tool], {
+    cwd,
+    input,
+    encoding: 'utf8',
+    env: isolatedEnv(env),
+  });
   return { code: r.status, stdout: r.stdout, stderr: r.stderr, ms: Date.now() - t0 };
 }
 
 function setup(stage: string, locked = true): string {
   const repo = makeRepo();
-  writeFileSync(join(repo, '.loopwright/tasks/2026-11-08-x.md'), '# Title\n\n## Goal\n\nShip the widget.\n\n## Decisions\n\n- D1: use sqlite\n- D2: no cache\n\nOther line.\n');
+  writeFileSync(
+    join(repo, '.loopwright/tasks/2026-11-08-x.md'),
+    '# Title\n\n## Goal\n\nShip the widget.\n\n## Decisions\n\n- D1: use sqlite\n- D2: no cache\n\nOther line.\n',
+  );
   runLw(repo, ['start', TASK]);
   runLw(repo, ['stage', 'test']);
   if (locked) {
@@ -41,7 +49,9 @@ describe.each(TOOLS)('guard-locked-tests (%s)', (tool) => {
     const repo = setup('build');
     const r = run('guard-locked-tests.mjs', tool, payload(tool, 'pretooluse', repo), repo);
     expect(r.code).toBe(2);
-    expect(r.stderr).toContain('loopwright: test/t.test.ts is a locked acceptance test. Ask the user before changing it.');
+    expect(r.stderr).toContain(
+      'loopwright: test/t.test.ts is a locked acceptance test. Ask the user before changing it.',
+    );
   });
 
   it('guard allows edit of locked test outside build', () => {
@@ -76,7 +86,9 @@ describe.each(TOOLS)('stop-gate (%s)', (tool) => {
     const input = payload(tool, 'stop', repo);
     const r = run('stop-gate.mjs', tool, input, repo);
     expect(r.code).toBe(2);
-    expect(r.stderr).toContain('loopwright: no passing review for the current code. Run /loopwright-review (or finish the fix loop) before stopping.');
+    expect(r.stderr).toContain(
+      'loopwright: no passing review for the current code. Run /loopwright-review (or finish the fix loop) before stopping.',
+    );
     const s = JSON.parse(runLw(repo, ['status']).stdout);
     expect(s.stopBlocks).toBe(1);
     expect(s.history.at(-1)).toMatchObject({ event: 'stop-blocked', detail: '1' });
@@ -103,7 +115,7 @@ describe.each(TOOLS)('stop-gate (%s)', (tool) => {
   it('stop-gate fails open on corrupt state', () => {
     const repo = setup('build');
     const dir = join(repo, '.loopwright/state');
-    const f = JSON.parse(runLw(repo, ['status']).stdout) && require('node:fs').readdirSync(dir)[0];
+    const f = JSON.parse(runLw(repo, ['status']).stdout) && readdirSync(dir)[0];
     writeFileSync(join(dir, f), '{not json');
     expect(run('stop-gate.mjs', tool, payload(tool, 'stop', repo), repo).code).toBe(0);
   });
@@ -121,21 +133,54 @@ describe.each(TOOLS)('stop-gate (%s)', (tool) => {
   });
 
   // Shape captured from a real Claude Code 2.1.319 Stop payload while a backgrounded subagent ran.
-  const running = [{ id: 'ae00e15d80a27bba1', type: 'subagent', status: 'running', description: 'Blind review of slice S1', agent_type: 'loopwright-reviewer' }];
+  const running = [
+    {
+      id: 'ae00e15d80a27bba1',
+      type: 'subagent',
+      status: 'running',
+      description: 'Blind review of slice S1',
+      agent_type: 'loopwright-reviewer',
+    },
+  ];
 
   it('stop-gate allows silently while a background task is running, and blocks again once none is', () => {
     const repo = setup('review');
-    const r = run('stop-gate.mjs', tool, payload(tool, 'stop', repo, (p) => { p.background_tasks = running; }), repo);
+    const r = run(
+      'stop-gate.mjs',
+      tool,
+      payload(tool, 'stop', repo, (p) => {
+        p.background_tasks = running;
+      }),
+      repo,
+    );
     expect(r.code).toBe(0);
     expect(r.stderr).toBe('');
     expect(JSON.parse(runLw(repo, ['status']).stdout).stopBlocks).toBe(0);
-    expect(run('stop-gate.mjs', tool, payload(tool, 'stop', repo, (p) => { p.background_tasks = []; }), repo).code).toBe(2);
+    expect(
+      run(
+        'stop-gate.mjs',
+        tool,
+        payload(tool, 'stop', repo, (p) => {
+          p.background_tasks = [];
+        }),
+        repo,
+      ).code,
+    ).toBe(2);
   });
 
   it('stop-gate ignores background tasks that are no longer running', () => {
     const repo = setup('build');
     const done = [{ ...running[0], status: 'completed' }];
-    expect(run('stop-gate.mjs', tool, payload(tool, 'stop', repo, (p) => { p.background_tasks = done; }), repo).code).toBe(2);
+    expect(
+      run(
+        'stop-gate.mjs',
+        tool,
+        payload(tool, 'stop', repo, (p) => {
+          p.background_tasks = done;
+        }),
+        repo,
+      ).code,
+    ).toBe(2);
   });
 
   it('stop-gate allows in plan stage', () => {
@@ -167,7 +212,9 @@ describe.each(TOOLS)('reinject-context (%s)', (tool) => {
     const r = run('reinject-context.mjs', tool, payload(tool, 'compact', repo), repo);
     expect(r.code).toBe(0);
     const text = tool === 'codex' ? JSON.parse(r.stdout).hookSpecificOutput.additionalContext : r.stdout;
-    expect(text).toContain('Waiting on the user: deviation D3 — do not proceed until they answer; then run lw.mjs resume.');
+    expect(text).toContain(
+      'Waiting on the user: deviation D3 — do not proceed until they answer; then run lw.mjs resume.',
+    );
     expect(text).toContain('Stage: build');
   });
 
@@ -246,7 +293,11 @@ describe.each(TOOLS)('LOOPWRIGHT_HOOKS=off (%s)', (tool) => {
   it('every hook exits 0 silently, even where it would block', () => {
     const repo = setup('build');
     const before = runLw(repo, ['status']).stdout;
-    for (const [script, kind] of [['stop-gate.mjs', 'stop'], ['guard-locked-tests.mjs', 'pretooluse'], ['reinject-context.mjs', 'compact']] as const) {
+    for (const [script, kind] of [
+      ['stop-gate.mjs', 'stop'],
+      ['guard-locked-tests.mjs', 'pretooluse'],
+      ['reinject-context.mjs', 'compact'],
+    ] as const) {
       const r = run(script, tool, payload(tool, kind, repo), repo, OFF);
       expect(r.code, script).toBe(0);
       expect(r.stdout, script).toBe('');

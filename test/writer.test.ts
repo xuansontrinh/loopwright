@@ -26,7 +26,10 @@ function make(opts: { manifest?: Manifest | null; dryRun?: boolean; force?: bool
   });
 }
 const manifestFor = (path: string, content: string): Manifest => ({
-  version: 1, mode: 'repo', files: [{ path, sha256: sha256(content) }], config: [],
+  version: 1,
+  mode: 'repo',
+  files: [{ path, sha256: sha256(content) }],
+  config: [],
 });
 
 describe('InstallWriter', () => {
@@ -114,8 +117,13 @@ describe('InstallWriter', () => {
 
   it('result() carries forward prior entries for files not written this run', async () => {
     const prior: Manifest = {
-      version: 1, mode: 'repo', config: [],
-      files: [{ path: 'gone.md', sha256: sha256('old') }, { path: 'a.md', sha256: sha256('a0') }],
+      version: 1,
+      mode: 'repo',
+      config: [],
+      files: [
+        { path: 'gone.md', sha256: sha256('old') },
+        { path: 'a.md', sha256: sha256('a0') },
+      ],
     };
     const w = make({ manifest: prior });
     writeFileSync(join(root, 'a.md'), 'a0');

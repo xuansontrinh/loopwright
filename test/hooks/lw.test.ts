@@ -13,7 +13,16 @@ describe('lw.mjs', () => {
     const r = runLw(repo, ['start', TASK]);
     expect(r.code).toBe(0);
     const s = JSON.parse(runLw(repo, ['status']).stdout);
-    expect(s).toMatchObject({ version: 1, task: TASK, stage: 'plan', worktree: repo, branch: 'main', lockedTests: [], verdict: null, stopBlocks: 0 });
+    expect(s).toMatchObject({
+      version: 1,
+      task: TASK,
+      stage: 'plan',
+      worktree: repo,
+      branch: 'main',
+      lockedTests: [],
+      verdict: null,
+      stopBlocks: 0,
+    });
     expect(s.baseCommit).toBe(git(repo, ['rev-parse', 'HEAD']));
   });
 
@@ -38,11 +47,23 @@ describe('lw.mjs', () => {
     expect(runLw(repo, ['lock', 'test/t.test.ts', join(repo, 'a.txt')]).code).toBe(0);
     const ok = runLw(repo, ['check-locks']);
     expect(ok.code).toBe(0);
-    expect(JSON.parse(ok.stdout)).toEqual({ ok: true, changed: [], missing: [], lockedAfterBuild: [], forcedRestartAfterBuild: false });
+    expect(JSON.parse(ok.stdout)).toEqual({
+      ok: true,
+      changed: [],
+      missing: [],
+      lockedAfterBuild: [],
+      forcedRestartAfterBuild: false,
+    });
     writeFileSync(join(repo, 'test/t.test.ts'), 'y');
     const bad = runLw(repo, ['check-locks']);
     expect(bad.code).toBe(1);
-    expect(JSON.parse(bad.stdout)).toEqual({ ok: false, changed: ['test/t.test.ts'], missing: [], lockedAfterBuild: [], forcedRestartAfterBuild: false });
+    expect(JSON.parse(bad.stdout)).toEqual({
+      ok: false,
+      changed: ['test/t.test.ts'],
+      missing: [],
+      lockedAfterBuild: [],
+      forcedRestartAfterBuild: false,
+    });
   });
 
   it('check-locks reports missing', () => {
@@ -137,7 +158,11 @@ describe('lw.mjs', () => {
     expect(r.stderr).toContain('loopwright: task already active (run lw.mjs done first, or start --force)');
     expect(runLw(repo, ['start', TASK, '--force']).code).toBe(0);
     const h = JSON.parse(runLw(repo, ['status']).stdout).history;
-    expect(h.map((e: { event: string; detail: string }) => `${e.event}:${e.detail}`)).toEqual([`start:${TASK}`, 'stage:test', 'start:--force']);
+    expect(h.map((e: { event: string; detail: string }) => `${e.event}:${e.detail}`)).toEqual([
+      `start:${TASK}`,
+      'stage:test',
+      'start:--force',
+    ]);
   });
 
   it('start --force keeps history and locks: a modified locked test is not laundered', () => {
@@ -172,7 +197,13 @@ describe('lw.mjs', () => {
     runLw(repo, ['stage', 'test']);
     runLw(repo, ['lock', 'a.txt']);
     runLw(repo, ['stage', 'build']);
-    expect(JSON.parse(runLw(repo, ['check-locks']).stdout)).toEqual({ ok: true, changed: [], missing: [], lockedAfterBuild: [], forcedRestartAfterBuild: false });
+    expect(JSON.parse(runLw(repo, ['check-locks']).stdout)).toEqual({
+      ok: true,
+      changed: [],
+      missing: [],
+      lockedAfterBuild: [],
+      forcedRestartAfterBuild: false,
+    });
   });
 
   it('a new path locked in a later slice is not in lockedAfterBuild; history is ordered', () => {
@@ -190,7 +221,13 @@ describe('lw.mjs', () => {
     expect(JSON.parse(r.stdout).lockedAfterBuild).toEqual([]);
     const h = JSON.parse(runLw(repo, ['status']).stdout).history;
     expect(h.map((e: { event: string; detail: string }) => `${e.event}:${e.detail}`)).toEqual([
-      `start:${TASK}`, 'stage:test', 'lock:a.txt', 'stage:build', 'stage:review', 'stage:test', 'lock:b.txt',
+      `start:${TASK}`,
+      'stage:test',
+      'lock:a.txt',
+      'stage:build',
+      'stage:review',
+      'stage:test',
+      'lock:b.txt',
     ]);
   });
 
@@ -233,31 +270,41 @@ describe('lw.mjs', () => {
     runLw(repo, ['verdict', 'fail', '--round', '1']);
     expect(status().awaitingUser).toBeUndefined();
     const h = status().history.map((e: { event: string; detail: string }) => `${e.event}:${e.detail}`);
-    expect(h).toEqual(expect.arrayContaining(['await-user:deviation D2', 'resume:deviation D2', 'await-user:undecided U1', 'await-user:fix-round cap']));
+    expect(h).toEqual(
+      expect.arrayContaining([
+        'await-user:deviation D2',
+        'resume:deviation D2',
+        'await-user:undecided U1',
+        'await-user:fix-round cap',
+      ]),
+    );
   });
 
-  it('fingerprint does not read untracked FIFOs and hashes symlink targets as strings', () => {
-    const repo = makeRepo();
-    runLw(repo, ['start', TASK]);
-    const outside = realpathSync(mkdtempSync(join(tmpdir(), 'lw-out-')));
-    execFileSync('mkfifo', [join(outside, 'fifo')]);
-    execFileSync('mkfifo', [join(repo, 'pipe')]);
-    symlinkSync(join(outside, 'fifo'), join(repo, 'pipe-link'));
-    const t0 = Date.now();
-    const r = spawnSync('node', [LW, 'fingerprint'], { cwd: repo, encoding: 'utf8', timeout: 5000 });
-    expect(r.status, `signal=${r.signal} stderr=${r.stderr}`).toBe(0);
-    expect(Date.now() - t0).toBeLessThan(5000);
-    // A symlink contributes its target string, not the target's content.
-    writeFileSync(join(outside, 'data'), 'one');
-    symlinkSync(join(outside, 'data'), join(repo, 'data-link'));
-    const fp = () => JSON.parse(runLw(repo, ['fingerprint']).stdout).fingerprint as string;
-    const f0 = fp();
-    writeFileSync(join(outside, 'data'), 'two');
-    expect(fp()).toBe(f0);
-    unlinkSync(join(repo, 'data-link'));
-    symlinkSync(join(outside, 'other'), join(repo, 'data-link'));
-    expect(fp()).not.toBe(f0);
-  });
+  it.skipIf(process.platform === 'win32')(
+    'fingerprint does not read untracked FIFOs and hashes symlink targets as strings',
+    () => {
+      const repo = makeRepo();
+      runLw(repo, ['start', TASK]);
+      const outside = realpathSync(mkdtempSync(join(tmpdir(), 'lw-out-')));
+      execFileSync('mkfifo', [join(outside, 'fifo')]);
+      execFileSync('mkfifo', [join(repo, 'pipe')]);
+      symlinkSync(join(outside, 'fifo'), join(repo, 'pipe-link'));
+      const t0 = Date.now();
+      const r = spawnSync('node', [LW, 'fingerprint'], { cwd: repo, encoding: 'utf8', timeout: 5000 });
+      expect(r.status, `signal=${r.signal} stderr=${r.stderr}`).toBe(0);
+      expect(Date.now() - t0).toBeLessThan(5000);
+      // A symlink contributes its target string, not the target's content.
+      writeFileSync(join(outside, 'data'), 'one');
+      symlinkSync(join(outside, 'data'), join(repo, 'data-link'));
+      const fp = () => JSON.parse(runLw(repo, ['fingerprint']).stdout).fingerprint as string;
+      const f0 = fp();
+      writeFileSync(join(outside, 'data'), 'two');
+      expect(fp()).toBe(f0);
+      unlinkSync(join(repo, 'data-link'));
+      symlinkSync(join(outside, 'other'), join(repo, 'data-link'));
+      expect(fp()).not.toBe(f0);
+    },
+  );
 
   it('fingerprint ignores diff.external/diff.relative and cwd', () => {
     const repo = makeRepo();
