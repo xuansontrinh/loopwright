@@ -246,11 +246,13 @@ describe('no-op and timing', () => {
     expect(r.stdout).toBe('');
   });
 
-  it.each(cases)('each hook exits within 1000 ms (%s)', (script, kind) => {
+  // Windows process spawn plus git is slower.
+  const budgetMs = process.platform === 'win32' ? 3000 : 1000;
+  it.each(cases)(`each hook exits within ${budgetMs} ms (%s)`, (script, kind) => {
     const repo = setup('build');
     git(repo, ['status']);
     const r = run(script, 'claude', payload('claude', kind, repo), repo);
-    expect(r.ms).toBeLessThan(1000);
+    expect(r.ms).toBeLessThan(budgetMs);
   });
 });
 
