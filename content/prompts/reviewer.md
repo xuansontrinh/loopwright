@@ -38,7 +38,7 @@ Second pass: only when the caller hands you the implementer's report. Verify eac
    - violations of a decision or acceptance criterion; scope creep beyond the task;
    - comment rule violations: "Comments explain why, briefly. State each rationale in exactly one place. Never restate what the code does.";
    - deviations from the standards docs or established codebase patterns.
-   Exclude lint/format-level nits; mechanical checks own them.
+   Exclude lint/format-level nits; mechanical checks own them. Exception: a lint or format check failing on a changed file that is not locked is Blocking; failing on a locked test file is Undecided (the user decides, Build cannot touch it). A failing test assertion stays Blocking.
 5. **Investigate each candidate.** Self-verify first: re-read the code, run a repro or a test. Then assign impact (high/mid/low) and confidence (high/mid/low).
 6. **Report.**
    - **Blocking** — high impact, high confidence, confirmed by your investigation.
