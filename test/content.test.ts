@@ -362,3 +362,55 @@ describe('task ids stay out of shipped work', () => {
     expect(b).not.toMatch(/`AC\d+: /);
   });
 });
+
+describe('workflow guards content', () => {
+  const flat = (s: string) => s.replace(/\s+/g, ' ');
+  const has = (text: string, phrases: string[]) => {
+    for (const p of phrases) expect(flat(text), p).toContain(p);
+  };
+
+  it('plan setup checks upstream without prompting for credentials', () => {
+    has(skill('loopwright-plan'), [
+      'GIT_TERMINAL_PROMPT=0 git fetch --quiet',
+      'HEAD..@{u}',
+      'origin/HEAD',
+      'sibling repo',
+    ]);
+  });
+
+  it('plan asks high-impact questions in plain language', () => {
+    has(skill('loopwright-plan'), ['reader who does not know the code']);
+  });
+
+  it('build setup checks upstream and skips it on a fix round', () => {
+    has(skill('loopwright-build'), [
+      'GIT_TERMINAL_PROMPT=0 git fetch --quiet',
+      'HEAD..@{u}',
+      'origin/HEAD',
+      'await-user "upstream changed"',
+      'Skip this check on a fix round',
+    ]);
+  });
+
+  it('tester runs a format check before locking and accepts missing-module lint errors', () => {
+    has(agent('tester').body, ['format check', 'lint errors that come only from the missing module']);
+  });
+
+  it('reviewer routes failing checks by whether the file is locked', () => {
+    has(read('prompts/reviewer.md'), [
+      'on a changed file that is not locked is Blocking',
+      'on a locked test file is Undecided',
+    ]);
+  });
+
+  it('implementer guards line endings', () => {
+    has(agent('implementer').body, ['git ls-files --eol', 'unchanged by your edit', 'never `w/mixed`']);
+  });
+
+  it('workflow doc lists new upstream commits as a stop', () => {
+    const doc = readFileSync(fileURLToPath(new URL('../docs/workflow.md', import.meta.url)), 'utf8');
+    const m = /## Where loopwright stops and waits for you\n([\s\S]*?)(\n## |$)/.exec(doc);
+    expect(m).not.toBeNull();
+    expect(m![1]).toContain('New upstream commits');
+  });
+});

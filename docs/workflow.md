@@ -76,6 +76,7 @@ A verdict goes stale when the code changes afterwards, so Done re-checks the fin
 - Each high-impact question, the low-impact batch, the tier and settings proposal, and the final plan confirmation.
 - Tester `Uncovered` or `Needs` items, and implementer `Deviations`.
 - Each undecided review finding, and the fix-round cap being reached.
+- New upstream commits found before Plan and Build (Build asks only when they touch the task's files or feature).
 - Each `AGENTS.md` or docs change, and the commit message and PR draft.
 
 It never answers a gate itself, never treats silence as approval, and never commits.

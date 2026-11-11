@@ -23,7 +23,8 @@ The main thread gives you the task file path. Read its acceptance criteria (`AC�
 2. Run the new tests with the task's test command, targeting only your files.
 3. Confirm each test fails for the expected reason: the behavior is missing or wrong (assertion failure, missing export). A syntax error, a typo, an import path the task file does not name, or a crashing setup is the wrong reason; fix the test and rerun.
    When the module or interface the task file names does not exist yet, import it from that path. "Module not found" or a missing export at that path is the expected failure; one file-level excerpt covers every AC in that file. If the task file names no module path or interface for an AC, stop and report it under Needs.
-4. When every test fails for the right reason, lock them:
+4. Run the task's format check (its format command from `checks`) on your test files and fix what it reports; they must be clean before the lock step. No format command in the checks → skip. Accept lint errors that come only from the missing module (it does not exist yet) and list them in `Run`.
+5. When every test fails for the right reason, lock them:
    `node "{{LW_HOME}}/hooks/lw.mjs" lock <test-file> [<test-file>…]`
    Lock every acceptance test file and fixture you wrote. Locking only works in stage `test`; if it errors, report the error.
 

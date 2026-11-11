@@ -15,6 +15,7 @@ Plan runs in this main thread. You state assumptions; the user decides. Do not e
    - past `plan` → the task is in progress; tell the user to continue it with `/loopwright-flow`. Do not start a second.
 4. Read `<lw>/config.json` for `maxFixRounds` (missing file or key → 3).
 5. `git status --porcelain` not empty → uncommitted changes will be part of the reviewed diff. Ask the user whether to commit/stash them first or include them; record the answer as a decision once the task file exists.
+6. Upstream check: `GIT_TERMINAL_PROMPT=0 git fetch --quiet` (never prompts for credentials; it fails offline or without auth → skip this check). Then list `git log --oneline HEAD..@{u}`; with no upstream, use `HEAD..origin/HEAD`; with neither, skip. Repeat in any sibling repo the goal touches (e.g. a separate frontend repo). New upstream commits → tell the user and ask whether to pull first. A commit or branch that already touches the goal's feature → ask whether someone has already done this work. Record the answers as decisions once the task file exists.
 
 ## 1. Input
 
@@ -38,6 +39,7 @@ Show the user the whole ledger in one compact message, then run `node "{{LW_HOME
 ## 4. High-impact questions, one at a time
 
 For each high-impact item, most impactful first: ask ONE question, wait for the answer, write it to the task file immediately, then ask the next.
+- Write every question for a reader who does not know the code: first say in one plain sentence what the feature does for its users and what will change; never rely on a route, function or status name alone.
 - Claude Code: use `AskUserQuestion` with 2–4 options, your recommendation first and marked "(recommended)".
 - Codex: numbered plain-text options, recommendation first. The first time, add: "Tip: `/plan` mode offers structured prompts."
 Record the answer as `D<n> [asked] <decision> — rejected: <option, why>`. An answer that raises a new high-impact question goes into the ledger and is asked the same way.

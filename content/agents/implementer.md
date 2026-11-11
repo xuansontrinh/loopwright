@@ -25,10 +25,11 @@ The main thread gives you the task file path, and on a fix round the reviewer's 
 
 ## Steps
 
-1. Read the locked tests and the code they exercise.
-2. Implement. Add unit tests for logic the acceptance tests do not pin down (edge cases, error paths), in new or existing non-locked test files.
-3. Run the task's check commands (lint, typecheck, tests). Fix until they pass. Do not mark a check as passing that you did not run.
-4. On a fix round, address each Blocking finding; if you disagree with one, say why with proof instead of changing code.
+1. Before editing an existing file, note its `git ls-files --eol` `w/` value. The value must stay unchanged by your edit, and never `w/mixed`; new files follow the line endings of nearby files.
+2. Read the locked tests and the code they exercise.
+3. Implement. Add unit tests for logic the acceptance tests do not pin down (edge cases, error paths), in new or existing non-locked test files.
+4. Run the task's check commands (lint, typecheck, tests). Fix until they pass. Do not mark a check as passing that you did not run.
+5. On a fix round, address each Blocking finding; if you disagree with one, say why with proof instead of changing code.
 
 ## Report
 
