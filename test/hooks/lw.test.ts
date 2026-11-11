@@ -52,6 +52,7 @@ describe('lw.mjs', () => {
       changed: [],
       missing: [],
       lockedAfterBuild: [],
+      relockedAfterReopen: [],
       forcedRestartAfterBuild: false,
     });
     writeFileSync(join(repo, 'test/t.test.ts'), 'y');
@@ -62,6 +63,7 @@ describe('lw.mjs', () => {
       changed: ['test/t.test.ts'],
       missing: [],
       lockedAfterBuild: [],
+      relockedAfterReopen: [],
       forcedRestartAfterBuild: false,
     });
   });
@@ -202,6 +204,7 @@ describe('lw.mjs', () => {
       changed: [],
       missing: [],
       lockedAfterBuild: [],
+      relockedAfterReopen: [],
       forcedRestartAfterBuild: false,
     });
   });

@@ -13,7 +13,7 @@ Reviewers judge in their own context. This thread dispatches them, merges their 
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status` → `task` (relative to `<lw>`) and `baseCommit`. "no active task" → point the user to `/loopwright-flow`, stop.
 4. Read the task file header (`tier`, `two-pass`, `fix-round cap`) and `<lw>/config.json` (`crossAgentReview`, `models.crossAgentReviewer`; missing → `off`).
 5. Scope: small/standard → the task. Large → the first `S<n> [tested]` slice, or `whole` once every slice is `[passed]`.
-6. Round `n` = number of `- R` lines in `## Review log` for this scope + 1.
+6. Round `n` = number of `- R` lines in `## Review log` for this scope after the last `- Scope change:` line (all of them if there is none) + 1.
 
 ## Passes
 
@@ -34,9 +34,14 @@ Human gates: before you ask the user anything in this stage (an undecided findin
 
 Merge all passes: union of `blocking`, union of `undecided` (drop exact duplicates by location and expectation), sum of `droppedCount`. Decide from the arrays, not from the `pass` fields.
 
-- **Blocking** present → `node "{{LW_HOME}}/hooks/lw.mjs" verdict fail --round <n>`. Fix rounds used = n − 1. If that equals the `fix-round cap`, stop: show every open finding and let the user decide (raise the cap, fix by hand, or accept). Otherwise show the findings briefly and run `/loopwright-build` with the Blocking findings verbatim; then review again (round n + 1). Undecided findings of this round are only counted; the next round re-checks them.
+- **Blocking** present → `node "{{LW_HOME}}/hooks/lw.mjs" verdict fail --round <n>`. Fix rounds used = n − 1. If that reaches or exceeds the `fix-round cap`, stop: show every open finding and let the user decide (raise the cap, fix by hand, or accept). Otherwise show the findings briefly and run `/loopwright-build` with the Blocking findings verbatim; then review again (round n + 1). Undecided findings of this round are only counted; the next round re-checks them.
 - Only **Undecided** → present each to the user, one at a time (Claude: `AskUserQuestion`; Codex: numbered text), with its location, expectation and proof; options: fix or dismiss. Record each answer under the round's log line: `  - U<k> <location>: fix|dismissed — <user's reason>`. Any "fix" → `verdict fail --round <n>` and Build with those findings, same cap rule. All dismissed → pass.
+- An undecided finding the user wants resolved by changing the plan or a locked test (not just the code) → offer to go back: after `verdict fail --round <n>`, `await-user` and the answer's `resume`, run `node "{{LW_HOME}}/hooks/lw.mjs" reopen <plan|test> "<reason>"` with the user's reason, set `stage: <plan|test>` in the task file header (for plan also `plan: draft`), then continue with `/loopwright-plan` or `/loopwright-test`. Run it only after the user chooses it.
 - Nothing open → `node "{{LW_HOME}}/hooks/lw.mjs" verdict pass --round <n>`.
+- Fix tasks, sibling gate: asked once, at the final pass (the task review for small/standard, the whole-branch review for large), never after a slice review. A passing slice review only records its merged `siblings` (union from all passes, dropping exact duplicates by `path` and `line`) as `  - Sibling <path>:<line> — <why>` lines under its log line, then the slice loop goes on.
+  - At the final pass, take the merged `siblings` of this verdict plus every `Sibling` line after the last `- Scope change:` line, dropping duplicates by `path` and `line`. Non-empty → run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "siblings of the fixed bug"` after the `verdict` command (the verdict clears the wait), list each sibling (`path:line`, why), then ask one question for the batch, recommendation first: include the siblings (also fix them), or list them as follow-ups. After the answer run `node "{{LW_HOME}}/hooks/lw.mjs" resume`.
+  - Include → append `- Scope change: siblings included` to the review log, run `node "{{LW_HOME}}/hooks/lw.mjs" reopen plan "include siblings in the fix"`, set `stage: plan` and `plan: draft` in the task file header, then continue with `/loopwright-plan` (one `[repro]` criterion per sibling; Test locks the new repro tests and existing locks stay; Build and Review run again with a fresh fix-round budget, because rounds are counted after the scope change).
+  - No (follow-ups only) → write the siblings under `## Follow-ups` in the task file (`path:line — why`) and go to `/loopwright-done`.
 
 Once the outcome is known (after the user's undecided answers) and before the verdict command, append one line to `## Review log`, followed by its `U<k>` lines if any:
 `- R<n>: <pass|fail> — <k> blocking, <m> undecided, <d> dropped — <key finding one-liners>; <skipped-pass notes>`

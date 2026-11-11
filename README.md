@@ -1,6 +1,6 @@
 # loopwright
 
-Make your AI coding agent plan, test, build and review like a careful team: a **Plan → Test → Build → Review → Done** workflow (Test is skipped for small tasks, and Review loops back to Build until it passes), installed into your repo as skills, subagents and hooks.
+Make your AI coding agent plan, test, build and review like a careful team: a **Plan → Test → Build → Review → Done** workflow (Test is skipped for small feature tasks, and Review loops back to Build until it passes), installed into your repo as skills, subagents and hooks.
 
 ## Why
 
@@ -45,7 +45,8 @@ The stages run in order, but the path depends on the task's size (its *tier*) an
 flowchart TD
     goal(["Your goal or spec"]) --> plan["Plan<br/>scout the repo, assumption ledger,<br/>you confirm tier, checks and criteria"]
     plan --> tier{"Tier"}
-    tier -- "small" --> build
+    tier -- "small feature" --> build
+    tier -- "small fix" --> test
     tier -- "standard" --> test["Test<br/>tester writes and locks acceptance tests"]
     tier -- "large" --> slices["Split into slices<br/>each runs Test, Build, Review,<br/>then one whole-branch review"]
     test --> build["Build<br/>implementer makes the tests pass"]
@@ -58,8 +59,8 @@ flowchart TD
 ```
 
 - **Plan** runs in your session. A read-only scout maps the repo, then you answer the high-impact questions one at a time and confirm the plan. Nothing is built before that.
-- **Test** (standard and large): a tester subagent, which never sees the implementation, writes acceptance tests from your confirmed criteria and locks them.
-- **Build**: an implementer subagent makes the locked tests pass. Small tasks skip Test, so the implementer writes the tests.
+- **Test** (standard, large, and every fix): a tester subagent, which never sees the implementation, writes acceptance tests from your confirmed criteria and locks them.
+- **Build**: an implementer subagent makes the locked tests pass. Small feature tasks skip Test, so the implementer writes the tests; a fix never skips it.
 - **Review**: a reviewer that starts blind runs your checks, confirms the locked tests are untouched, and reports only proven, high-impact findings. Blocking findings send the task back to Build, up to 3 rounds by default; findings it cannot confirm come to you to fix or dismiss.
 - **Done**: proposes `AGENTS.md` updates and drafts the commit and PR message. You approve each change; loopwright never commits.
 
@@ -72,6 +73,7 @@ Run a single stage, or the whole loop with `flow`. In Codex, use `$` instead of 
 | Command | Does |
 |---|---|
 | `/loopwright-flow` | Run or resume the whole loop, stopping wherever you must decide |
+| `/loopwright-fix` | Fix a bug: a repro test is locked first, then the root cause is fixed |
 | `/loopwright-plan` | Plan stage |
 | `/loopwright-test` | Test stage |
 | `/loopwright-build` | Build stage |
