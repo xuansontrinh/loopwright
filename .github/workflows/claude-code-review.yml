@@ -12,11 +12,11 @@ on:
 
 jobs:
   claude-review:
-    # Run only on PRs labeled "Conjure Claude": once when the label is added,
+    # Run only on PRs labeled "Request Review From Claude": once when the label is added,
     # then on each push while it stays. Adding other labels does not trigger a run.
     if: |
-      github.event.action == 'labeled' && github.event.label.name == 'Conjure Claude' ||
-      github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'Conjure Claude')
+      github.event.action == 'labeled' && github.event.label.name == 'Request Review From Claude' ||
+      github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'Request Review From Claude')
 
     runs-on: ubuntu-latest
     permissions:
