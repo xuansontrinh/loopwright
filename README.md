@@ -74,6 +74,7 @@ Run a single stage, or the whole loop with `flow`. In Codex, use `$` instead of 
 |---|---|
 | `/loopwright-flow` | Run or resume the whole loop, stopping wherever you must decide |
 | `/loopwright-fix` | Fix a bug: a repro test is locked first, then the root cause is fixed |
+| `/loopwright-park` | Capture work found mid-task as a startable stub, without growing the current task |
 | `/loopwright-plan` | Plan stage |
 | `/loopwright-test` | Test stage |
 | `/loopwright-build` | Build stage |

@@ -40,6 +40,8 @@ Releases: `main` is PR-only. Release = merged PR bumping `package.json` `version
 ## Conventions
 
 - Content phrase assertions live in `test/content.test.ts` and `test/agents.test.ts`. Change them with any `content/` wording change.
+- A new skill in `content/skills/` must also be added to the `SKILLS` lists in `test/content.test.ts` and `test/init.test.ts`, the `loopwright-{…}` brace list in `docs/installation.md`, the README skills table, and be named by `loopwright-flow`; tests assert each.
+- Error-path tests for an `lw.mjs` command must assert that command's own message, not only exit 1 and no writes: an unknown command also exits 1 without writing, so such a test passes before the command exists.
 - Docs (`README.md`, `docs/*.md`): follow `docs/writing-documentation-guidelines.md` and re-read it before any docs change. Essentials: README is a landing page (what/why, then a short tested quick start, then links); reference detail lives in `docs/`; never mix tutorial, how-to, reference and explanation in one section; every command must work as written; keep maintainer material out of the user path. Test phrase assertions read `README.md` + `docs/configuration.md`; move assertions with the text.
 - Task ids (AC, D, S and similar shorthands) live only in the task file. Never write them into tests, code, comments, commit messages or PR descriptions; name tests by behavior.
 - Keep `README.md`, `HELP` in `src/cli.ts`, and the install summary in `src/commands/init.ts` in sync with CLI flags and workflow behavior.

@@ -40,6 +40,11 @@ Run `/loopwright-fix` once on a real bug in the scratch repo, with a description
 - [ ] Sibling gate: if Review finds the same defect pattern elsewhere, you are asked once at the final pass (after the whole-branch review for large) to include the siblings or list them as follow-ups; "include" reopens Plan with one repro criterion per sibling
 - [ ] The PR draft states the root cause in one line, names the repro test(s) with "failed before, passes after", and lists the follow-ups
 
+### Park path
+
+- [ ] During a task, `/loopwright-park` restates the finding, asks one blocking question (recommending no), and writes a `status: proposed` stub; the task's state and diff are unchanged and the stub is listed under its `## Follow-ups`
+- [ ] `/loopwright-flow` after Done lists the stub; starting it fills the same file in place
+
 ## Codex (WIP)
 
 Codex support is work in progress; only install and discovery checks are listed. No end-to-end run has been done.

@@ -19,7 +19,9 @@ Runs the stage skills in order for the confirmed tier and resumes where a task l
 - Prints a task → read `<lw>/<task>` and continue at its `stage` (plan: run `loopwright-plan`, which resumes the open plan; review: count rounds from the review log).
 - "no active task" → `grep -l "^status: active" <lw>/tasks/*.md`.
   - One or more files → ask the user which one (or a new task). For the chosen file, offer to rebuild state from it: `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md --base <base commit from its header>`, then `node "{{LW_HOME}}/hooks/lw.mjs" stage <stage from its header>`. Locked-test hashes are lost with the state: if the task already has acceptance tests and is past Test, tell the user; re-lock the test files named in its AC lines (`stage test`, `lock <files>`, then `stage <stage>`) only if the user confirms they are unchanged.
-  - None, or the user wants a new task → start at Plan with the user's goal or spec path.
+  - None, or the user wants a new task → continue below.
+- Also list stubs parked by `/loopwright-park`: `grep -l "^status: proposed" <lw>/tasks/*.md`. Offer each as start, drop, or a new task instead. Start → run `loopwright-plan` on it as in that skill ("Parked stubs"). Drop → set `status: dropped` in the stub; never delete it.
+- No stubs and no task, or the user wants a new task → start at Plan with the user's goal or spec path.
 
 ## Run
 
@@ -30,6 +32,8 @@ Follow each stage skill in turn (Claude Code `/loopwright-<stage>`, Codex `$loop
 - A fix (`kind: fix` in the task file header; set by `/loopwright-fix`, or by Plan after the user agrees to run a bug-like goal as a fix) runs `loopwright-test` at every tier: a small fix is never built without a locked repro test. Large keeps its slice loop.
 - Going back is the user's choice only: at a deviation, or an undecided review finding, run `node "{{LW_HOME}}/hooks/lw.mjs" reopen <plan|test> "<reason>"` (plan or test; accepted only after Build began) and set `stage: <plan|test>` in the task file header (for plan also `plan: draft`), then follow the stage skill it names. Locked tests may then be edited by the tester in Test and are re-locked.
 - A failed review returns to `loopwright-build` and then `loopwright-review`, up to the task's fix-round cap.
+
+Work found along the way that does not belong in the task goes to `loopwright-park` (`/loopwright-park`), which leaves the current task unchanged.
 
 When a stage says to spawn the `loopwright-<role>` subagent, spawn the subagent and wait for its result; never do its work in this thread. After each stage, tell the user one line: what finished and what runs next.
 

@@ -18,6 +18,10 @@ Plan runs in this main thread. You state assumptions; the user decides. Do not e
 5. `git status --porcelain` not empty → uncommitted changes will be part of the reviewed diff. Ask the user whether to commit/stash them first or include them; record the answer as a decision once the task file exists.
 6. Upstream check: `GIT_TERMINAL_PROMPT=0 git fetch --quiet` (never prompts for credentials; it fails offline or without auth → skip this check). Then list `git log --oneline HEAD..@{u}`; with no upstream, use `HEAD..origin/HEAD`; with neither, skip. Repeat in any sibling repo the goal touches (e.g. a separate frontend repo). New upstream commits → tell the user and ask whether to pull first. A commit or branch that already touches the goal's feature → ask whether someone has already done this work. Record the answers as decisions once the task file exists.
 
+## Parked stubs
+
+Invoked without a goal (and no active task) → run `grep -l "^status: proposed" <lw>/tasks/*.md` and list the stubs `/loopwright-park` left, one line each (title, `kind`, `found while`, `blocks`). Offer: start one, drop one, or a new task. Drop → set `status: dropped` in the stub; never delete it. Start → treat the stub as an imported spec: run `start tasks/<stub>.md`, and fill that same file in place (status `active`, the Plan template's header lines and sections) instead of creating a second file. Keep its `kind`, `found while` and `blocks` lines. Its `## Goal` is confirmed with the batch; its `## Evidence` is a lead for the scout, not a verified fact.
+
 ## 1. Input
 
 - A goal in the user's words, or a path to an imported spec/plan (e.g. from superpowers).
