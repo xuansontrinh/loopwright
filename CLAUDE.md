@@ -22,7 +22,7 @@ Unit tests import `src/`. E2E tests spawn `dist/cli.js` in temp git repos; hook 
 
 ESLint is dropped until typescript-eslint supports TypeScript 7 (typescript-eslint#10940; tracked in #20).
 
-CI: `.github/workflows/ci.yml` runs typecheck + format:check + tests on every PR and push to `main`, on Node 22.14 (`engines` floor), 24, 26. `.github/dependabot.yml` opens weekly, cooldown-delayed PRs for npm and Actions. Pin actions to commit SHAs with a `# vX.Y.Z` comment; keep `npm ci --ignore-scripts`. Dependabot PRs are reviewed and merged by hand, never auto-merged.
+CI: `.github/workflows/ci.yml` runs typecheck + format:check + tests on every PR and push to `main`, on Node 22.14 (`engines` floor), 24, 26. `.github/dependabot.yml` opens weekly, cooldown-delayed PRs for npm and Actions. Pin actions to commit SHAs with a `# vX.Y.Z` comment; a test fails on any unpinned `uses:` in any workflow, including ones pasted from app templates. Resolve the SHA with `git ls-remote <repo> 'refs/tags/vX.Y.Z^{}'`: an annotated tag's own SHA is not the commit. Keep `npm ci --ignore-scripts`. Dependabot PRs are reviewed and merged by hand, never auto-merged.
 
 `.github/workflows/format.yml` pushes a `npm run format` commit to same-repo, non-Dependabot PR branches using the `FORMAT_PUSH_TOKEN` secret (fine-grained PAT, this repo only, Contents read/write); without the secret it only warns. `ci.yml` still gates on `format:check`.
 
