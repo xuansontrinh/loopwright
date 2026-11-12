@@ -9,7 +9,9 @@ const ROLES = ['scout', 'tester', 'implementer', 'reviewer'];
 const read = (rel: string) => readFileSync(contentRoot() + rel, 'utf8');
 const agent = (role: string) => parseAgentSource(role, read(`agents/${role}.md`));
 
-const SKILLS = ['flow', 'plan', 'fix', 'park', 'test', 'build', 'review', 'done'].map((s) => `loopwright-${s}`);
+const SKILLS = ['flow', 'plan', 'fix', 'park', 'explore', 'test', 'build', 'review', 'done'].map(
+  (s) => `loopwright-${s}`,
+);
 const skill = (name: string) => read(`skills/${name}/SKILL.md`);
 function skillMeta(name: string): { name?: string; description?: string; body: string } {
   const m = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(skill(name));

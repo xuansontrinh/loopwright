@@ -45,6 +45,11 @@ Run `/loopwright-fix` once on a real bug in the scratch repo, with a description
 - [ ] During a task, `/loopwright-park` restates the finding, asks one blocking question (recommending no), and writes a `status: proposed` stub; the task's state and diff are unchanged and the stub is listed under its `## Follow-ups`
 - [ ] `/loopwright-flow` after Done lists the stub; starting it fills the same file in place
 
+### Explore path
+
+- [ ] `/loopwright-explore services/x` writes a run folder under `.loopwright/explore/`, stops at the outline gate, then runs one scout per component; the repo outside `.loopwright/` is unchanged
+- [ ] Stopping midway and running `lw.mjs explore services/x` again resumes the same folder; `--new` abandons it and starts another
+
 ## Codex (WIP)
 
 Codex support is work in progress; only install and discovery checks are listed. No end-to-end run has been done.

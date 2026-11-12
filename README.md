@@ -1,6 +1,6 @@
 # loopwright
 
-Make your AI coding agent plan, test, build and review like a careful team: a **Plan → Test → Build → Review → Done** workflow (Test is skipped for small feature tasks, and Review loops back to Build until it passes), installed into your repo as skills, subagents and hooks.
+Make your AI coding agent plan, test, build and review like a careful team: a **Plan → Test → Build → Review → Done** workflow (Test is skipped for small feature tasks, and Review loops back to Build until it passes), installed into your repo as skills, subagents and hooks. `/loopwright-explore` also writes a verified walkthrough of a codebase you are new to.
 
 ## Why
 
@@ -75,6 +75,7 @@ Run a single stage, or the whole loop with `flow`. In Codex, use `$` instead of 
 | `/loopwright-flow` | Run or resume the whole loop, stopping wherever you must decide |
 | `/loopwright-fix` | Fix a bug: a repro test is locked first, then the root cause is fixed |
 | `/loopwright-park` | Capture work found mid-task as a startable stub, without growing the current task |
+| `/loopwright-explore` | Understand an unfamiliar codebase: a verified walkthrough, written under `.loopwright/` |
 | `/loopwright-plan` | Plan stage |
 | `/loopwright-test` | Test stage |
 | `/loopwright-build` | Build stage |

@@ -33,6 +33,8 @@ Follow each stage skill in turn (Claude Code `/loopwright-<stage>`, Codex `$loop
 - Going back is the user's choice only: at a deviation, or an undecided review finding, run `node "{{LW_HOME}}/hooks/lw.mjs" reopen <plan|test> "<reason>"` (plan or test; accepted only after Build began) and set `stage: <plan|test>` in the task file header (for plan also `plan: draft`), then follow the stage skill it names. Locked tests may then be edited by the tester in Test and are re-locked.
 - A failed review returns to `loopwright-build` and then `loopwright-review`, up to the task's fix-round cap.
 
+Exploring is not a stage of the loop: to understand an unfamiliar codebase before any task, run `loopwright-explore` (`/loopwright-explore [folder]`).
+
 Work found along the way that does not belong in the task goes to `loopwright-park` (`/loopwright-park`), which leaves the current task unchanged.
 
 When a stage says to spawn the `loopwright-<role>` subagent, spawn the subagent and wait for its result; never do its work in this thread. After each stage, tell the user one line: what finished and what runs next.

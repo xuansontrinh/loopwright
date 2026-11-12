@@ -41,6 +41,18 @@ flowchart TD
 
 Later, `/loopwright-flow` or `/loopwright-plan` without a goal lists the proposed stubs: start one (it goes through normal Plan in a fresh context), drop it, or begin a new task. Done lists the stubs found during a task, drafts issue text for each (shown, never filed) and adds a Follow-ups section to the PR draft.
 
+## Understanding an unfamiliar codebase
+
+`/loopwright-explore [folder]` writes a walkthrough of a codebase, or of one folder of it, for someone new to it. It changes no code and runs no commands from the repository. Nothing outside `.loopwright/` is written unless you ask to copy the walkthrough in.
+
+1. A scout maps the scope. You confirm the outline: the components (4 to 8 is readable) and one to three key flows to trace.
+2. One read-only scout per component reports what it does, what it depends on, and where, with `path:line`.
+3. The main thread writes the walkthrough and a list of claims, each with its `path:line`.
+4. A fresh scout gets only the claim list and tries to disprove each claim. Refuted claims are fixed; unconfirmed ones are removed or moved to "Questions for the team", and unconfirmed diagram edges are removed or drawn dashed.
+5. You see the questions for the team and may answer any; your answers are marked as not verified in code.
+
+The walkthrough goes under `.loopwright/explore/<date>-<scope>/walkthrough.md`, which is gitignored. It opens with what the system is, defines its words, then shows a context diagram and a component diagram before any detail. Runs resume from the files in that folder after an interruption; `lw.mjs explore "<folder>" --new` abandons an unfinished run and starts another. Copy the walkthrough into the repo yourself when you judge it good enough. That offer is withheld while a task is in `test`, `build` or `review`, so the copy does not join that task's diff.
+
 ## Plan, step by step
 
 Plan runs in your main thread. Nothing is built until you confirm.
