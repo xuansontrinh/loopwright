@@ -28,6 +28,18 @@ function goalParagraph(text) {
   return out;
 }
 
+// First non-empty line under `## Root cause`; one line keeps the 40-line cap for the decisions.
+function rootCauseLine(text) {
+  const lines = text.split(/\r?\n/);
+  const i = lines.findIndex((l) => /^#{1,6}\s*root cause\b/i.test(l.trim()));
+  if (i === -1) return null;
+  for (const l of lines.slice(i + 1)) {
+    if (/^#{1,6}\s/.test(l)) return null;
+    if (l.trim() !== '') return l;
+  }
+  return null;
+}
+
 exitIfHooksOff();
 
 try {
@@ -43,7 +55,11 @@ try {
   const file = join(dir, String(state.task));
   if (existsSync(file)) {
     const text = readFileSync(file, 'utf8');
+    const fix = /^kind:\s*fix\s*$/im.test(text);
+    if (fix) lines.push('kind: fix');
     lines.push(...goalParagraph(text));
+    const root = fix ? rootCauseLine(text) : null;
+    if (root) lines.push(`Root cause: ${root.trim()}`);
     lines.push(`Stage: ${state.stage}`);
     lines.push(...text.split(/\r?\n/).filter((l) => l.startsWith('- D')));
   } else {

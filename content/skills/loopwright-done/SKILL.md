@@ -31,7 +31,8 @@ Never write task ids (AC, D, S shorthands) into tests, code, comments, commit me
 
 Draft both and show them to the user:
 - Commit: imperative subject ≤ 72 chars; body says why, the key decisions, and the rejected options with the reason.
-- PR: summary of intent; decisions and rejected options; notable assumptions the reviewer should know; how it was verified (check commands, acceptance tests, review rounds from the log). Do not list the diff file by file.
+- PR: summary of intent; decisions and rejected options; notable assumptions the reviewer should know; how it was verified (check commands, acceptance tests, review rounds from the log). Do not list the diff file by file. Run `node "{{LW_HOME}}/hooks/lw.mjs" check-locks`; when `relockedAfterReopen` is non-empty, add a section listing each locked test changed after a reopen with its reason.
+  - Fix tasks (`kind: fix`): the PR also states the root cause in one line (from `## Root cause`), the repro test name(s) with "failed before, passes after", and the follow-ups from `## Follow-ups`.
 
 ## 3. Close
 

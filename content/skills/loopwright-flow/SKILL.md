@@ -24,18 +24,21 @@ Runs the stage skills in order for the confirmed tier and resumes where a task l
 ## Run
 
 Follow each stage skill in turn (Claude Code `/loopwright-<stage>`, Codex `$loopwright-<stage>`):
-- small: `loopwright-plan` → `loopwright-build` → `loopwright-review` → `loopwright-done`
-- standard: `loopwright-plan` → `loopwright-test` → `loopwright-build` → `loopwright-review` → `loopwright-done`
+- small feature: `loopwright-plan` → `loopwright-build` → `loopwright-review` → `loopwright-done`
+- standard (and any fix): `loopwright-plan` → `loopwright-test` → `loopwright-build` → `loopwright-review` → `loopwright-done`
 - large: `loopwright-plan` → for each slice in order: `loopwright-test` → `loopwright-build` → `loopwright-review` → then one whole-branch `loopwright-review` → `loopwright-done`
+- A fix (`kind: fix` in the task file header; set by `/loopwright-fix`, or by Plan after the user agrees to run a bug-like goal as a fix) runs `loopwright-test` at every tier: a small fix is never built without a locked repro test. Large keeps its slice loop.
+- Going back is the user's choice only: at a deviation, or an undecided review finding, run `node "{{LW_HOME}}/hooks/lw.mjs" reopen <plan|test> "<reason>"` (plan or test; accepted only after Build began) and set `stage: <plan|test>` in the task file header (for plan also `plan: draft`), then follow the stage skill it names. Locked tests may then be edited by the tester in Test and are re-locked.
 - A failed review returns to `loopwright-build` and then `loopwright-review`, up to the task's fix-round cap.
 
 When a stage says to spawn the `loopwright-<role>` subagent, spawn the subagent and wait for its result; never do its work in this thread. After each stage, tell the user one line: what finished and what runs next.
 
 ## Gates: stop and wait for the user
 
-- each high-impact question, the low-impact batch, the tier/settings proposal, and the final plan confirmation;
+- each high-impact question, the "run this as a fix?" question for a bug-like goal, the low-impact batch, the tier/settings proposal, and the final plan confirmation;
 - tester `Uncovered`/`Needs` items and implementer `Deviations`;
+- fixes: the no-repro gate (no locked repro test: provide evidence, find the faulty unit, or stop; never continue without one) and, after the final passing review (whole-branch for large), the sibling gate (include siblings in this fix or list them as follow-ups);
 - each undecided review finding, and the fix-round cap being reached;
 - each AGENTS.md / docs change, and the commit message and PR draft.
 
-In Build and Review, run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "<reason>"` before asking and `resume` after the answer, as those skills say; otherwise the stop gate pushes you past the gate. Never answer a gate yourself or treat silence as approval. Do not commit at any point.
+In Test (no-repro gate), Build and Review, run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "<reason>"` before asking and `resume` after the answer, as those skills say; otherwise the stop gate pushes you past the gate. Never answer a gate yourself or treat silence as approval. Do not commit at any point.

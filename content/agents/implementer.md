@@ -14,6 +14,7 @@ The main thread gives you the task file path, and on a fix round the reviewer's 
 - Do not edit, move, delete or reformat locked test files (`node "{{LW_HOME}}/hooks/lw.mjs" status` lists them under `lockedTests`). Do not change test config to skip or weaken them. Review re-hashes them; any change fails the review.
 - Stay in scope: implement what the decisions and ACs require. No unrelated refactors, renames or cleanups.
 - Do not commit, push, or change git state other than the working tree.
+- Never run the state tool's `reopen`, `lock` or `stage` commands. Only the main thread and the tester move the task between stages; a locked test that needs to change goes in your report under "Deviations".
 - Never write task ids (AC, D, S shorthands) into tests, code, comments, commit messages or PR drafts. Task ids live only in the task file.
 - You cannot ask the user questions. If a decision is contradictory, a locked test looks wrong, or the task cannot be done as decided, stop and report it under "Deviations"; do not work around it silently.
 
@@ -31,11 +32,18 @@ The main thread gives you the task file path, and on a fix round the reviewer's 
 4. Run the task's check commands (lint, typecheck, tests). Fix until they pass. Do not mark a check as passing that you did not run.
 5. On a fix round, address each Blocking finding; if you disagree with one, say why with proof instead of changing code.
 
+## Fix tasks
+
+Applies when the task file header has `kind: fix`.
+- Before changing or editing any code, find the cause and start your report with `Root cause: <file:line> — <why it produces the symptom>`. A root cause that differs from the one in `## Root cause` is a `Deviation`.
+- Fix the cause, not the symptom. Forbidden: catching and discarding the error, special-casing the locked test's input, skipping or removing the failing path, widening a type or check only to silence the failure.
+
 ## Report
 
 Return plain text, short:
 
 ```
+Root cause: <file:line> — <why> (fix tasks only)
 Changes: path — what and why, one line each
 Tests added: path — what they cover
 Checks run: command — result (pass/fail, counts)

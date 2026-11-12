@@ -9,7 +9,7 @@ const ROLES = ['scout', 'tester', 'implementer', 'reviewer'];
 const read = (rel: string) => readFileSync(contentRoot() + rel, 'utf8');
 const agent = (role: string) => parseAgentSource(role, read(`agents/${role}.md`));
 
-const SKILLS = ['flow', 'plan', 'test', 'build', 'review', 'done'].map((s) => `loopwright-${s}`);
+const SKILLS = ['flow', 'plan', 'fix', 'test', 'build', 'review', 'done'].map((s) => `loopwright-${s}`);
 const skill = (name: string) => read(`skills/${name}/SKILL.md`);
 function skillMeta(name: string): { name?: string; description?: string; body: string } {
   const m = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(skill(name));
@@ -89,7 +89,7 @@ describe('content', () => {
     const s = JSON.parse(read('schemas/verdict.json'));
     expect(s).not.toHaveProperty('$schema');
     expect(s.type).toBe('object');
-    expect(s.required.sort()).toEqual(['blocking', 'droppedCount', 'pass', 'undecided']);
+    expect(s.required.sort()).toEqual(['blocking', 'droppedCount', 'pass', 'siblings', 'undecided']);
     expect(s.additionalProperties).toBe(false);
     expect(s.properties.droppedCount).toEqual({ type: 'integer' });
     const f = s.$defs.Finding;
@@ -101,7 +101,7 @@ describe('content', () => {
   });
 
   describe('skills', () => {
-    it('the six skills exist and no TODO-BODY remains in content/skills', () => {
+    it('every skill exists and no TODO-BODY remains in content/skills', () => {
       expect(listContent('skills')).toEqual([...SKILLS].sort().map((n) => `${n}/SKILL.md`));
       for (const f of listContent('skills')) expect(read(`skills/${f}`), f).not.toContain('TODO-BODY');
     });

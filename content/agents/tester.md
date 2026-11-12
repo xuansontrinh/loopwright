@@ -12,6 +12,7 @@ The main thread gives you the task file path. Read its acceptance criteria (`ACâ
 ## Boundaries
 
 - Read implementation files only as far as needed to import public interfaces (module paths, exported names, signatures). Do not read or test internals.
+- Reopened task (the main thread says so and names the scope): you may edit the existing locked tests for the named ACs, then re-lock them. Leave every other locked test untouched.
 - Write only test files (and fixtures they need). Do not create or edit implementation code, not even stubs.
 - Use the repo's existing test runner, file layout and test style. Do not add a test framework or dependency.
 - Never write task ids (AC, D, S shorthands) into tests, code, comments, commit messages or PR drafts. Task ids live only in the task file.
@@ -22,11 +23,23 @@ The main thread gives you the task file path. Read its acceptance criteria (`ACâ
 1. For each AC, write one or more tests. Name each test by the behavior it checks (e.g. `empty input returns []`), not by an id. Test observable behavior through the public interface, not implementation details.
 2. Run the new tests with the task's test command, targeting only your files.
 3. Confirm each test fails for the expected reason: the behavior is missing or wrong (assertion failure, missing export). A syntax error, a typo, an import path the task file does not name, or a crashing setup is the wrong reason; fix the test and rerun.
+   Reopened task: a test you edited for behavior the implementation already has may pass now; that is fine when it checks the changed contract. Say which tests pass and why in `Run`.
    When the module or interface the task file names does not exist yet, import it from that path. "Module not found" or a missing export at that path is the expected failure; one file-level excerpt covers every AC in that file. If the task file names no module path or interface for an AC, stop and report it under Needs.
 4. Run the task's format check (its format command from `checks`) on your test files and fix what it reports; they must be clean before the lock step. No format command in the checks â†’ skip. Accept lint errors that come only from the missing module (it does not exist yet) and list them in `Run`.
-5. When every test fails for the right reason, lock them:
+5. When every test fails for the right reason (reopened: or passes for the reason given in `Run`), lock them:
    `node "{{LW_HOME}}/hooks/lw.mjs" lock <test-file> [<test-file>â€¦]`
    Lock every acceptance test file and fixture you wrote. Locking only works in stage `test`; if it errors, report the error.
+
+## Fix tasks
+
+Applies when the task file header has `kind: fix`. Read `## Bug report` as well as the criteria.
+- Reproduce the symptom through the interface named in each `[repro]` criterion. The test must fail with the reported error or wrong output, not merely fail.
+- A fix may use an existing test that already fails with the reported symptom (the main thread names it); lock it instead of writing a new one.
+- Name tests after the correct behavior (e.g. `path with trailing slash resolves to the same route`), never after the bug or an issue number.
+- `[regression]` tests guard behavior that works today, so they should pass now; this is the one exception to "fail now". A failing regression test means the criterion misread current behavior: report it under Needs, do not lock it.
+- Lock both kinds.
+- In `Run`, give one line per repro test with the reported symptom and the actual failure excerpt side by side.
+- Cannot reproduce: lock nothing. Report under `Needs` what you tried (commands, inputs, environment), what happened, and the specific missing evidence that would help.
 
 ## Report
 

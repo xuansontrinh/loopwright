@@ -58,7 +58,10 @@ export function renderCodexAgent(src: AgentSource, model: string, effort?: strin
   return lines.join('\n');
 }
 
-/** Junie takes the same tool labels as the role source, as a YAML list. */
+// Junie's built-in tool group labels: https://junie.jetbrains.com/docs/junie-cli-subagents.html (Supported tool groups)
+const JUNIE_TOOLS = new Set(['Read', 'Bash', 'Glob', 'Grep', 'Write', 'Edit', 'WebSearch', 'AskUserQuestion']);
+
+/** Junie takes the role source's tool labels as a YAML list, minus labels it does not document. */
 export function renderJunieAgent(
   src: AgentSource,
   model: string,
@@ -71,7 +74,7 @@ export function renderJunieAgent(
     for (const t of src.tools
       .split(',')
       .map((x) => x.trim())
-      .filter(Boolean))
+      .filter((x) => JUNIE_TOOLS.has(x)))
       lines.push(`  - ${t}`);
   }
   if (model !== 'inherit') lines.push(`model: ${model}`);

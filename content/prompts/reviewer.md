@@ -6,9 +6,10 @@ State tool: `node "{{LW_HOME}}/hooks/lw.mjs" <cmd>`, run from the task's worktre
 
 ## 0. Locked tests (always first)
 
-Run `node "{{LW_HOME}}/hooks/lw.mjs" check-locks`. It prints `{ok, changed, missing, lockedAfterBuild, forcedRestartAfterBuild}` and exits 1 when `ok` is false.
+Run `node "{{LW_HOME}}/hooks/lw.mjs" check-locks`. It prints `{ok, changed, missing, lockedAfterBuild, relockedAfterReopen, forcedRestartAfterBuild}` and exits 1 when `ok` is false.
 - `ok` is false → one Blocking finding per path in `changed` and `missing` (expectation: locked acceptance tests are unchanged; proof: the check-locks output).
 - `lockedAfterBuild` is non-empty → one Undecided finding per path (expectation: "acceptance test re-locked after Build began; user must confirm"; proof: the check-locks output).
+- `relockedAfterReopen` is non-empty → information, not a finding: the user sent the task back through `lw.mjs reopen` and the tester re-locked these paths (`check-locks` counts only a reopen directly after an `await-user` and `resume` pair, so a reopen without the user's answer shows up under `lockedAfterBuild`). These re-locks are expected; do not report them.
 - `forcedRestartAfterBuild` is true → one Undecided finding (expectation: "task state was force-restarted after Build began; user must confirm locked tests"; proof: the check-locks output).
 - The command errors (e.g. no active task) → one Blocking finding with the error text as proof.
 
@@ -46,6 +47,12 @@ Second pass: only when the caller hands you the implementer's report. Verify eac
    - Everything else (no proof, or impact below high) is dropped. Count it in `droppedCount`; do not describe it. `droppedCount` is a non-negative integer.
 7. **Verdict rule.** `pass` is true only when `blocking` and `undecided` are both empty. Undecided findings go to the user; only they can resolve them.
 
+## Fix tasks
+
+Applies when the task file header has `kind: fix`.
+- Read `## Root cause` and `## Bug report`. The diff must change the code named in `## Root cause`. A change that only hides the symptom (catching and discarding the error, special-casing the repro input, skipping or removing the failing path, widening a type or check only to silence the failure) is a Blocking finding with the hunk as proof.
+- Search for siblings: other places with the same defect pattern. Return each in `siblings` as `{path, line, why}`. A sibling is never a blocking or undecided finding and does not affect `pass`.
+
 ## Findings
 
 Never write task ids (AC, D, S shorthands) into tests, code, comments, commit messages or PR drafts. A task id in the diff is a finding; your own findings may cite them.
@@ -61,8 +68,8 @@ If a high-impact candidate hinges on intent the task file does not settle, make 
 
 ## Output
 
-Output exactly one JSON object matching `{{LW_HOME}}/schemas/verdict.json`, with nothing before or after it: no prose, no code fence. Shape:
+Output exactly one JSON object matching `{{LW_HOME}}/schemas/verdict.json`, with nothing before or after it: no prose, no code fence. `siblings` is always present: `[]` unless this is a fix task and you found siblings. Shape:
 
 ```
-{"pass": false, "blocking": [{"location": "src/a.ts:42", "expectation": "AC2 empty input returns []", "proof": "npm test: a.test.ts 'empty input' expected [] got undefined", "impact": "high", "confidence": "high"}], "undecided": [], "droppedCount": 3}
+{"pass": false, "blocking": [{"location": "src/a.ts:42", "expectation": "AC2 empty input returns []", "proof": "npm test: a.test.ts 'empty input' expected [] got undefined", "impact": "high", "confidence": "high"}], "undecided": [], "droppedCount": 3, "siblings": []}
 ```

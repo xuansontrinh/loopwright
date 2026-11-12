@@ -151,6 +151,23 @@ try {
       out(state);
       break;
     }
+    case 'reopen': {
+      const target = rest[0];
+      if (target !== 'plan' && target !== 'test') fail('loopwright: usage: reopen <plan|test> "<reason>"');
+      const reason = rest.slice(1).join(' ').trim();
+      if (!reason) fail('loopwright: reopen requires a reason');
+      const { dir, id, state } = requireState();
+      if (!(state.history ?? []).some((e) => e.event === 'stage' && e.detail === 'build'))
+        fail('loopwright: reopen is only for a task that has begun Build');
+      state.stage = target;
+      state.stopBlocks = 0;
+      delete state.awaitingUser;
+      note(state, 'reopen', target);
+      state.history.at(-1).reason = reason;
+      writeState(dir, id, state);
+      out(state);
+      break;
+    }
     case 'lock': {
       if (rest.length === 0) fail('loopwright: usage: lock <paths...>');
       const { dir, id, state } = requireState();
@@ -182,12 +199,31 @@ try {
       }
       const ok = changed.length === 0 && missing.length === 0;
       // Re-locking an existing lock after a build could launder an implementer's edit; first-time locks in later slices are legitimate.
+      // A reopen covers re-locks until the next Build starts, but only when the history reads
+      // await-user, resume, reopen with nothing between (the pair the skills run around the user's answer
+      // to going back); any other reopen is ignored. A faked triple is not detected.
       const lockedAfterBuild = [];
+      const relockedAfterReopen = [];
       const seen = new Map();
+      let reopenReason = null;
+      let prev = null;
+      let prev2 = null;
       for (const e of state.history ?? []) {
-        if (e.event === 'stage' && e.detail === 'build') for (const p of seen.keys()) seen.set(p, true);
+        const sanctioned = prev2 === 'await-user' && prev === 'resume';
+        prev2 = prev;
+        prev = e.event;
+        if (e.event === 'stage' && e.detail === 'build') {
+          for (const p of seen.keys()) seen.set(p, true);
+          reopenReason = null;
+        }
+        if (e.event === 'reopen' && sanctioned) reopenReason = e.reason ?? '';
         if (e.event !== 'lock') continue;
-        if (seen.get(e.detail) === true && !lockedAfterBuild.includes(e.detail)) lockedAfterBuild.push(e.detail);
+        if (seen.get(e.detail) === true) {
+          if (reopenReason !== null) {
+            if (!relockedAfterReopen.some((r) => r.path === e.detail))
+              relockedAfterReopen.push({ path: e.detail, reason: reopenReason });
+          } else if (!lockedAfterBuild.includes(e.detail)) lockedAfterBuild.push(e.detail);
+        }
         seen.set(e.detail, false);
       }
       let built = false;
@@ -196,7 +232,7 @@ try {
         if (e.event === 'stage' && e.detail === 'build') built = true;
         if (built && e.event === 'start' && e.detail === '--force') forcedRestartAfterBuild = true;
       }
-      out({ ok, changed, missing, lockedAfterBuild, forcedRestartAfterBuild });
+      out({ ok, changed, missing, lockedAfterBuild, relockedAfterReopen, forcedRestartAfterBuild });
       process.exit(ok ? 0 : 1);
       break;
     }
@@ -256,7 +292,7 @@ try {
     }
     default:
       fail(
-        'loopwright: usage: lw.mjs <dir|start|stage|lock|check-locks|fingerprint|verdict|await-user|resume|status|effort|done>',
+        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|fingerprint|verdict|await-user|resume|status|effort|done>',
       );
   }
 } catch (err) {

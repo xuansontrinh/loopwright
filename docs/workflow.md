@@ -24,6 +24,17 @@ flowchart TD
     whole -- "pass" --> done(["Done"])
 ```
 
+## Fixing a bug
+
+`/loopwright-fix` runs the same stages with `kind: fix` in the task file. The differences:
+
+- **Plan**: the scout reads your bug report, log or issue first. You are asked once for missing evidence (error text, steps, expected behavior) and confirm a root-cause hypothesis.
+- **Test never skips**, at any tier. The tester writes a `[repro]` test for the correct behavior and locks it only after it fails for the reported reason, not for an unrelated one. A `[regression]` test covers behavior that must keep working and passes already.
+- **No repro stops the task.** If the tester cannot reproduce the bug, you choose: add evidence, say which unit is at fault (a new `[repro]` criterion is recorded), or stop. There is no option to continue without a locked repro test; stopping marks the task `stopped`.
+- **Build** names the root cause first and fixes it; suppressing the symptom (catching the error, special-casing the input) is not a fix.
+- **Review** checks that the fix addresses the root cause and lists sibling code with the same flaw. After a pass you decide whether to include the siblings. Yes goes back to Plan and Test for their repro tests; no records them under `## Follow-ups` in the task file.
+- **Done** puts the root cause, the repro test failing before and passing after, and the follow-ups in the PR draft.
+
 ## Plan, step by step
 
 Plan runs in your main thread. Nothing is built until you confirm.
@@ -40,7 +51,7 @@ flowchart TD
     prop -- "you edit" --> prop
     prop --> conf{{"Final confirmation"}}
     conf -- "not yet" --> prop
-    conf -- "confirmed: plan: confirmed" --> next(["Test (standard, large)<br/>or Build (small)"])
+    conf -- "confirmed: plan: confirmed" --> next(["Test (standard, large, any fix)<br/>or Build (small) for a feature"])
 ```
 
 ## Review, step by step
@@ -85,6 +96,6 @@ It never answers a gate itself, never treats silence as approval, and never comm
 
 - **Locked-test guard**: during Build, edit tools cannot touch locked test files.
 - **Stop gate**: in Build and Review, the agent cannot finish its turn without a passing verdict that matches the current working tree, except while it waits for one of your decisions.
-- **Context reinjection**: after context compaction, the task's goal, stage, decisions and next step are printed again.
+- **Context reinjection**: after context compaction, the task's goal, stage, decisions and next step are printed again, plus the kind and root cause line for a fix.
 
 Details and limits: [Enforcement](enforcement.md).

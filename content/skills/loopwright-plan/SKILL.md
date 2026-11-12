@@ -11,6 +11,7 @@ Plan runs in this main thread. You state assumptions; the user decides. Do not e
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
 2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` prints the `.loopwright` directory (`<lw>` below). `null` inside a git repo → no task has started here yet; `lw.mjs start` (section 3) creates `.loopwright/`, so continue with a new task. Not a git repo → tell the user loopwright must run inside a git repo, stop.
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status`. "no active task" → continue with a new task. If it prints a task, read `<lw>/<task>`:
+   - `stage: plan` and reopened (`status` `history` has a `reopen` event after the last `stage build` event; that event's `reason` says why) → this is the same task returning to Plan for added scope, not a second task: keep its decisions, ACs and tests, run sections 2–6 only for what the reason adds or changes (a new slice starts `[todo]`), then section 7. Do not ask whether the plan is abandoned.
    - `stage: plan` → resume this plan: the first `— pending` item under `## Open questions`, else the proposal (step 6), else the confirmation (step 7). If the user says this plan is abandoned, offer to start the new one with `start tasks/<new file>.md --force` (the old task file stays).
    - past `plan` → the task is in progress; tell the user to continue it with `/loopwright-flow`. Do not start a second.
 4. Read `<lw>/config.json` for `maxFixRounds` (missing file or key → 3).
@@ -20,11 +21,13 @@ Plan runs in this main thread. You state assumptions; the user decides. Do not e
 ## 1. Input
 
 - A goal in the user's words, or a path to an imported spec/plan (e.g. from superpowers).
+- Called from `/loopwright-fix` → `kind: fix`; read "Fix tasks" below. Otherwise `kind: feature`.
+- A goal that looks like a bug, without `/loopwright-fix` → never switch silently. Ask one question first (format of section 4), recommendation first: "Run this as a fix (repro test first)?" Yes → `kind: fix`; no → `kind: feature`. Record the answer as a decision once the task file exists.
 - Imported spec: read it fully. Do not interview from scratch; run the assumption pass over it. What the spec states explicitly becomes a decision tagged `batch-confirmed` once the user confirms the batch; what it leaves implicit goes in the ledger.
 
 ## 2. Scout
 
-Before writing any assumption, spawn the `loopwright-scout` subagent and wait for its result. Give it only the goal text or the spec path. On Claude Code pass `effort` = the output of `node "{{LW_HOME}}/hooks/lw.mjs" effort scout` on the spawn; if the spawn rejects `effort`, fall back to spawning without it (the agent file's effort applies).
+Before writing any assumption, spawn the `loopwright-scout` subagent and wait for its result. Give it only the goal text or the spec path (a fix: the bug report text, and "Fix tasks: report the fix inputs"). On Claude Code pass `effort` = the output of `node "{{LW_HOME}}/hooks/lw.mjs" effort scout` on the spawn; if the spawn rejects `effort`, fall back to spawning without it (the agent file's effort applies).
 Never ask the user a question the repo can answer. If the scout report leaves a repo fact open, look it up yourself or spawn the `loopwright-scout` subagent and wait for its result again with that one question.
 
 ## 3. Assumption ledger
@@ -52,18 +55,30 @@ Write the result immediately: accepted → `[batch-confirmed]`, changed by the u
 ## 6. Proposal
 
 In one message, propose and explain each in one line:
-- **tier**: `small` (one area, few files, low risk; no acceptance-test stage, the implementer writes tests for every AC), `standard` (default; tests first, then build), `large` (several separable parts; split into ordered slices, each run Test → Build → Review, then one whole-branch review).
+- **tier**: `small` (one area, few files, low risk; no acceptance-test stage for features, the implementer writes tests for every AC; a fix always runs Test), `standard` (default; tests first, then build), `large` (several separable parts; split into ordered slices, each run Test → Build → Review, then one whole-branch review).
 - **profile**: `lean` (trivial or mechanical), `balanced` (default; most tasks), `thorough` (cross-module work, risky changes), `deep` (major refactors, complex redesigns). It sets subagent effort for the task; the user confirms. Written as `profile: <name>` in the header; Test, Build and Review read it via `lw.mjs effort <role>`.
 - **two-pass** review on/off: on when the implementer's claims matter beyond what tests show (performance, migrations, concurrency, external APIs); otherwise off.
 - **fix-round cap**: default `maxFixRounds` from config; may be lower for small tasks.
 - **check commands**: exact lint / typecheck / test commands from the scout report.
-- **acceptance criteria** `AC<n>`: observable behavior, each with the module path and export the test will use (the tester stops without one), and the planned test file. Large tier: slices `S<n>` with their ACs.
+- **acceptance criteria** `AC<n>` (fix tasks: see "Fix tasks"): observable behavior, each with the module path and export the test will use (the tester stops without one), and the planned test file. Large tier: slices `S<n>` with their ACs.
 The user confirms or edits each item; write the outcome to the header and sections immediately.
 
 ## 7. Confirm
 
 Show the task file path and a short summary (tier, decisions count, ACs). Ask for explicit confirmation. Until the user confirms, keep editing the plan; never start Test or Build.
-On explicit confirmation, set the header line to `plan: confirmed` (Test and Build refuse to run without it). Then, if `git rev-parse HEAD` differs from the recorded base commit, rerun `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md --force` and update the header. Then the next stage is `/loopwright-test` (standard, large) or `/loopwright-build` (small); under `/loopwright-flow`, return to the flow.
+On explicit confirmation, set the header line to `plan: confirmed` (Test and Build refuse to run without it). Then, unless the task was reopened (keep its base commit so the review scope stays whole), if `git rev-parse HEAD` differs from the recorded base commit, rerun `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md --force` and update the header. Then the next stage is `/loopwright-test` (standard, large, and every fix) or `/loopwright-build` (small feature); under `/loopwright-flow`, return to the flow.
+
+## Fix tasks
+
+`kind: fix` adds this to the steps above. A missing `kind` header means `feature`, so older task files keep working.
+- Sections: `## Bug report` (observed, expected, steps to reproduce, environment or version, logs or stack trace, already tried), `## Root cause` (starts as a hypothesis; Build confirms it), `## Follow-ups` (siblings the user chose not to include).
+- Evidence intake: the scout runs first (section 2) and fills in what the repo can answer. Then ask for the missing evidence in one message, listing only the `## Bug report` items the scout could not fill in. Write the answers to `## Bug report`; "I don't know" is a valid answer and is recorded as such.
+- The root-cause hypothesis goes in `## Root cause` and in the ledger as a high-impact assumption, shown to the user, who may correct it.
+- Acceptance criteria keep the line shape with a leading tag:
+  - `AC<n> [repro] <input or steps> → actual <symptom>, expected <behavior> — interface: <module, export> — test: <file>`: at least one.
+  - `AC<n> [regression] <nearby behavior that must not change> — interface: <module, export> — test: <file>`: optional.
+- The proposal states that Test always runs for fixes, whatever the tier. Tier is still about size.
+- If the scout reports the same defect pattern elsewhere (siblings), ask one question, recommendation first: include them in this fix (one `[repro]` criterion each), or list them under `## Follow-ups`.
 
 ## Task file
 
@@ -73,6 +88,7 @@ One line per entry; target ≤ ~150 lines. Template:
 ```markdown
 # <title>
 
+kind: <feature|fix>
 status: active
 stage: plan
 plan: draft
