@@ -14,6 +14,8 @@ In stage test the tester may edit and re-lock tests. `check-locks` reports those
 
 `lw.mjs park` (the `/loopwright-park` command) writes a task stub and a follow-up line only; it never changes worktree state or the history, so locks and the stop gate are unaffected.
 
+`lw.mjs explore` (the `/loopwright-explore` command) writes only a run folder under `.loopwright/explore/`; it never touches worktree state or the history, so locks and the stop gate are unaffected.
+
 Limits, stated plainly:
 
 - Shell edits (`sed -i`, redirects) are not intercepted. The review re-hashes locked tests and fails on any mismatch; that is the real backstop.

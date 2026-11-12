@@ -26,7 +26,7 @@ Requires Node >= 22.14. Repo mode needs a git repository; `--global` does not.
 
 Repo install:
 
-- `.agents/skills/loopwright-{flow,fix,park,plan,test,build,review,done}/SKILL.md`, and `.claude/skills` as a symlink to `../.agents/skills` (existing directories or other symlinks are prompted about unless `--force`)
+- `.agents/skills/loopwright-{flow,fix,park,explore,plan,test,build,review,done}/SKILL.md`, and `.claude/skills` as a symlink to `../.agents/skills` (existing directories or other symlinks are prompted about unless `--force`)
 - `.claude/agents/loopwright-<role>.md` and `.codex/agents/loopwright-<role>.toml`, and `.junie/agents/loopwright-<role>.md` for `scout`, `tester`, `implementer`, `reviewer`
 - `.agents/loopwright/` with `hooks/`, `prompts/reviewer.md`, `schemas/verdict.json`
 - hook wiring (unless `--no-hook`): entries in `.claude/settings.json`, and a `# BEGIN loopwright` ... `# END loopwright` block in `.codex/config.toml`

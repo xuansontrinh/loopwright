@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Loopwright state tool. Usage: node lw.mjs <cmd> [args]
-import { copyFileSync, existsSync, readFileSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, readdirSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { isAbsolute, join, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
@@ -329,6 +329,84 @@ try {
       out({ stub, foundWhile, blocks: Boolean(blocks && foundWhile) });
       break;
     }
+    case 'explore': {
+      // Run-folder bookkeeping for /loopwright-explore. Never reads or writes worktree state.
+      const usage = 'loopwright: usage: explore "<scope>" [--new]';
+      const fresh = rest.includes('--new');
+      if (fresh) rest.splice(rest.indexOf('--new'), 1);
+      if (rest.length > 1) fail(usage);
+      const top = gitTopLevel(cwd);
+      const abs = resolve(top, rest[0] ?? '.');
+      const rel = relative(top, abs).split(sep).join('/');
+      if (rel.startsWith('..') || isAbsolute(rel) || !existsSync(abs))
+        fail(`loopwright: explore: scope path does not exist in this repository: ${rest[0] ?? '.'}`);
+      const scope = rel || '.';
+      const headSha = () => {
+        try {
+          return gitOut(['rev-parse', 'HEAD']);
+        } catch {
+          return null; // repo without commits
+        }
+      };
+      const { dir } = ctx(true);
+      const root = join(dir, 'explore');
+      mkdirSync(root, { recursive: true });
+      const field = (text, name) => new RegExp(`^${name}: (.*)$`, 'm').exec(text)?.[1];
+      // Same date, then the shorter name first, so `-2` sorts before `-10`.
+      const byAge = (a, b) => a.slice(0, 10).localeCompare(b.slice(0, 10)) || a.length - b.length || a.localeCompare(b);
+      let open = null;
+      for (const name of readdirSync(root).sort(byAge)) {
+        let text;
+        try {
+          text = readFileSync(join(root, name, 'run.md'), 'utf8');
+        } catch {
+          continue;
+        }
+        if (field(text, 'scope') === scope && field(text, 'status') === 'in-progress') open = { name, text };
+      }
+      const head = headSha();
+      let name;
+      let commit;
+      let resume = false;
+      if (open && !fresh) {
+        ({ name } = open);
+        resume = true;
+        const c = field(open.text, 'commit');
+        commit = c === undefined || c === 'null' ? null : c;
+      } else {
+        if (open)
+          writeFileSync(join(root, open.name, 'run.md'), open.text.replace(/^status: .*$/m, 'status: abandoned'));
+        const d = new Date();
+        const p2 = (n) => String(n).padStart(2, '0');
+        const today = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+        const slug = scope === '.' ? 'repo' : scope.replace(/\s+/g, '-').replace(/[\\/:*?"<>|]/g, '-');
+        for (let n = 1; ; n++) {
+          name = `${today}-${slug}${n === 1 ? '' : `-${n}`}`;
+          try {
+            mkdirSync(join(root, name));
+            break;
+          } catch (err) {
+            if (err.code !== 'EEXIST') throw err;
+          }
+        }
+        commit = head;
+        writeFileSync(
+          join(root, name, 'run.md'),
+          `scope: ${scope}\ncommit: ${commit}\nstarted: ${today}\nstatus: in-progress\n`,
+        );
+      }
+      const present = [];
+      const walk = (sub) => {
+        for (const e of readdirSync(join(root, name, sub), { withFileTypes: true })) {
+          const r = sub ? `${sub}/${e.name}` : e.name;
+          if (e.isDirectory()) walk(r);
+          else present.push(r);
+        }
+      };
+      if (resume) walk('');
+      out({ dir: `explore/${name}`, resume, commit, head, present: present.sort() });
+      break;
+    }
     case 'status': {
       out(requireState().state);
       break;
@@ -344,7 +422,7 @@ try {
     }
     default:
       fail(
-        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|fingerprint|verdict|await-user|resume|park|status|effort|done>',
+        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|fingerprint|verdict|await-user|resume|park|explore|status|effort|done>',
       );
   }
 } catch (err) {
