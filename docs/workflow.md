@@ -45,11 +45,12 @@ Later, `/loopwright-flow` or `/loopwright-plan` without a goal lists the propose
 
 `/loopwright-explore [folder]` writes a walkthrough of a codebase, or of one folder of it, for someone new to it. It changes no code and runs no commands from the repository. Nothing outside `.loopwright/` is written unless you ask to copy the walkthrough in.
 
-1. A scout maps the scope. You confirm the outline: the components (4 to 8 is readable) and one to three key flows to trace.
+1. A scout maps the scope. If the working tree has uncommitted changes, you are asked whether to commit or stash first or go on; going on is recorded in the walkthrough header. You confirm the outline: the components (4 to 8 is readable) and one to three key flows to trace.
 2. One read-only scout per component reports what it does, what it depends on, and where, with `path:line`.
 3. The main thread writes the walkthrough and a list of claims, each with its `path:line`.
-4. A fresh scout gets only the claim list and tries to disprove each claim. Refuted claims are fixed; unconfirmed ones are removed or moved to "Questions for the team", and unconfirmed diagram edges are removed or drawn dashed.
-5. You see the questions for the team and may answer any; your answers are marked as not verified in code.
+4. An answer pass: a scout gets only the open questions and looks for answers in the docs, `CLAUDE.md`, tests and git history. Answers become claims, defects go under "Possible problems found", and the rest stay under "Questions only the team can answer".
+5. A fresh scout gets only the claim list and tries to disprove each claim. Refuted claims are fixed; `narrower` claims (true, but narrower than written) are narrowed or get the caveat folded in; unconfirmed ones are removed or moved to "Questions only the team can answer", and unconfirmed diagram edges are removed or drawn dashed.
+6. You see both lists but are asked only about "Questions only the team can answer" and may answer any; your answers are marked as not verified in code.
 
 The walkthrough goes under `.loopwright/explore/<date>-<scope>/walkthrough.md`, which is gitignored. It opens with what the system is, defines its words, then shows a context diagram and a component diagram before any detail. Runs resume from the files in that folder after an interruption; `lw.mjs explore "<folder>" --new` abandons an unfinished run and starts another. Copy the walkthrough into the repo yourself when you judge it good enough. That offer is withheld while a task is in `test`, `build` or `review`, so the copy does not join that task's diff.
 

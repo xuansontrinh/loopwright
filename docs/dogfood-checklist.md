@@ -49,6 +49,8 @@ Run `/loopwright-fix` once on a real bug in the scratch repo, with a description
 
 - [ ] `/loopwright-explore services/x` writes a run folder under `.loopwright/explore/`, stops at the outline gate, then runs one scout per component; the repo outside `.loopwright/` is unchanged
 - [ ] Stopping midway and running `lw.mjs explore services/x` again resumes the same folder; `--new` abandons it and starts another
+- [ ] The answer pass runs before the check: answered questions appear as claims, defects under "Possible problems found", and only "Questions only the team can answer" reach the questions gate
+- [ ] With uncommitted changes, the outline gate raises the dirty tree; going on puts "plus uncommitted changes in N files" in the header
 
 ## Codex (WIP)
 

@@ -365,6 +365,20 @@ try {
         if (field(text, 'scope') === scope && field(text, 'status') === 'in-progress') open = { name, text };
       }
       const head = headSha();
+      // Paths, not a boolean, so the skill can name them. -z keeps odd names unquoted; -uall lists files inside new folders.
+      const dirty = [];
+      const entries = execFileSync('git', ['status', '--porcelain', '-z', '-uall'], {
+        cwd: top,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+        .split('\0')
+        .filter(Boolean);
+      for (let i = 0; i < entries.length; i++) {
+        dirty.push(entries[i].slice(3));
+        if (/^[RC]/.test(entries[i])) i++; // renames carry the old path as the next entry
+      }
+      dirty.sort();
       let name;
       let commit;
       let resume = false;
@@ -392,7 +406,7 @@ try {
         commit = head;
         writeFileSync(
           join(root, name, 'run.md'),
-          `scope: ${scope}\ncommit: ${commit}\nstarted: ${today}\nstatus: in-progress\n`,
+          `scope: ${scope}\ncommit: ${commit}\nstarted: ${today}\nstatus: in-progress\ndirty: ${dirty.length ? 'yes' : 'no'}\n`,
         );
       }
       const present = [];
@@ -404,7 +418,7 @@ try {
         }
       };
       if (resume) walk('');
-      out({ dir: `explore/${name}`, resume, commit, head, present: present.sort() });
+      out({ dir: `explore/${name}`, resume, commit, head, dirty, present: present.sort() });
       break;
     }
     case 'status': {

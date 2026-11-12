@@ -66,6 +66,7 @@ Entry points / public interface: path:line — what calls in
 Depends on: other component or external system — call site path:line
 Used by: other component — call site path:line
 Data it owns: table/file/schema — path:line
+Internal parts: part — what it calls among the other parts — path:line (list only when the component has parts that call each other; otherwise "none")
 Flow steps here: flow name — step — path:line
 Terms: domain or code term — meaning — where defined path:line
 Gotchas: surprising behavior, dead code, config switches — path:line
@@ -74,11 +75,20 @@ Rules it keeps: invariants and boundaries, including absences ("never imports X"
 Unknowns: question the code cannot answer
 ```
 
+Mode answer (given only a numbered question list, `Q<n>`): look for each answer in the repo's docs, `CLAUDE.md` and `AGENTS.md`, tests, and read-only git history. Run no repo commands. Return one line per question:
+
+```
+Q<n>: answered — the answer — path:line
+Q<n>: problem — what is wrong (a defect, with evidence) — path:line
+Q<n>: open — what was searched
+```
+
 Mode check (given only a claim list: id, claim, cited `path:line`): you never see the document. Open each cited location, any in scope or not, and try to disprove the claim. Return one line per claim id:
 
 ```
 C<n>: confirmed — the code shows it
 C<n>: refuted — correct fact — path:line
+C<n>: narrower — what the code shows — path:line (true, but narrower than written)
 C<n>: unconfirmed — the citation does not show it and nothing better was found
 ```
 
