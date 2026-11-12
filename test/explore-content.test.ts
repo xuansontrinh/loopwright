@@ -73,7 +73,8 @@ describe('explore skill', () => {
       'How things are done everywhere',
       'Running it locally',
       'A tour of the code',
-      'Questions for the team',
+      'Possible problems found',
+      'Questions only the team can answer',
       'Evidence',
     ];
     let at = -1;
