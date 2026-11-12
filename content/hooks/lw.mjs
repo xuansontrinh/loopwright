@@ -277,6 +277,58 @@ try {
     case 'effort':
       process.stdout.write(effortFor(rest[0]) + '\n');
       break;
+    case 'park': {
+      // Captures work found mid-task as a proposed stub. Reads state only to find the active task; never writes it.
+      const usage = 'loopwright: usage: park "<title>" [--blocks] [--kind feature|fix]';
+      const blocks = rest.includes('--blocks');
+      if (blocks) rest.splice(rest.indexOf('--blocks'), 1);
+      const kind = flag(rest, '--kind') ?? 'feature';
+      if (kind !== 'feature' && kind !== 'fix') fail(`${usage} (kind must be feature or fix)`);
+      const title = rest.join(' ').trim();
+      if (!title) fail(usage);
+      const existing = loopwrightDir(cwd);
+      const active = existing ? (readState(existing, worktreeId(cwd))?.task ?? null) : null;
+      if (blocks && !active) fail('loopwright: park --blocks needs an active task');
+      const { dir } = ctx(true);
+      const d = new Date();
+      const p2 = (n) => String(n).padStart(2, '0');
+      const base = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}-${title.replace(/\s+/g, '-').replace(/[\\/:*?"<>|]/g, '-')}`;
+      const foundWhile = active && existsSync(join(dir, active)) ? active : null;
+      if (active && !foundWhile)
+        process.stderr.write(`loopwright: warning: active task file ${active} is missing; follow-up not linked\n`);
+      const header = [`# ${title}`, '', `kind: ${kind}`, 'status: proposed', 'stage: plan', 'plan: draft'];
+      if (foundWhile) header.push(`found while: ${foundWhile}`);
+      if (blocks && foundWhile) header.push(`blocks: ${foundWhile}`);
+      const text = header.join('\n') + '\n\n## Goal\n\n## Evidence\n';
+      let stub;
+      for (let n = 1; ; n++) {
+        stub = `tasks/${base}${n === 1 ? '' : `-${n}`}.md`;
+        try {
+          writeFileSync(join(dir, stub), text, { flag: 'wx' });
+          break;
+        } catch (err) {
+          if (err.code !== 'EEXIST') throw err;
+        }
+      }
+      if (foundWhile) {
+        const line = `- ${title} — ${stub}${blocks ? ' [blocking]' : ''}`;
+        const file = join(dir, foundWhile);
+        const body = readFileSync(file, 'utf8');
+        const m = /^## Follow-ups[ \t]*$/m.exec(body);
+        let next;
+        if (!m) next = body.replace(/\n*$/, '\n') + `\n## Follow-ups\n${line}\n`;
+        else {
+          const start = m.index + m[0].length;
+          const end = body.slice(start).search(/^## /m);
+          const stop = end === -1 ? body.length : start + end;
+          const section = body.slice(start, stop).replace(/\s*$/, '');
+          next = body.slice(0, start) + section + `\n${line}\n` + (end === -1 ? '' : '\n') + body.slice(stop);
+        }
+        writeFileSync(file, next);
+      }
+      out({ stub, foundWhile, blocks: Boolean(blocks && foundWhile) });
+      break;
+    }
     case 'status': {
       out(requireState().state);
       break;
@@ -292,7 +344,7 @@ try {
     }
     default:
       fail(
-        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|fingerprint|verdict|await-user|resume|status|effort|done>',
+        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|fingerprint|verdict|await-user|resume|park|status|effort|done>',
       );
   }
 } catch (err) {

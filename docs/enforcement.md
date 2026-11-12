@@ -12,6 +12,8 @@ Three hooks (plain Node scripts, no dependencies) are wired by default:
 
 In stage test the tester may edit and re-lock tests. `check-locks` reports those re-locks as `relockedAfterReopen` (path and reason), which the reviewer treats as information and the PR draft lists. A reopen counts only when the three history events ending with it are `await-user`, `resume`, `reopen`, strictly in a row (the pair the skills run around your answer, then the reopen). Any event between them, such as the `stage build` the skills run before re-spawning the implementer, means it does not count. A re-lock after Build without a counted reopen, including one after a bare `reopen` an agent ran on its own, stays in `lockedAfterBuild` and the reviewer raises it as a finding. Back in Build, the guard blocks locked-test edits again.
 
+`lw.mjs park` (the `/loopwright-park` command) writes a task stub and a follow-up line only; it never changes worktree state or the history, so locks and the stop gate are unaffected.
+
 Limits, stated plainly:
 
 - Shell edits (`sed -i`, redirects) are not intercepted. The review re-hashes locked tests and fails on any mismatch; that is the real backstop.

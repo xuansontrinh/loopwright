@@ -28,7 +28,7 @@ vi.mock('node:fs', async (orig) => {
   };
 });
 
-const SKILLS = ['flow', 'plan', 'fix', 'test', 'build', 'review', 'done'].map((s) => `loopwright-${s}`);
+const SKILLS = ['flow', 'plan', 'fix', 'park', 'test', 'build', 'review', 'done'].map((s) => `loopwright-${s}`);
 const ROLES = ['scout', 'tester', 'implementer', 'reviewer'];
 
 function spacedRepo(): string {

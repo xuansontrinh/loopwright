@@ -25,16 +25,21 @@ Propose each change individually, with the exact text, and wait for approval (Cl
 
 If `CLAUDE.md` exists and has no line `@AGENTS.md`, propose adding that import line instead of copying content into CLAUDE.md. Never duplicate AGENTS.md content elsewhere.
 
-## 2. Commit message and PR description
+## 2. Parked follow-ups
+
+`grep -l "^found while: <this task path>" <lw>/tasks/*.md` lists the stubs parked while this task ran (`status: proposed` ones are still open). For each, draft issue text (title, what and why, `path:line` evidence from its `## Evidence`) and show it to the user. It is shown only: never file it, and write no task paths or ids into it. A stub with `blocks: <this task path>` that is still `proposed` → ask one question: clear the flag (the stub no longer blocks) or note it in the PR.
+
+## 3. Commit message and PR description
 
 Never write task ids (AC, D, S shorthands) into tests, code, comments, commit messages or PR drafts. Describe decisions in words.
 
 Draft both and show them to the user:
 - Commit: imperative subject ≤ 72 chars; body says why, the key decisions, and the rejected options with the reason.
 - PR: summary of intent; decisions and rejected options; notable assumptions the reviewer should know; how it was verified (check commands, acceptance tests, review rounds from the log). Do not list the diff file by file. Run `node "{{LW_HOME}}/hooks/lw.mjs" check-locks`; when `relockedAfterReopen` is non-empty, add a section listing each locked test changed after a reopen with its reason.
+  - A `## Follow-ups` section for every kind of task, listing the parked stubs by title and any follow-ups in the task file (still no task paths or ids).
   - Fix tasks (`kind: fix`): the PR also states the root cause in one line (from `## Root cause`), the repro test name(s) with "failed before, passes after", and the follow-ups from `## Follow-ups`.
 
-## 3. Close
+## 4. Close
 
 1. Set `status: done` in the task file header.
 2. `node "{{LW_HOME}}/hooks/lw.mjs" done` (removes this worktree's machine state; the task file stays).

@@ -35,6 +35,12 @@ flowchart TD
 - **Review** checks that the fix addresses the root cause and lists sibling code with the same flaw. After a pass you decide whether to include the siblings. Yes goes back to Plan and Test for their repro tests; no records them under `## Follow-ups` in the task file.
 - **Done** puts the root cause, the repro test failing before and passing after, and the follow-ups in the PR draft.
 
+## Parking work you find along the way
+
+`/loopwright-park` captures work you notice while doing one task so the task does not grow. It restates the finding for you to edit, asks whether it blocks the current task (the recommendation is no), and writes a stub in `tasks/` with `status: proposed`. The current task's scope, tests and diff do not change; the stub is listed under its `## Follow-ups`. A blocking stub is best run first in another worktree.
+
+Later, `/loopwright-flow` or `/loopwright-plan` without a goal lists the proposed stubs: start one (it goes through normal Plan in a fresh context), drop it, or begin a new task. Done lists the stubs found during a task, drafts issue text for each (shown, never filed) and adds a Follow-ups section to the PR draft.
+
 ## Plan, step by step
 
 Plan runs in your main thread. Nothing is built until you confirm.
