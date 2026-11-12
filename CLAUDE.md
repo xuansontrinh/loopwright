@@ -24,6 +24,8 @@ ESLint is dropped until typescript-eslint supports TypeScript 7 (typescript-esli
 
 CI: `.github/workflows/ci.yml` runs typecheck + format:check + tests on every PR and push to `main`, on Node 22.14 (`engines` floor), 24, 26. `.github/dependabot.yml` opens weekly, cooldown-delayed PRs for npm and Actions. Pin actions to commit SHAs with a `# vX.Y.Z` comment; keep `npm ci --ignore-scripts`. Dependabot PRs are reviewed and merged by hand, never auto-merged.
 
+`.github/workflows/format.yml` pushes a `npm run format` commit to same-repo, non-Dependabot PR branches using the `FORMAT_PUSH_TOKEN` secret (fine-grained PAT, this repo only, Contents read/write); without the secret it only warns. `ci.yml` still gates on `format:check`.
+
 Releases: `main` is PR-only. Release = merged PR bumping `package.json` `version` (`npm version patch --no-git-tag-version`). After `ci.yml` passes on `main`, `.github/workflows/publish.yml` (`workflow_run`) runs for a version with no GitHub release: `npm stage publish` via OIDC (skipped if already on npm), then creates the `vX.Y.Z` tag and GitHub release. A maintainer approves the staged version on npmjs.com with 2FA. See docs/releasing.md.
 
 ## Architecture
@@ -46,6 +48,7 @@ Releases: `main` is PR-only. Release = merged PR bumping `package.json` `version
 - Code or tests that rely on facts from external documentation (tool labels, config keys, CLI flags, schema rules) carry a comment with the source URL next to the fact, e.g. `// https://junie.jetbrains.com/docs/junie-cli-subagents.html (Supported tool groups)`.
 - When dogfooding loopwright here, acceptance tests go in new test files; never lock shared files like `test/content.test.ts` or `test/init.test.ts`: a lock covers the whole file and blocks later phrase-assertion edits.
 - A loopwright task in this repo runs on the installed copy (global: `~/.config/loopwright`), not `content/`: new `lw.mjs` commands or skill changes reach tasks only after `npm run build` and `node dist/cli.js update --global` (or the repo-mode `update`).
+- To run a loopwright task in a separate worktree, create it with `git worktree add` and work in it by path; never create or enter it with Claude Code's `EnterWorktree`. `EnterWorktree` locks the session's writes to the worktree, but task state lives in the main checkout's shared `.loopwright/`.
 - Relative imports in `src/` use `.js` extensions. No runtime deps (dev only).
 - Write user-global config only in `--global` mode. Never delete settings files, `.loopwright/tasks/`, or `AGENTS.md`/`CLAUDE.md` content.
 - Junie CLI hooks run with `cwd=~/.junie`: find the repo via payload `project_path`. Edits arrive as `apply_patch` with `tool_input.patch`. Project `.junie/config.json` hooks run only with `--config-location` (or from `~/.junie/config.json` with `--global`).

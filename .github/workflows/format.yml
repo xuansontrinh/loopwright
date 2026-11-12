@@ -1,0 +1,57 @@
+# Auto-fixes formatting on same-repo PRs by pushing a `npm run format` commit.
+# ci.yml still gates on `format:check`; this only saves the manual round-trip.
+name: Format
+
+# Never `pull_request_target`: this job runs PR code, so it must not get base-repo secrets for forks.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# The push uses FORMAT_PUSH_TOKEN, so the workflow token needs no write power.
+permissions:
+  contents: read
+
+concurrency:
+  group: format-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Run prettier
+    # Fork PRs get no secrets, and Dependabot PRs are reviewed by hand before anything edits them.
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Check out the branch itself, not the merge ref, so the fix commit lands on the PR head.
+          ref: ${{ github.event.pull_request.head.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+      - run: npm run format
+
+      - name: Commit and push formatting changes
+        env:
+          # A commit pushed with the built-in GITHUB_TOKEN does not trigger workflows, so CI would not rerun.
+          # https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#using-the-github_token-in-a-workflow
+          PUSH_TOKEN: ${{ secrets.FORMAT_PUSH_TOKEN }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if git diff --quiet; then
+            echo "Already formatted."
+            exit 0
+          fi
+          if [ -z "${PUSH_TOKEN}" ]; then
+            echo "::warning::Formatting is needed but the FORMAT_PUSH_TOKEN secret is not set, so nothing was pushed. Run npm run format."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "style: run prettier"
+          git push "https://x-access-token:${PUSH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:refs/heads/${HEAD_REF}"

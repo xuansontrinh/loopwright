@@ -16,3 +16,7 @@ Then approve the staged version with 2FA: on npmjs.com → `loopwright` → **St
 `publish.yml` fails if a remote `vX.Y.Z` tag already exists on a different commit than the one being released; delete that tag and re-run.
 
 If the publish run fails, fix the cause and re-run it from the Actions tab ("Run workflow" on `main`).
+
+## Formatting bot setup
+
+`format.yml` pushes a `style: run prettier` commit to same-repo PR branches (not Dependabot's) when `npm run format` changes files. It needs a repo secret `FORMAT_PUSH_TOKEN`: a fine-grained personal access token limited to this repository with **Contents: Read and write**. A push made with the built-in `GITHUB_TOKEN` would not trigger CI, which is why a PAT is used. Without the secret the job only prints a warning, and `ci.yml` still fails on `format:check`.
