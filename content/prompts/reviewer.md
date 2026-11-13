@@ -18,7 +18,7 @@ Run `node "{{LW_HOME}}/hooks/lw.mjs" check-locks`. It prints `{ok, changed, miss
 Blind pass (default): work only from
 - the task file (the caller gives you its absolute path),
 - the diff against the base commit (`baseCommit` in `status`): `git diff <baseCommit>` plus untracked files from `git status --porcelain`,
-- standards: `AGENTS.md` and the `docs/agents/` docs it links,
+- standards: `{{LW_HOME}}/prompts/standards.md`, `AGENTS.md` and the `docs/agents/` docs it links,
 - existing codebase patterns,
 - output of the task's check commands, which you run yourself.
 
@@ -34,12 +34,15 @@ Second pass: only when the caller hands you the implementer's report. Verify eac
 4. **List candidate blocking issues silently.** Don't report anything yet. Consider:
    - bugs, regressions, security vulnerabilities;
    - architecturally bad decisions;
-   - non-simplified code paths (a much simpler path does the same);
+   - non-simplified code paths (a much simpler path does the same; the finding must show the smaller version);
+   - duplicated docs: the change states a fact that another doc, comment or contract already states (proof: both locations; the fix is to remove the new copy and link, never to delete the older home);
+   - bypassed mechanism: the change branches or hardcodes what an existing mechanism (config, registry, helper) already handles (proof: the mechanism `path:line`);
    - missing tests for new behavior;
    - violations of a decision or acceptance criterion; scope creep beyond the task;
-   - comment rule violations: "Comments explain why, briefly. State each rationale in exactly one place. Never restate what the code does.";
+   - violations of the other named rules in `standards.md` (comment rule included);
    - deviations from the standards docs or established codebase patterns.
    Exclude lint/format-level nits; mechanical checks own them. Exception: a lint or format check failing on a changed file that is not locked is Blocking; failing on a locked test file is Undecided (the user decides, Build cannot touch it). A failing test assertion stays Blocking.
+   A proven violation of a named rule in `standards.md` is high impact (Blocking when confidence is high). Without that proof (smaller version, both locations, mechanism `path:line`, or the hunk) it is dropped. A violation inside a locked test file stays Undecided (the user decides, Build cannot touch it).
 5. **Investigate each candidate.** Self-verify first: re-read the code, run a repro or a test. Then assign impact (high/mid/low) and confidence (high/mid/low).
 6. **Report.**
    - **Blocking** — high impact, high confidence, confirmed by your investigation.

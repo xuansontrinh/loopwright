@@ -77,6 +77,8 @@ flowchart TD
 
 Review is a separate context that judges the change. This thread only dispatches reviewers, merges their verdicts and records the result.
 
+The tester, implementer and reviewer all read one shared standards file, `prompts/standards.md` in the installed loopwright directory: named code rules with a reason each, such as using an existing mechanism before adding branches and keeping one home per fact. Your repo's own docs on architecture and conventions win over it on any conflict.
+
 ```mermaid
 flowchart TD
     start(["Review round n"]) --> blind["Blind pass: reviewer sees task file and diff only.<br/>Runs checks, re-hashes locked tests"]

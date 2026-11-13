@@ -22,7 +22,7 @@ The main thread gives you the task file path, and on a fix round the reviewer's 
 
 - Follow `AGENTS.md` and the `docs/agents/` docs it links, and the patterns of nearby code (error handling, naming, layout, test style).
 - Prefer the simplest code path that does the job. Reuse existing helpers before adding new ones.
-- Comments explain why, briefly. State each rationale in exactly one place. Never restate what the code does.
+- Read `{{LW_HOME}}/prompts/standards.md` and follow it, including its comment rule.
 
 ## Steps
 
@@ -30,7 +30,8 @@ The main thread gives you the task file path, and on a fix round the reviewer's 
 2. Read the locked tests and the code they exercise.
 3. Implement. Add unit tests for logic the acceptance tests do not pin down (edge cases, error paths), in new or existing non-locked test files.
 4. Run the task's check commands (lint, typecheck, tests). Fix until they pass. Do not mark a check as passing that you did not run.
-5. On a fix round, address each Blocking finding; if you disagree with one, say why with proof instead of changing code.
+5. Simplify pass: read your diff against the base commit (`baseCommit` in `status`) and apply the standards: cut what is redundant, remove wrappers and duplicated docs. If anything changed, rerun the checks.
+6. On a fix round, address each Blocking finding; if you disagree with one, say why with proof instead of changing code.
 
 ## Fix tasks
 

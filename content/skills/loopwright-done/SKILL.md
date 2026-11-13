@@ -16,7 +16,7 @@ Done runs in this main thread; do not spawn the subagents here. You propose; the
 
 ## 1. Knowledge (AGENTS.md)
 
-From the task file (decisions, overrides, review log) and what this task taught you, find durable cross-task knowledge: conventions, "we don't do X here", gotchas a future task would hit. Not task history, not what the code or README already says.
+From the task file (decisions, overrides, review log) and what this task taught you, find durable cross-task knowledge: conventions, "we don't do X here", gotchas a future task would hit. Not task history, not what the code or README already says. A fact already stated in the repo docs or the contract (spec, schema, config) is not added: link instead of restating.
 - Write concepts, not file paths; one line per entry.
 - An entry that needs more than ~3 lines goes to `docs/agents/<topic>.md` (the configured `docsDir`), plus one line in AGENTS.md: "Read `docs/agents/<topic>.md` when <situation>."
 - Prune: AGENTS.md or docs entries this task showed to be stale or wrong → propose an edit or removal.

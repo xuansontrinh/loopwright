@@ -69,8 +69,8 @@ describe('content', () => {
     expect(agent('scout').body).toContain('Do not modify any file');
   });
 
-  it('implementer contains the comment rule verbatim', () => {
-    expect(agent('implementer').body).toContain(
+  it('shared standards file contains the comment rule verbatim', () => {
+    expect(read('prompts/standards.md')).toContain(
       'Comments explain why, briefly. State each rationale in exactly one place. Never restate what the code does.',
     );
   });
