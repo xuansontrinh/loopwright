@@ -50,7 +50,7 @@ describe('park skill', () => {
     const body = skill('park');
     expect(body).toMatch(/block/i);
     expect(body).toMatch(/recommend[^\n]*"?no"?/i);
-    expect(body).toMatch(/another worktree/i);
+    expect(body).toMatch(/new worktree/i);
   });
 
   it('pauses with await-user and resume only when the active task is in build or review', () => {

@@ -20,6 +20,8 @@ In stage test the tester may edit and re-lock tests. `check-locks` reports those
 
 `lw.mjs explore` (the `/loopwright-explore` command) writes only a run folder under `.loopwright/explore/`; it never touches worktree state or the history, so locks and the stop gate are unaffected.
 
+`lw.mjs start` refuses a task file whose `worktree:` header names another worktree, and the skills send such a task to its start command. This safety net has a gap: `lw.mjs` sees only the folder it runs in, not the session's folder. An agent that `cd`s into another worktree and runs `lw.mjs` there passes the check, because the header then names the worktree it runs in; so does a session that stayed in the old worktree and starts a fresh task there. Start the new session with the printed `cd` command.
+
 Limits, stated plainly:
 
 - Shell edits (`sed -i`, redirects) are not intercepted. The review re-hashes locked tests and fails on any mismatch; that is the real backstop.

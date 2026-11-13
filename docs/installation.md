@@ -30,7 +30,7 @@ Repo install:
 - `.claude/agents/loopwright-<role>.md` and `.codex/agents/loopwright-<role>.toml`, and `.junie/agents/loopwright-<role>.md` for `scout`, `tester`, `implementer`, `reviewer`
 - `.agents/loopwright/` with `hooks/`, `prompts/reviewer.md`, `schemas/verdict.json`
 - hook wiring (unless `--no-hook`): entries in `.claude/settings.json`, and a `# BEGIN loopwright` ... `# END loopwright` block in `.codex/config.toml`
-- `.loopwright/` (in the main worktree) with its own `.gitignore` (`*`), `config.json`, `manifest.json`, `tasks/`, `state/`
+- `.loopwright/` in the main worktree with its own `.gitignore` (`*`), `config.json`, `manifest.json`, `tasks/`, `state/`
 
 If `.claude/skills/` already holds files, `init` asks whether to merge them into `.agents/skills/` (`--force` merges). A merge never overwrites or deletes a skill whose content differs between the two folders: `init` keeps `.claude/skills/` as a directory, skips the symlink and names the differing skills. Keep one version of each, then run `npx loopwright init` again.
 
@@ -55,4 +55,8 @@ Global install writes the equivalents to `~/.agents/skills`, `~/.claude/skills` 
 
 ## Worktrees
 
-All worktrees of a repo share one `.loopwright/` in the main worktree (found via `git rev-parse --git-common-dir`); machine state is kept per worktree under `.loopwright/state/`. Task files therefore survive removing a linked worktree. Note that `git worktree remove` refuses to remove a worktree that contains untracked, non-ignored files; `.loopwright/` ignores itself so it does not trigger that, but your own stray files can.
+Each worktree keeps its own tasks and state in its own `.loopwright/` (`tasks/` and `state/`, created on the first `lw.mjs` write there), so one task can run per worktree, each in its own session. `config.json` and `manifest.json` exist once, in the main checkout; hooks and skills in a linked worktree read them from there (`lw.mjs config`). Deleting a worktree deletes its tasks, so run `lw.mjs carry` first to move its parked stubs to the main checkout (the Done stage offers it). See [Workflow](workflow.md#running-tasks-in-parallel-worktrees) for how a session hands a new goal to a new worktree.
+
+Tasks written before this layout sit in the main checkout and name their worktree in the header. `lw.mjs tasks` lists them as older layout (or worktree gone); `lw.mjs adopt <task>` in that worktree copies the task and its state in, and marks the original `status: moved`. Nothing moves or is deleted automatically.
+
+A new worktree has no repo-mode install unless the files are committed: `lw.mjs worktree` flags that, and the skill prints `npx loopwright update` to run in the new folder. `git worktree remove` refuses to remove a worktree that contains untracked, non-ignored files; `.loopwright/` ignores itself so it does not trigger that, but your own stray files can.

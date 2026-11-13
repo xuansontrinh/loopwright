@@ -38,8 +38,17 @@ export function mainWorktreeRoot(cwd) {
   return gitTopLevel(cwd);
 }
 
-/** Main-worktree .loopwright path (whether or not it exists); null outside git. */
+/** This worktree's .loopwright path (tasks and state live per worktree; whether or not it exists); null outside git. */
 export function loopwrightPath(cwd) {
+  try {
+    return join(gitTopLevel(cwd), '.loopwright');
+  } catch {
+    return null;
+  }
+}
+
+/** The main checkout's .loopwright path, where config.json and manifest.json live once; null outside git. */
+export function mainLoopwrightPath(cwd) {
   try {
     return join(mainWorktreeRoot(cwd), '.loopwright');
   } catch {
@@ -47,7 +56,7 @@ export function loopwrightPath(cwd) {
   }
 }
 
-/** Main-worktree .loopwright directory if it exists; null outside git or if absent. */
+/** This worktree's .loopwright directory if it exists; null outside git or if absent. */
 export function loopwrightDir(cwd) {
   const dir = loopwrightPath(cwd);
   return dir && existsSync(dir) ? dir : null;
