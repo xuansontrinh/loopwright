@@ -100,6 +100,8 @@ Return plain text, at most ~60 lines, one line per item, each with `path` or `pa
 Relevant files: path — role in the goal
 Standards: rule — source path
 Conventions: convention — example path:line
+Mechanisms: existing config, registry or helper this goal could extend instead of adding new code — path:line
+Layers: layers or boundaries the repo docs define for the code the goal touches — doc path
 Checks: test (all) / test (one file) / lint / format / typecheck — exact command, or "none found"
 Tests: runner, location and style of existing tests near the goal
 Risks: risk — evidence path:line

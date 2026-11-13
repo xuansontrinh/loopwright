@@ -6,6 +6,10 @@ Three hooks (plain Node scripts, no dependencies) are wired by default:
 - **Stop gate** (Stop): in Build or Review, blocks finishing unless a passing verdict matches the current working-tree fingerprint. It blocks at most 3 times per stage, then lets the stop through with a warning, so it cannot deadlock a session. It stands down while the agent is waiting for your decision.
 - **Context reinjection** (SessionStart after compaction): re-prints goal, stage, decisions and next step from the task file.
 
+## Code standards
+
+The shared standards file (`prompts/standards.md`) is enforced by prompts and review, not by a hook. Before Build, the Test stage reads the new test files; comments or doc blocks that restate a test name or an acceptance criterion send the tester back to edit and re-lock its tests. In Review, a violation of a named standards rule that the reviewer proves (the smaller version, both locations of a duplicated fact, the mechanism that was bypassed, or the hunk) is high impact and blocks the pass; one without proof is dropped.
+
 ## Going back after Build began
 
 `lw.mjs reopen <plan|test> "<reason>"` sends the task back to Plan or Test. Skills run it only after you choose to go back (a deviation, an undecided review finding). It is refused before Build began, for any other target, or without a reason, and the reason is recorded in the status history.
