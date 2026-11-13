@@ -26,16 +26,16 @@ describe('lw.mjs', () => {
     expect(s.baseCommit).toBe(git(repo, ['rev-parse', 'HEAD']));
   });
 
-  it('resolves main worktree from secondary worktree', () => {
+  it('keeps state per worktree, in each worktree own .loopwright', () => {
     const repo = makeRepo();
-    const wt = join(realpathSync(mkdtempSync(join(tmpdir(), 'lw-wt-'))), 'wt');
+    const wt = join(realpathSync.native(mkdtempSync(join(tmpdir(), 'lw-wt-'))), 'wt');
     git(repo, ['worktree', 'add', '-q', '-b', 'feat', wt]);
     expect(runLw(wt, ['start', TASK]).code).toBe(0);
     expect(runLw(repo, ['start', TASK]).code).toBe(0);
-    const files = readdirSync(join(repo, '.loopwright', 'state'));
-    expect(files).toHaveLength(2);
+    expect(readdirSync(join(repo, '.loopwright', 'state'))).toHaveLength(1);
+    expect(readdirSync(join(wt, '.loopwright', 'state'))).toHaveLength(1);
     expect(JSON.parse(runLw(wt, ['status']).stdout).branch).toBe('feat');
-    expect(runLw(wt, ['dir']).stdout.trim()).toBe(join(repo, '.loopwright'));
+    expect(runLw(wt, ['dir']).stdout.trim()).toBe(join(wt, '.loopwright'));
   });
 
   it('lock then check-locks passes; edit then fails', () => {

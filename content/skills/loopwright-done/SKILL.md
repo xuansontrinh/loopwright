@@ -9,7 +9,7 @@ Done runs in this main thread; do not spawn the subagents here. You propose; the
 ## Setup
 
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
-2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>` (`null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/` with the first task, so continue and the next step reports "no active task". Not a git repo → tell the user loopwright must run inside a git repo, stop). Read `docsDir` from `<lw>/config.json` (default `docs/agents`).
+2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>` (`null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/` with the first task, so continue and the next step reports "no active task". Not a git repo → tell the user loopwright must run inside a git repo, stop). Read `docsDir` from `node "{{LW_HOME}}/hooks/lw.mjs" config` (the main checkout's config; default `docs/agents`).
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status` → `task`, `verdict`. Then `node "{{LW_HOME}}/hooks/lw.mjs" fingerprint`.
    - No `verdict.pass: true`, or its `fingerprint` differs from the current one → the code changed since review or never passed: run `/loopwright-review` first. Continue only if the user explicitly says so, and note it in the review log.
 4. `node "{{LW_HOME}}/hooks/lw.mjs" stage done`, and set `stage: done` in the task file header.
@@ -28,6 +28,8 @@ If `CLAUDE.md` exists and has no line `@AGENTS.md`, propose adding that import l
 ## 2. Parked follow-ups
 
 `grep -l "^found while: <this task path>" <lw>/tasks/*.md` lists the stubs parked while this task ran (`status: proposed` ones are still open). For each, draft issue text (title, what and why, `path:line` evidence from its `## Evidence`) and show it to the user. It is shown only: never file it, and write no task paths or ids into it. A stub with `blocks: <this task path>` that is still `proposed` → ask one question: clear the flag (the stub no longer blocks) or note it in the PR.
+
+In a linked worktree, its `status: proposed` stubs are deleted along with the worktree. List them and offer one question: move them to the main checkout with `node "{{LW_HOME}}/hooks/lw.mjs" carry` (it copies each into the main checkout's `tasks/` and marks the source `status: moved`; it fails in the main checkout, where the stubs already are). Run it only on yes; a stub the user keeps here is lost when the worktree is removed, so say so.
 
 ## 3. Commit message and PR description
 

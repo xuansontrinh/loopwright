@@ -10,13 +10,31 @@ Plan runs in this main thread. You state assumptions; the user decides. Do not e
 
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
 2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` prints the `.loopwright` directory (`<lw>` below). `null` inside a git repo → no task has started here yet; `lw.mjs start` (section 3) creates `.loopwright/`, so continue with a new task. Not a git repo → tell the user loopwright must run inside a git repo, stop.
-3. `node "{{LW_HOME}}/hooks/lw.mjs" status`. "no active task" → continue with a new task. If it prints a task, read `<lw>/<task>`:
+3. `node "{{LW_HOME}}/hooks/lw.mjs" status`. "no active task" → this worktree is free; a new goal still goes through "Goal intake" below first (a related task in another worktree is not started again here), then continue with a new task. If it prints a task, read `<lw>/<task>`:
    - `stage: plan` and reopened (`status` `history` has a `reopen` event after the last `stage build` event; that event's `reason` says why) → this is the same task returning to Plan for added scope, not a second task: keep its decisions, ACs and tests, run sections 2–6 only for what the reason adds or changes (a new slice starts `[todo]`), then section 7. Do not ask whether the plan is abandoned.
+   - `stage: plan`, and the user gave a new goal unrelated to this plan → the worktree is occupied: follow "Goal intake" below, do not resume.
    - `stage: plan` → resume this plan: the first `— pending` item under `## Open questions`, else the proposal (step 6), else the confirmation (step 7). If the user says this plan is abandoned, offer to start the new one with `start tasks/<new file>.md --force` (the old task file stays).
-   - past `plan` → the task is in progress; tell the user to continue it with `/loopwright-flow`. Do not start a second.
-4. Read `<lw>/config.json` for `maxFixRounds` (missing file or key → 3).
+   - past `plan` → the task is in progress; tell the user to continue it with `/loopwright-flow`. Do not start a second here; a new goal follows "Goal intake".
+4. `node "{{LW_HOME}}/hooks/lw.mjs" config` prints the main checkout's config; read `maxFixRounds` from it (missing key → 3).
 5. `git status --porcelain` not empty → uncommitted changes will be part of the reviewed diff. Ask the user whether to commit/stash them first or include them; record the answer as a decision once the task file exists.
 6. Upstream check: `GIT_TERMINAL_PROMPT=0 git fetch --quiet` (never prompts for credentials; it fails offline or without auth → skip this check). Then list `git log --oneline HEAD..@{u}`; with no upstream, use `HEAD..origin/HEAD`; with neither, skip. Repeat in any sibling repo the goal touches (e.g. a separate frontend repo). New upstream commits → tell the user and ask whether to pull first. A commit or branch that already touches the goal's feature → ask whether someone has already done this work. Record the answers as decisions once the task file exists.
+
+## Goal intake
+
+A new goal, while open tasks may exist: `node "{{LW_HOME}}/hooks/lw.mjs" tasks` lists every worktree's open tasks (`inProgress`, each with its `goal` and `current`) and the parked stubs. Whether a task is related to the goal is your judgment; ask the user when unsure.
+
+First step, before any question or message: if `node "{{LW_HOME}}/hooks/lw.mjs" status` shows this worktree's task in `build` or `review`, run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "handing a new goal to a new worktree"` once, so the stop gate does not push this session into that task or spend its stop-block cap on any turn of this intake. Never run `resume` in goal intake: the wait clears when that task's own work resumes (its stage skill's `stage` call, `reopen` or `verdict`), also when the user switches to continuing it.
+- A related task in this worktree → ask whether to continue it with `/loopwright-flow`. A related task in another worktree → do not start here; tell the user to continue it there and print the start command.
+- Only unrelated tasks, and this worktree is free (`status` prints "no active task") → start the goal here.
+- This worktree is occupied (`status` prints a task; the Plan stage counts) → say which task occupies it, suggest a new worktree, and never offer to close or shelve an unrelated task. On yes, pass the goal on stdin through a quoted heredoc, so backticks and `$` in it stay text (pick a delimiter that does not appear alone on a line in the goal), then print the start command.
+  ```bash
+  node "{{LW_HOME}}/hooks/lw.mjs" worktree "<title>" <<'LW_GOAL'
+  <goal, exactly as the user wrote it>
+  LW_GOAL
+  ```
+  Add `--kind fix` for a fix. It prints `{worktree, branch, base, stub, installMissing}`. Planning happens in the new session, from the stub, not here.
+- `installMissing` true → the new worktree lacks the repo-mode install: say so and print `npx loopwright update` (run in that folder) before the start command.
+- Start command, by tool: Claude `cd <path> && claude "/loopwright-flow"`; Codex `cd <path> && codex '$loopwright-flow'`; Junie `cd <path>`, then start Junie and run `/loopwright-flow`. This session does not change directory; the user starts the new session.
 
 ## Parked stubs
 

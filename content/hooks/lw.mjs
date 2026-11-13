@@ -2,8 +2,9 @@
 // Loopwright state tool. Usage: node lw.mjs <cmd> [args]
 import { copyFileSync, existsSync, readFileSync, readdirSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { isatty } from 'node:tty';
 import { fileURLToPath } from 'node:url';
 import {
   PROFILES,
@@ -11,7 +12,10 @@ import {
   gitTopLevel,
   loopwrightDir,
   loopwrightPath,
+  mainLoopwrightPath,
+  mainWorktreeRoot,
   readState,
+  realpathLoose,
   repoRelative,
   sha256File,
   statePath,
@@ -40,27 +44,30 @@ function flag(args, name) {
   return v;
 }
 
-/** Create <main worktree>/.loopwright/ (global installs, fresh clones). Config seeds from ~/.config/loopwright/config.json, else the default. */
-function scaffold(dir) {
+/** Config a fresh install starts from: the user's, else the shipped default. */
+const seedConfig = () => {
+  const user = join(homedir(), '.config', 'loopwright', 'config.json');
+  return existsSync(user) ? user : fileURLToPath(new URL('./default-config.json', import.meta.url));
+};
+
+/** Create <worktree>/.loopwright/ (global installs, fresh clones, new worktrees). Only the main checkout holds config.json. */
+function scaffold(dir, withConfig) {
   mkdirSync(join(dir, 'tasks'), { recursive: true });
   mkdirSync(join(dir, 'state'), { recursive: true });
   const ignore = join(dir, '.gitignore');
   if (!existsSync(ignore)) writeFileSync(ignore, '*\n');
   const cfg = join(dir, 'config.json');
-  if (existsSync(cfg)) return;
-  const user = join(homedir(), '.config', 'loopwright', 'config.json');
-  copyFileSync(existsSync(user) ? user : fileURLToPath(new URL('./default-config.json', import.meta.url)), cfg);
+  if (withConfig && !existsSync(cfg)) copyFileSync(seedConfig(), cfg);
 }
 
+const isMainCheckout = () => gitTopLevel(cwd) === mainWorktreeRoot(cwd);
+
 function ctx(create = false) {
-  let dir = loopwrightDir(cwd);
-  if (!dir) {
-    const path = loopwrightPath(cwd);
-    if (!path) fail('loopwright: no .loopwright directory found (not inside a git repository)');
-    if (!create) fail('loopwright: no active task (no .loopwright directory yet; lw.mjs start creates it)');
-    scaffold(path);
-    dir = path;
-  } else if (create) scaffold(dir); // idempotent: seeds a config.json missing from an existing .loopwright/
+  const dir = loopwrightPath(cwd);
+  if (!dir) fail('loopwright: no .loopwright directory found (not inside a git repository)');
+  if (!existsSync(dir) && !create)
+    fail('loopwright: no active task (no .loopwright directory yet; lw.mjs start creates it)');
+  if (create) scaffold(dir, isMainCheckout()); // idempotent: seeds a config.json missing from an existing main .loopwright/
   return { dir, id: worktreeId(cwd) };
 }
 
@@ -77,9 +84,8 @@ function effortFor(role) {
     fail(`loopwright: usage: effort <${Object.keys(PROFILES.balanced).join('|')}>`);
   // Works before `start` (Plan's scout spawn): no task or repo state just means no header.
   let name;
-  let dir = null;
   try {
-    dir = loopwrightDir(cwd);
+    const dir = loopwrightDir(cwd);
     const state = dir && readState(dir, worktreeId(cwd));
     if (state?.task && existsSync(join(dir, state.task))) {
       name = /^profile:\s*(\S+)\s*$/m.exec(readFileSync(join(dir, state.task), 'utf8').split(/^## /m)[0])?.[1];
@@ -87,8 +93,9 @@ function effortFor(role) {
   } catch {
     // Unreadable task or state: fall through to the manifest profile.
   }
-  // Repo manifest first, then the global one (global installs record it under ~/.config/loopwright).
-  for (const m of [dir && join(dir, 'manifest.json'), join(homedir(), '.config', 'loopwright', 'manifest.json')]) {
+  // Main checkout's manifest first (it exists once), then the global one (global installs record it under ~/.config/loopwright).
+  const main = mainLoopwrightPath(cwd);
+  for (const m of [main && join(main, 'manifest.json'), join(homedir(), '.config', 'loopwright', 'manifest.json')]) {
     if (name || !m || !existsSync(m)) continue;
     try {
       name = JSON.parse(readFileSync(m, 'utf8')).options?.profile;
@@ -104,6 +111,74 @@ function effortFor(role) {
 
 const gitOut = (args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
+/** The worktree a task header names: `worktree: <path> (branch <name>)`. */
+function namedWorktree(header) {
+  const m = /^worktree:[ \t]*(.+?)(?:[ \t]+\(branch[ \t]+(.*?)\))?[ \t]*$/m.exec(header);
+  return m ? { path: resolve(m[1]), branch: m[2] ?? null } : null;
+}
+
+/** Task file fields: status/stage from the header (before the first `## `), title from `# `, goal from `## Goal`. */
+function readTask(root, rel) {
+  const [head, ...sections] = readFileSync(join(root, rel), 'utf8').split(/^## /m);
+  const goal = sections.find((s) => /^Goal[ \t]*\r?\n/.test(s));
+  return {
+    title: /^# (.*)$/m.exec(head)?.[1].trim() ?? null,
+    status: /^status:[ \t]*(\S+)/m.exec(head)?.[1] ?? null,
+    stage: /^stage:[ \t]*(\S+)/m.exec(head)?.[1] ?? null,
+    named: namedWorktree(head),
+    goal: goal ? goal.replace(/^Goal[ \t]*\r?\n/, '').trim() : '',
+  };
+}
+
+/** `git worktree list`: the main checkout first, then linked worktrees. A missing folder is still listed. */
+const listWorktrees = () =>
+  gitOut(['worktree', 'list', '--porcelain'])
+    .split(/\r?\n\r?\n/)
+    .filter(Boolean)
+    .map((b) => ({
+      path: resolve(/^worktree (.+)$/m.exec(b)[1]),
+      branch: /^branch refs\/heads\/(.+)$/m.exec(b)?.[1] ?? null,
+    }));
+
+/** A move copies; the source stays, marked so no listing offers it again. */
+function markMoved(file, to) {
+  writeFileSync(file, readFileSync(file, 'utf8').replace(/^status:.*$/m, `status: moved\nmoved to: ${to}`));
+}
+
+const today = () => {
+  const d = new Date();
+  const p2 = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+};
+
+/** File name (no extension) for a stub: date plus the title with spaces and path characters dashed. */
+const stubBase = (title) => `${today()}-${title.replace(/\s+/g, '-').replace(/[\\/:*?"<>|]/g, '-')}`;
+
+/** Write `tasks/<base>.md`, adding `-2`, `-3`... on a name collision; returns the path relative to `dir`. */
+function writeUnique(dir, base, text) {
+  for (let n = 1; ; n++) {
+    const rel = `tasks/${base}${n === 1 ? '' : `-${n}`}.md`;
+    try {
+      writeFileSync(join(dir, rel), text, { flag: 'wx' });
+      return rel;
+    } catch (err) {
+      if (err.code !== 'EEXIST') throw err;
+    }
+  }
+}
+
+/** A proposed stub in park's format; `goal` is empty for a stub parked mid-task. */
+const stubText = (header, goal = '') => `${header.join('\n')}\n\n## Goal\n${goal ? `${goal}\n` : ''}\n## Evidence\n`;
+
+const refExists = (ref) => {
+  try {
+    gitOut(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const [cmd, ...rest] = process.argv.slice(2);
 try {
   switch (cmd) {
@@ -116,6 +191,12 @@ try {
       if (force) rest.splice(rest.indexOf('--force'), 1);
       const task = rest[0];
       if (!task) fail('loopwright: usage: start <task-rel-path> [--base <sha>] [--force]');
+      // A task file belongs to the worktree its header names; starting it elsewhere would split its state.
+      const own = loopwrightPath(cwd);
+      const header = own && existsSync(join(own, task)) ? readFileSync(join(own, task), 'utf8').split(/^## /m)[0] : '';
+      const named = namedWorktree(header)?.path;
+      if (named && realpathLoose(named) !== realpathLoose(gitTopLevel(cwd)))
+        fail(`loopwright: ${task} belongs to the worktree ${named}; start it there`);
       const { dir, id } = ctx(true);
       const prior = readState(dir, id);
       if (!force && prior) fail('loopwright: task already active (run lw.mjs done first, or start --force)');
@@ -274,6 +355,207 @@ try {
       out(state);
       break;
     }
+    case 'tasks': {
+      // Read-only: lists what is open in every worktree. Never creates a .loopwright/ or touches a task.
+      const real = (p) => realpathLoose(resolve(p));
+      const here = real(gitTopLevel(cwd));
+      const trees = listWorktrees();
+      const [main] = trees;
+      const live = trees.filter((t) => t !== main && existsSync(t.path));
+      const result = { inProgress: [], proposed: [], olderLayout: [], worktreeGone: [], unreadable: [] };
+      const entry = (wt, branch, task, t) => ({
+        worktree: wt,
+        branch,
+        task,
+        title: t.title,
+        stage: t.stage,
+        goal: t.goal,
+        current: real(wt) === here,
+      });
+      const gone = new Map();
+      for (const wt of trees) {
+        const root = join(wt.path, '.loopwright');
+        let names = [];
+        try {
+          if (existsSync(join(root, 'tasks')))
+            names = readdirSync(join(root, 'tasks')).filter((n) => n.endsWith('.md'));
+          else if (!existsSync(wt.path)) throw new Error('folder missing');
+        } catch (err) {
+          result.unreadable.push({ worktree: wt.path, branch: wt.branch, reason: err.message });
+          continue;
+        }
+        for (const name of names.sort()) {
+          const task = `tasks/${name}`;
+          let t;
+          try {
+            t = readTask(root, task);
+          } catch {
+            continue; // one unreadable file does not hide the rest
+          }
+          if (['done', 'stopped', 'moved', 'dropped'].includes(t.status)) continue;
+          if (t.status === 'proposed') {
+            result.proposed.push(entry(wt.path, wt.branch, task, t));
+            continue;
+          }
+          // Task files written before per-worktree layout sit in the main checkout and name their worktree.
+          if (wt === main && t.named && real(t.named.path) !== real(main.path)) {
+            const owner = live.find((l) => real(l.path) === real(t.named.path));
+            if (owner) result.olderLayout.push(entry(owner.path, owner.branch, task, t));
+            else gone.set(`${t.named.path}\0${task}`, entry(t.named.path, t.named.branch, task, t));
+            continue;
+          }
+          result.inProgress.push(entry(wt.path, wt.branch, task, t));
+        }
+      }
+      // A state file whose worktree folder is gone, even when its task file is too.
+      const stateDir = join(main.path, '.loopwright', 'state');
+      for (const name of existsSync(stateDir) ? readdirSync(stateDir).sort() : []) {
+        let s;
+        try {
+          s = JSON.parse(readFileSync(join(stateDir, name), 'utf8'));
+        } catch {
+          continue;
+        }
+        if (typeof s?.worktree !== 'string' || typeof s.task !== 'string' || existsSync(s.worktree)) continue;
+        const key = `${resolve(s.worktree)}\0${s.task}`;
+        let t = { title: null, stage: null, goal: '' };
+        try {
+          t = readTask(join(main.path, '.loopwright'), s.task);
+        } catch {
+          // Task file gone too: report the state alone.
+        }
+        // An adopted or finished task leaves its main-checkout state behind; its header says it is closed.
+        if (['done', 'stopped', 'moved', 'dropped'].includes(t.status)) continue;
+        gone.set(key, entry(resolve(s.worktree), s.branch ?? null, s.task, { ...t, stage: s.stage ?? t.stage }));
+      }
+      result.worktreeGone.push(...gone.values());
+      out(result);
+      break;
+    }
+    case 'adopt': {
+      // Pulls a task written before per-worktree layout (main checkout) into the worktree it names. Copies; never deletes.
+      const task = rest[0];
+      if (!task) fail('loopwright: usage: adopt <task-rel-path>');
+      if (isMainCheckout())
+        fail('loopwright: adopt runs in the linked worktree that should own the task, not in the main checkout');
+      const mainDir = mainLoopwrightPath(cwd);
+      const src = join(mainDir, task);
+      if (!existsSync(src)) fail(`loopwright: adopt: ${task} not found in the main checkout's .loopwright/`);
+      const named = namedWorktree(readFileSync(src, 'utf8').split(/^## /m)[0]);
+      if (named && realpathLoose(named.path) !== realpathLoose(gitTopLevel(cwd)))
+        fail(`loopwright: adopt: ${task} belongs to the worktree ${named.path}; run adopt there`);
+      const id = worktreeId(cwd);
+      const old = readState(mainDir, id);
+      const state = old?.task === task ? old : null;
+      const own = loopwrightPath(cwd);
+      if (existsSync(join(own, task))) fail(`loopwright: adopt: ${task} already exists in this worktree`);
+      if (state && readState(own, id)) fail('loopwright: adopt: this worktree already has an active task');
+      const { dir } = ctx(true);
+      copyFileSync(src, join(dir, task));
+      if (state) {
+        note(state, 'adopt', task);
+        writeState(dir, id, state);
+      }
+      markMoved(src, join(dir, task));
+      out({ task, state: Boolean(state) });
+      break;
+    }
+    case 'worktree': {
+      // Creates a sibling worktree on a new branch with a stub to plan from. Does not enter it or start a session there.
+      const usage = 'loopwright: usage: worktree "<title>" [--base <ref>] [--stub <file>] [--kind feature|fix]';
+      const baseFlag = flag(rest, '--base');
+      const stubFlag = flag(rest, '--stub');
+      const kind = flag(rest, '--kind') ?? 'feature';
+      const title = rest.join(' ').trim();
+      if (!title) fail(usage);
+      if (kind !== 'feature' && kind !== 'fix') fail(`${usage} (kind must be feature or fix)`);
+      // Validate everything before git changes anything.
+      let source = null;
+      if (stubFlag) {
+        source = resolve(loopwrightPath(cwd), stubFlag);
+        if (!existsSync(source)) fail(`loopwright: worktree: stub ${stubFlag} not found`);
+        if (readTask(dirname(source), basename(source)).status !== 'proposed')
+          fail(`loopwright: worktree: ${stubFlag} is not a proposed stub`);
+      }
+      let goal = '';
+      // isatty, not process.stdin.isTTY: touching process.stdin makes a piped fd 0 non-blocking, so a slow writer fails readFileSync with EAGAIN.
+      if (!source && !isatty(0)) goal = readFileSync(0, 'utf8').trim();
+      let base = baseFlag;
+      if (base !== undefined) {
+        if (base.startsWith('-') || !refExists(base)) fail(`loopwright: worktree: unknown base '${base}'`);
+      } else {
+        // The remote's default branch beats a local main that may be ahead or stale-checked-out.
+        base = ['origin/HEAD', 'main', 'master'].find(refExists) ?? 'HEAD';
+      }
+      const main = mainWorktreeRoot(cwd);
+      const slug =
+        title
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}]+/gu, '-')
+          .replace(/^-+|-+$/g, '') || 'task';
+      let name;
+      let folder;
+      for (let n = 1; ; n++) {
+        name = `${slug}${n === 1 ? '' : `-${n}`}`;
+        folder = join(dirname(main), `${basename(main)}-${name}`);
+        if (!existsSync(folder) && !refExists(`refs/heads/${name}`)) break;
+      }
+      gitOut(['worktree', 'add', '--no-track', '-b', name, folder, base]);
+      const dir = join(folder, '.loopwright');
+      scaffold(dir, false);
+      let stub;
+      if (source) {
+        stub = `tasks/${basename(source)}`;
+        copyFileSync(source, join(dir, stub));
+        markMoved(source, join(dir, stub));
+      } else {
+        stub = writeUnique(
+          dir,
+          stubBase(title),
+          stubText([`# ${title}`, '', `kind: ${kind}`, 'status: proposed', 'stage: plan', 'plan: draft'], goal),
+        );
+      }
+      const hook = join('.agents', 'loopwright', 'hooks', 'lw.mjs');
+      out({
+        worktree: folder,
+        branch: name,
+        base,
+        stub,
+        installMissing: existsSync(join(gitTopLevel(cwd), hook)) && !existsSync(join(folder, hook)),
+      });
+      break;
+    }
+    case 'carry': {
+      // Moves this worktree's proposed stubs to the main checkout so they outlive the worktree. Copies; never deletes.
+      if (isMainCheckout())
+        fail('loopwright: carry runs in a linked worktree; the main checkout already holds its stubs');
+      const own = loopwrightPath(cwd);
+      const mainDir = mainLoopwrightPath(cwd);
+      scaffold(mainDir, true);
+      const carried = [];
+      const names = existsSync(join(own, 'tasks')) ? readdirSync(join(own, 'tasks')).sort() : [];
+      for (const name of names.filter((n) => n.endsWith('.md'))) {
+        const file = join(own, 'tasks', name);
+        let status;
+        try {
+          status = readTask(own, `tasks/${name}`).status;
+        } catch {
+          continue; // one unreadable file does not block the rest
+        }
+        if (status !== 'proposed') continue;
+        const to = join(mainDir, writeUnique(mainDir, name.slice(0, -3), readFileSync(file, 'utf8')));
+        markMoved(file, to);
+        carried.push({ from: file, to });
+      }
+      out({ carried });
+      break;
+    }
+    case 'config': {
+      const main = mainLoopwrightPath(cwd);
+      const file = main && join(main, 'config.json');
+      out(JSON.parse(readFileSync(file && existsSync(file) ? file : seedConfig(), 'utf8')));
+      break;
+    }
     case 'effort':
       process.stdout.write(effortFor(rest[0]) + '\n');
       break;
@@ -290,26 +572,13 @@ try {
       const active = existing ? (readState(existing, worktreeId(cwd))?.task ?? null) : null;
       if (blocks && !active) fail('loopwright: park --blocks needs an active task');
       const { dir } = ctx(true);
-      const d = new Date();
-      const p2 = (n) => String(n).padStart(2, '0');
-      const base = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}-${title.replace(/\s+/g, '-').replace(/[\\/:*?"<>|]/g, '-')}`;
       const foundWhile = active && existsSync(join(dir, active)) ? active : null;
       if (active && !foundWhile)
         process.stderr.write(`loopwright: warning: active task file ${active} is missing; follow-up not linked\n`);
       const header = [`# ${title}`, '', `kind: ${kind}`, 'status: proposed', 'stage: plan', 'plan: draft'];
       if (foundWhile) header.push(`found while: ${foundWhile}`);
       if (blocks && foundWhile) header.push(`blocks: ${foundWhile}`);
-      const text = header.join('\n') + '\n\n## Goal\n\n## Evidence\n';
-      let stub;
-      for (let n = 1; ; n++) {
-        stub = `tasks/${base}${n === 1 ? '' : `-${n}`}.md`;
-        try {
-          writeFileSync(join(dir, stub), text, { flag: 'wx' });
-          break;
-        } catch (err) {
-          if (err.code !== 'EEXIST') throw err;
-        }
-      }
+      const stub = writeUnique(dir, stubBase(title), stubText(header));
       if (foundWhile) {
         const line = `- ${title} — ${stub}${blocks ? ' [blocking]' : ''}`;
         const file = join(dir, foundWhile);
@@ -436,7 +705,7 @@ try {
     }
     default:
       fail(
-        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|fingerprint|verdict|await-user|resume|park|explore|status|effort|done>',
+        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|fingerprint|verdict|await-user|resume|park|explore|status|config|tasks|adopt|worktree|carry|effort|done>',
       );
   }
 } catch (err) {

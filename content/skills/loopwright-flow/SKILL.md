@@ -16,12 +16,30 @@ Runs the stage skills in order for the confirmed tier and resumes where a task l
 ## Resume
 
 `node "{{LW_HOME}}/hooks/lw.mjs" status`:
-- Prints a task → read `<lw>/<task>` and continue at its `stage` (plan: run `loopwright-plan`, which resumes the open plan; review: count rounds from the review log).
+- Prints a task, and the user gave a new goal → the worktree is occupied: follow "Goal intake" below, never continue the task unasked. Prints a task, and no goal or the goal is that task → read `<lw>/<task>` and continue at its `stage` (plan: run `loopwright-plan`, which resumes the open plan; review: count rounds from the review log).
 - "no active task" → `grep -l "^status: active" <lw>/tasks/*.md`.
   - One or more files → ask the user which one (or a new task). For the chosen file, offer to rebuild state from it: `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md --base <base commit from its header>`, then `node "{{LW_HOME}}/hooks/lw.mjs" stage <stage from its header>`. Locked-test hashes are lost with the state: if the task already has acceptance tests and is past Test, tell the user; re-lock the test files named in its AC lines (`stage test`, `lock <files>`, then `stage <stage>`) only if the user confirms they are unchanged.
   - None, or the user wants a new task → continue below.
-- Also list stubs parked by `/loopwright-park`: `grep -l "^status: proposed" <lw>/tasks/*.md`. Offer each as start, drop, or a new task instead. Start → run `loopwright-plan` on it as in that skill ("Parked stubs"). Drop → set `status: dropped` in the stub; never delete it.
-- No stubs and no task, or the user wants a new task → start at Plan with the user's goal or spec path.
+- Also list stubs parked by `/loopwright-park` (`status: proposed` in `lw.mjs tasks`, from any worktree; `grep -l "^status: proposed" <lw>/tasks/*.md` lists this worktree's). Offer each as start, drop, or a new task instead. Start → run `loopwright-plan` on it as in that skill ("Parked stubs"); a stub that sits in another worktree starts in a new worktree instead (`lw.mjs worktree "<title>" --stub <absolute path>`, then print the start command). Drop → set `status: dropped` in the stub; never delete it.
+- An `olderLayout` entry listed under this worktree is a task from before tasks were kept per worktree: offer `node "{{LW_HOME}}/hooks/lw.mjs" adopt <task>` to copy it and its state (with locks) in. Nothing moves or is deleted unasked.
+- No stubs and no task, or the user wants a new task → run "Goal intake" below for the user's goal, then start at Plan with the goal or spec path.
+
+## Goal intake
+
+A new goal, while open tasks may exist: `node "{{LW_HOME}}/hooks/lw.mjs" tasks` lists every worktree's open tasks (`inProgress`, each with its `goal` and `current`) and the parked stubs (`proposed`). Whether a task is related to the goal is your judgment; ask the user when unsure.
+
+First step, before any question or message: if `node "{{LW_HOME}}/hooks/lw.mjs" status` shows this worktree's task in `build` or `review`, run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "handing a new goal to a new worktree"` once, so the stop gate does not push this session into that task or spend its stop-block cap on any turn of this intake. Never run `resume` in goal intake: the wait clears when that task's own work resumes (its stage skill's `stage` call, `reopen` or `verdict`), also when the user switches to continuing it.
+- A related task in this worktree → ask whether to continue it. A related task in another worktree → do not start here; tell the user to continue it there and print the start command.
+- Only unrelated tasks, and this worktree is free (`status` prints "no active task") → start the goal here.
+- This worktree is occupied (`status` prints a task; the Plan stage counts) → say which task occupies it, suggest a new worktree, and never offer to close or shelve an unrelated task. On yes, pass the goal on stdin through a quoted heredoc, so backticks and `$` in it stay text (pick a delimiter that does not appear alone on a line in the goal), then print the start command.
+  ```bash
+  node "{{LW_HOME}}/hooks/lw.mjs" worktree "<title>" <<'LW_GOAL'
+  <goal, exactly as the user wrote it>
+  LW_GOAL
+  ```
+  It prints `{worktree, branch, base, stub, installMissing}`. Planning happens in the new session, from the stub, not here.
+- `installMissing` true → the new worktree lacks the repo-mode install: say so and print `npx loopwright update` (run in that folder) before the start command.
+- Start command, by tool: Claude `cd <path> && claude "/loopwright-flow"`; Codex `cd <path> && codex '$loopwright-flow'`; Junie `cd <path>`, then start Junie and run `/loopwright-flow`. This session does not change directory; the user starts the new session.
 
 ## Run
 

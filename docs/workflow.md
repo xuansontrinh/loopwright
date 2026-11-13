@@ -37,9 +37,29 @@ flowchart TD
 
 ## Parking work you find along the way
 
-`/loopwright-park` captures work you notice while doing one task so the task does not grow. It restates the finding for you to edit, asks whether it blocks the current task (the recommendation is no), and writes a stub in `tasks/` with `status: proposed`. The current task's scope, tests and diff do not change; the stub is listed under its `## Follow-ups`. A blocking stub is best run first in another worktree.
+`/loopwright-park` captures work you notice while doing one task so the task does not grow. It restates the finding for you to edit, asks whether it blocks the current task (the recommendation is no), and writes a stub in `tasks/` with `status: proposed`. The current task's scope, tests and diff do not change; the stub is listed under its `## Follow-ups`. A blocking stub is best run first in a new worktree (see [Running tasks in parallel worktrees](#running-tasks-in-parallel-worktrees)).
 
 Later, `/loopwright-flow` or `/loopwright-plan` without a goal lists the proposed stubs: start one (it goes through normal Plan in a fresh context), drop it, or begin a new task. Done lists the stubs found during a task, drafts issue text for each (shown, never filed) and adds a Follow-ups section to the PR draft.
+
+## Running tasks in parallel worktrees
+
+One task runs per git worktree, each in its own session, so a new goal does not wait on an unrelated task. Each worktree holds its own tasks in `.loopwright/` (see [Installation](installation.md#worktrees)).
+
+When you give `/loopwright-flow`, `/loopwright-plan` or `/loopwright-fix` a new goal, the skill runs `lw.mjs tasks`, a read-only listing of the open tasks and parked stubs in every worktree:
+
+- A task that looks related to the goal: you are asked whether to continue it. If it is in another worktree, nothing starts here; you get the command to continue it there. Which tasks are related is the agent's judgment, and it asks when unsure.
+- Only unrelated tasks, and this worktree has no task: the goal starts here.
+- This worktree is occupied (it has a task, Plan stage included): the skill says what occupies it and suggests a new worktree. It never offers to close or shelve an unrelated task. On yes it runs `lw.mjs worktree "<title>"`, which creates the sibling folder `../<repo-folder>-<slug>` on a new branch `<slug>` from `origin/HEAD` (else `main` or `master`, else `HEAD`; `--base <ref>` overrides), writes a `status: proposed` stub with your goal there, and prints the command to start a session in it:
+
+```bash
+cd ../my-repo-add-export && claude "/loopwright-flow"      # Claude Code
+cd ../my-repo-add-export && codex '$loopwright-flow'       # Codex
+cd ../my-repo-add-export                                   # Junie: start Junie, then run /loopwright-flow
+```
+
+`/loopwright-fix` adds `--kind fix`, so the stub keeps `kind: fix` and the new session still locks a repro test first (the default is `feature`). The new session lists the stub and plans from it in a fresh context. If the new worktree lacks the repo-mode install, the skill says so and prints `npx loopwright update` first. A stub from any worktree can start in a new worktree with `lw.mjs worktree "<title>" --stub <file>`; the original is marked `status: moved` and never deleted. Codex may ask for one sandbox approval to create the worktree (unverified; Codex support is WIP).
+
+When Done closes a task in a linked worktree, it offers `lw.mjs carry`, which copies the worktree's proposed stubs to the main checkout's `tasks/` and marks the sources `status: moved`, so they outlive the worktree.
 
 ## Understanding an unfamiliar codebase
 

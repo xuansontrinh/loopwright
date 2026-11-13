@@ -18,8 +18,8 @@ Captures work found mid-task (call it B) as a stub, so the current task (A) keep
 2. Ask one question, "Does this block the current task?", recommendation "no" (Claude: `AskUserQuestion`; Codex: numbered text). It needs an active task; with none, skip it.
 3. Run `node "{{LW_HOME}}/hooks/lw.mjs" park "<title>"`, adding `--blocks` when the answer is yes and `--kind fix` when B is a bug. It prints `{stub, foundWhile, blocks}`.
 4. Write the agreed goal under `## Goal` and the evidence under `## Evidence` of `<lw>/<stub>`.
-5. Blocking → suggest running B first in another worktree (the stub is shared by all worktrees), and leave A as it is.
-6. Tell the user the stub path and that it is listed under A's `## Follow-ups`. Resume A where it was.
+5. Blocking → suggest running B first in a new worktree (`node "{{LW_HOME}}/hooks/lw.mjs" worktree "<title>" --stub <stub>` moves the stub there; print the start command as `loopwright-flow` describes under "Goal intake"), and leave A as it is.
+6. Tell the user the stub path (it lives in this worktree's `.loopwright/`) and that it is listed under A's `## Follow-ups`. Resume A where it was.
 
 ## Rules
 

@@ -54,12 +54,13 @@ describe('lw.mjs lazy .loopwright creation', () => {
     expect(readFileSync(join(repo, '.loopwright/config.json'), 'utf8')).toBe(mine);
   });
 
-  it('start from a linked worktree scaffolds in the main worktree', () => {
+  it('start from a linked worktree scaffolds its own .loopwright without a config', () => {
     const repo = makeBareRepo();
     const wt = join(realpathSync(mkdtempSync(join(tmpdir(), 'lw-wt-'))), 'wt');
     git(repo, ['worktree', 'add', '-q', '-b', 'feat', wt]);
     expect(runLw(wt, ['start', TASK], undefined, homeEnv(emptyHome())).code).toBe(0);
-    expect(existsSync(join(repo, '.loopwright/.gitignore'))).toBe(true);
-    expect(existsSync(join(wt, '.loopwright'))).toBe(false);
+    expect(existsSync(join(wt, '.loopwright/.gitignore'))).toBe(true);
+    expect(existsSync(join(wt, '.loopwright/config.json'))).toBe(false);
+    expect(existsSync(join(repo, '.loopwright'))).toBe(false);
   });
 });
