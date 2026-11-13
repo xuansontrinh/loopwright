@@ -28,7 +28,7 @@ describe('lw.mjs', () => {
 
   it('keeps state per worktree, in each worktree own .loopwright', () => {
     const repo = makeRepo();
-    const wt = join(realpathSync(mkdtempSync(join(tmpdir(), 'lw-wt-'))), 'wt');
+    const wt = join(realpathSync.native(mkdtempSync(join(tmpdir(), 'lw-wt-'))), 'wt');
     git(repo, ['worktree', 'add', '-q', '-b', 'feat', wt]);
     expect(runLw(wt, ['start', TASK]).code).toBe(0);
     expect(runLw(repo, ['start', TASK]).code).toBe(0);
