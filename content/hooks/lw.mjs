@@ -79,19 +79,20 @@ function requireState() {
 }
 
 /**
- * Effort for a role: the task header's `profile:`, else the manifest's recorded profile, else balanced.
+ * Effort for a role: a `--profile` name, else the task header's `profile:` (`pending` means not chosen yet), else the manifest's recorded profile, else balanced.
  * An unknown profile goes to `badProfile`, which fails by default; if it returns, there is no effort.
  */
-function effortFor(role, badProfile = fail) {
+function effortFor(role, badProfile = fail, flagged) {
   if (!Object.hasOwn(PROFILES.balanced, role))
     fail(`loopwright: usage: effort <${Object.keys(PROFILES.balanced).join('|')}>`);
   // Works before `start` (Plan's scout spawn): no task or repo state just means no header.
-  let name;
+  let name = flagged;
   try {
-    const dir = loopwrightDir(cwd);
+    const dir = !name && loopwrightDir(cwd);
     const state = dir && readState(dir, worktreeId(cwd));
     if (state?.task && existsSync(join(dir, state.task))) {
       name = /^profile:\s*(\S+)\s*$/m.exec(readFileSync(join(dir, state.task), 'utf8').split(/^## /m)[0])?.[1];
+      if (name === 'pending') name = undefined;
     }
   } catch {
     // Unreadable task or state: fall through to the manifest profile.
@@ -628,9 +629,11 @@ try {
       });
       break;
     }
-    case 'effort':
-      process.stdout.write(effortFor(rest[0]) + '\n');
+    case 'effort': {
+      const profile = flag(rest, '--profile');
+      process.stdout.write(effortFor(rest[0], fail, profile) + '\n');
       break;
+    }
     case 'park': {
       // Captures work found mid-task as a proposed stub. Reads state only to find the active task; never writes it.
       const usage = 'loopwright: usage: park "<title>" [--blocks] [--kind feature|fix]';
