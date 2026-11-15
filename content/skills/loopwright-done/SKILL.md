@@ -9,19 +9,19 @@ Done runs in this main thread; do not spawn the subagents here. You propose; the
 ## Setup
 
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
-2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>` (`null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/` with the first task, so continue and the next step reports "no active task". Not a git repo → tell the user loopwright must run inside a git repo, stop). Read `docsDir` from `node "{{LW_HOME}}/hooks/lw.mjs" config` (the main checkout's config; default `docs/agents`).
-3. `node "{{LW_HOME}}/hooks/lw.mjs" status` → `task`, `verdict`. Then `node "{{LW_HOME}}/hooks/lw.mjs" fingerprint`.
+2. `node "{{LW_HOME}}/hooks/lw.mjs" brief` → `dir` (`<lw>`), `task`, `verdict`, `config.docsDir` (the main checkout's config; default `docs/agents`). `dir` `null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/` with the first task, so continue and `task: null` reports "no active task". Not a git repo → tell the user loopwright must run inside a git repo, stop.
+3. `task: null` → "no active task": stop. Then `node "{{LW_HOME}}/hooks/lw.mjs" fingerprint`.
    - No `verdict.pass: true`, or its `fingerprint` differs from the current one → the code changed since review or never passed: run `/loopwright-review` first. Continue only if the user explicitly says so, and note it in the review log.
-4. `node "{{LW_HOME}}/hooks/lw.mjs" stage done`, and set `stage: done` in the task file header.
+4. `node "{{LW_HOME}}/hooks/lw.mjs" stage done` (it updates the task file header `stage:` line; if it prints `"header": false`, set that line by hand).
 
 ## 1. Knowledge (AGENTS.md)
 
-From the task file (decisions, overrides, review log) and what this task taught you, find durable cross-task knowledge: conventions, "we don't do X here", gotchas a future task would hit. Not task history, not what the code or README already says. A fact already stated in the repo docs or the contract (spec, schema, config) is not added: link instead of restating.
+From the task file (decisions, overrides, review log, and `## Notes for Done` when present, written before a fresh-context reset) and what this task taught you, find durable cross-task knowledge: conventions, "we don't do X here", gotchas a future task would hit. Not task history, not what the code or README already says. A fact already stated in the repo docs or the contract (spec, schema, config) is not added: link instead of restating.
 - Write concepts, not file paths; one line per entry.
 - An entry that needs more than ~3 lines goes to `docs/agents/<topic>.md` (the configured `docsDir`), plus one line in AGENTS.md: "Read `docs/agents/<topic>.md` when <situation>."
 - Prune: AGENTS.md or docs entries this task showed to be stale or wrong → propose an edit or removal.
 - No AGENTS.md → propose creating one with the first entry.
-Propose each change individually, with the exact text, and wait for approval (Claude: `AskUserQuestion`; Codex: numbered text). Apply only approved changes. Nothing worth adding → say so.
+Notes from `## Notes for Done` are candidates, not approved entries: each goes through the user like the rest. Propose each change individually, with the exact text, and wait for approval (Claude: `AskUserQuestion`; Codex: numbered text). Apply only approved changes. Nothing worth adding → say so.
 
 If `CLAUDE.md` exists and has no line `@AGENTS.md`, propose adding that import line instead of copying content into CLAUDE.md. Never duplicate AGENTS.md content elsewhere.
 

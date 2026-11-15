@@ -6,10 +6,11 @@ const read = (rel: string) => readFileSync(contentRoot() + rel, 'utf8');
 const lineWith = (body: string, needle: RegExp) => body.split('\n').find((l) => needle.test(l)) ?? '';
 
 describe('going back keeps the task file header in step', () => {
-  it.each(['flow', 'build', 'review'])('loopwright-%s sets the header stage and plan: draft on reopen', (name) => {
+  it.each(['flow', 'build', 'review'])('loopwright-%s leaves the header stage and plan: draft to reopen', (name) => {
     const line = lineWith(read(`skills/loopwright-${name}/SKILL.md`), /lw\.mjs" reopen/);
-    expect(line).toContain('stage: <plan|test>');
-    expect(line).toContain('plan: draft');
+    expect(line).toContain('sets the header `stage:`');
+    expect(line).toContain('`plan: draft`');
+    expect(line).toContain('"header": false');
   });
 
   it('plan skill resumes a reopened task for the added scope and keeps the base commit', () => {

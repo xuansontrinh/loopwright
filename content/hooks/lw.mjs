@@ -78,8 +78,11 @@ function requireState() {
   return { dir, id, state };
 }
 
-/** Effort for a role: the task header's `profile:`, else the manifest's recorded profile, else balanced. */
-function effortFor(role) {
+/**
+ * Effort for a role: the task header's `profile:`, else the manifest's recorded profile, else balanced.
+ * An unknown profile goes to `badProfile`, which fails by default; if it returns, there is no effort.
+ */
+function effortFor(role, badProfile = fail) {
   if (!Object.hasOwn(PROFILES.balanced, role))
     fail(`loopwright: usage: effort <${Object.keys(PROFILES.balanced).join('|')}>`);
   // Works before `start` (Plan's scout spawn): no task or repo state just means no header.
@@ -104,10 +107,45 @@ function effortFor(role) {
     }
   }
   name ??= 'balanced';
-  if (!Object.hasOwn(PROFILES, name))
-    fail(`loopwright: unknown profile '${name}' (allowed: ${Object.keys(PROFILES).join(', ')})`);
+  if (!Object.hasOwn(PROFILES, name)) {
+    badProfile(`loopwright: unknown profile '${name}' (allowed: ${Object.keys(PROFILES).join(', ')})`);
+    return undefined;
+  }
   return PROFILES[name][role];
 }
+
+/**
+ * Set `key: value` in the task file header (the text before the first `## `). The body is never touched,
+ * and the file's line endings are kept. Returns null when written, else why not (nothing is written then).
+ */
+function setHeader(taskPath, key, value) {
+  try {
+    const text = readFileSync(taskPath, 'utf8');
+    const at = text.search(/^## /m);
+    const split = at === -1 ? text.length : at;
+    const line = new RegExp(`^${key}:[^\\r\\n]*`, 'm');
+    const head = text.slice(0, split);
+    if (!line.test(head)) return `no "${key}:" line`;
+    writeFileSync(taskPath, head.replace(line, () => `${key}: ${value}`) + text.slice(split));
+    return null;
+  } catch (err) {
+    return err.code === 'ENOENT' ? 'task file missing' : `cannot write "${key}:" (${err.code ?? err.message})`;
+  }
+}
+
+/** A missed header write is a warning, never a failure: state is already saved. Returns whether every write landed. */
+function headerResult(misses) {
+  const missed = [...new Set(misses.filter(Boolean))];
+  if (missed.length) process.stderr.write(`loopwright: task file header not updated (${missed.join('; ')})\n`);
+  return missed.length === 0;
+}
+
+/** The main checkout's config.json, else the seed config. */
+const readConfig = () => {
+  const main = mainLoopwrightPath(cwd);
+  const file = main && join(main, 'config.json');
+  return JSON.parse(readFileSync(file && existsSync(file) ? file : seedConfig(), 'utf8'));
+};
 
 const gitOut = (args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
@@ -229,7 +267,7 @@ try {
       delete state.awaitingUser;
       note(state, 'stage', name);
       writeState(dir, id, state);
-      out(state);
+      out({ stage: name, header: headerResult([setHeader(join(dir, state.task), 'stage', name)]) });
       break;
     }
     case 'reopen': {
@@ -246,7 +284,11 @@ try {
       note(state, 'reopen', target);
       state.history.at(-1).reason = reason;
       writeState(dir, id, state);
-      out(state);
+      const file = join(dir, state.task);
+      // Both lines are attempted even if the first misses, so a partial header is still fixed.
+      const set = [setHeader(file, 'stage', target)];
+      if (target === 'plan') set.push(setHeader(file, 'plan', 'draft'));
+      out({ stage: target, reopened: true, header: headerResult(set) });
       break;
     }
     case 'lock': {
@@ -550,10 +592,40 @@ try {
       out({ carried });
       break;
     }
-    case 'config': {
-      const main = mainLoopwrightPath(cwd);
-      const file = main && join(main, 'config.json');
-      out(JSON.parse(readFileSync(file && existsSync(file) ? file : seedConfig(), 'utf8')));
+    case 'config':
+      out(readConfig());
+      break;
+    case 'brief': {
+      // One call for a stage's setup: what `dir`, `status`, `config` and `effort <role>` told it, minus the history.
+      // A bad profile or an unreadable config.json costs only that field (warned on stderr), not the whole brief.
+      const warn = (msg) => process.stderr.write(`${msg}\n`);
+      const effort =
+        rest[0] === undefined ? undefined : effortFor(rest[0], (msg) => warn(`${msg}; brief has no effort`));
+      const dir = loopwrightDir(cwd);
+      const state = dir && readState(dir, worktreeId(cwd));
+      const history = state?.history ?? [];
+      const lastBuild = history.findLastIndex((e) => e.event === 'stage' && e.detail === 'build');
+      const reopen = history.findLast((e, i) => e.event === 'reopen' && i > lastBuild);
+      let cfg;
+      try {
+        cfg = readConfig();
+      } catch (err) {
+        warn(`loopwright: config.json unreadable (${err.message}); brief uses the default config`);
+        cfg = JSON.parse(readFileSync(fileURLToPath(new URL('./default-config.json', import.meta.url)), 'utf8'));
+      }
+      const { maxFixRounds, crossAgentReview, docsDir, models } = cfg;
+      out({
+        dir,
+        task: state?.task ?? null,
+        stage: state?.stage,
+        baseCommit: state?.baseCommit,
+        lockedTests: state?.lockedTests,
+        verdict: state?.verdict,
+        awaitingUser: state?.awaitingUser,
+        reopened: reopen ? { target: reopen.detail, reason: reopen.reason } : null,
+        config: { maxFixRounds, crossAgentReview, docsDir, crossAgentReviewer: models?.crossAgentReviewer },
+        effort,
+      });
       break;
     }
     case 'effort':
@@ -705,7 +777,7 @@ try {
     }
     default:
       fail(
-        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|fingerprint|verdict|await-user|resume|park|explore|status|config|tasks|adopt|worktree|carry|effort|done>',
+        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|fingerprint|verdict|await-user|resume|park|explore|status|config|brief|tasks|adopt|worktree|carry|effort|done>',
       );
   }
 } catch (err) {

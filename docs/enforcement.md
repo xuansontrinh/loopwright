@@ -1,10 +1,11 @@
 # Enforcement and its limits
 
-Three hooks (plain Node scripts, no dependencies) are wired by default:
+Four hooks (plain Node scripts, no dependencies) are wired by default on Claude Code, three elsewhere:
 
 - **Locked-test guard** (PreToolUse): during Build, blocks edit tools on locked test files.
 - **Stop gate** (Stop): in Build or Review, blocks finishing unless a passing verdict matches the current working-tree fingerprint. It blocks at most 3 times per stage, then lets the stop through with a warning, so it cannot deadlock a session. It stands down while the agent is waiting for your decision.
 - **Context reinjection** (SessionStart after compaction): re-prints goal, stage, decisions and next step from the task file.
+- **Compaction instructions** (PreCompact, Claude Code only): while a task is active, tells compaction to keep the task file path, the stage, any open question, unresolved review findings and decisions not yet in the task file, and to re-read the task file afterwards.
 
 ## Code standards
 

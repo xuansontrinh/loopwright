@@ -1,0 +1,2 @@
+{"type":"assistant","message":{"id":"s1","model":"claude-sonnet-5-5","role":"assistant","content":[{"type":"tool_use","id":"tu_Read","name":"Read","input":{"file_path":"/x/b.ts"}}],"usage":{"input_tokens":5,"cache_creation_input_tokens":50,"cache_read_input_tokens":500,"output_tokens":7}}}
+{"type":"assistant","message":{"id":"s2","model":"claude-sonnet-5-5","role":"assistant","content":[{"type":"text","text":"verdict"}],"usage":{"input_tokens":6,"cache_creation_input_tokens":60,"cache_read_input_tokens":600,"output_tokens":8}}}

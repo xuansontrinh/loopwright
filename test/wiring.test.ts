@@ -17,7 +17,7 @@ describe('claude settings', () => {
   it('merges into empty settings', () => {
     const out = mergeClaudeHooks('', hookSpecs('claude'), cmdFor('claude'));
     const j = JSON.parse(out);
-    expect(Object.keys(j.hooks).sort()).toEqual(['PreToolUse', 'SessionStart', 'Stop']);
+    expect(Object.keys(j.hooks).sort()).toEqual(['PreCompact', 'PreToolUse', 'SessionStart', 'Stop']);
     expect(j.hooks.PreToolUse[0].matcher).toBe('Edit|Write|MultiEdit');
     expect(j.hooks.Stop[0].matcher).toBeUndefined();
     expect(out.endsWith('\n')).toBe(true);

@@ -197,7 +197,7 @@ describe('content', () => {
         'plan: confirmed',
         '--force',
       ],
-      'loopwright-test': ['lw.mjs" stage test', 'lw.mjs" status', 'lockedTests', 'plan: confirmed'],
+      'loopwright-test': ['lw.mjs" stage test', 'lw.mjs" brief tester', 'lockedTests', 'plan: confirmed'],
       'loopwright-build': [
         'lw.mjs" stage build',
         'task file path',
@@ -310,14 +310,18 @@ describe('effort profiles content', () => {
     expect(b).toMatch(/profile:/);
     for (const n of ['lean', 'balanced', 'thorough', 'deep']) expect(b).toContain(n);
   });
+  it('plan scout spawn passes effort from lw.mjs effort scout with fallback', () => {
+    const b = skill('loopwright-plan');
+    expect(b).toMatch(/lw\.mjs"? effort scout/);
+    expect(b).toMatch(/fall ?back|falls back|reject/i);
+  });
   it.each([
-    ['loopwright-plan', 'scout'],
     ['loopwright-test', 'tester'],
     ['loopwright-build', 'implementer'],
     ['loopwright-review', 'reviewer'],
-  ])('%s spawn passes effort from lw.mjs effort %s with fallback', (s, role) => {
+  ])('%s spawn passes effort from lw.mjs brief %s with fallback', (s, role) => {
     const b = skill(s);
-    expect(b).toMatch(new RegExp(`lw\\.mjs"? effort ${role}`));
+    expect(b).toContain(`lw.mjs" brief ${role}`);
     expect(b).toMatch(/fall ?back|falls back|reject/i);
   });
   it('README documents profiles and the subagent-only caveat', () => {

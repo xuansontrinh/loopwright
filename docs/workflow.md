@@ -123,11 +123,21 @@ flowchart TD
 
 A verdict goes stale when the code changes afterwards, so Done re-checks the fingerprint and sends you back to Review if it differs.
 
+## Taking a fresh context at a safe point
+
+Every turn re-reads the whole conversation, so a long task gets more expensive with each turn. A fresh context stops that growth, but the new session has to write its cache again. It saves tokens when much of the task remains (a large task, a long plan conversation) and can cost more than it saves on a short task, so take it only when a lot of work is left. A safe point is a place where the next stage needs nothing from the conversation, because the task file holds the plan and the state. loopwright offers a fresh context at two of them, and it is always your choice:
+
+- **Plan confirmation**, for standard and large tasks and for fixes of those tiers. The confirmation offers three answers: confirm and continue here, confirm and continue in a fresh context, or keep editing. Small tasks and a plan reopened after Build began keep the two-answer confirmation, because Build's findings and report live in the conversation.
+- **A slice boundary**, for large tasks: when a slice review passes and another slice remains, you are asked whether to continue here or in a fresh context. It is not asked after the last slice, after the whole-branch review, or on smaller tasks.
+
+If you choose a fresh context, loopwright first writes up to five lines of what it learned under `## Notes for Done` in the task file, which Done reads later, checks that the task file holds every decision made so far, and moves the task to the next stage. Then it asks you to type `/clear`, then `/loopwright-flow` on Claude Code (`/compact` also works and keeps a summary), or to start a new session and run the flow on Codex and Junie. The flow resumes from the task file. If you keep typing in the same session instead, the flow carries on with Test as usual and nothing is lost.
+
 ## Where loopwright stops and waits for you
 
 - Each high-impact question, the low-impact batch, the tier and settings proposal, and the final plan confirmation.
 - Tester `Uncovered` or `Needs` items, and implementer `Deviations`.
 - Each undecided review finding, and the fix-round cap being reached.
+- On a large task, the slice boundary question after a slice review passes while another slice remains.
 - New upstream commits found before Plan and Build (Build asks only when they touch the task's files or feature).
 - Each `AGENTS.md` or docs change, and the commit message and PR draft.
 
@@ -138,5 +148,6 @@ It never answers a gate itself, never treats silence as approval, and never comm
 - **Locked-test guard**: during Build, edit tools cannot touch locked test files.
 - **Stop gate**: in Build and Review, the agent cannot finish its turn without a passing verdict that matches the current working tree, except while it waits for one of your decisions.
 - **Context reinjection**: after context compaction, the task's goal, stage, decisions and next step are printed again, plus the kind and root cause line for a fix.
+- **Compaction instructions** (Claude Code only): before a compaction, tells the summary to keep the task file path, the stage, any open question, unresolved review findings and decisions not yet in the task file, and to re-read the task file afterwards.
 
 Details and limits: [Enforcement](enforcement.md).
