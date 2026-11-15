@@ -25,6 +25,9 @@ For each run, check:
 - [ ] Tamper with a locked test via shell (`sed -i`): Review fails on the hash mismatch
 - [ ] Large: each slice runs Test, Build, Review, then a whole-branch review runs
 - [ ] `/compact` mid-task: goal, stage, decisions and next step are reinjected (a fix task also restores `kind: fix` and the root cause line)
+- [ ] Claude Code only: run `/compact` with a task active and an open question; the summary keeps the task file path, the stage and the open question, and the agent re-reads the task file afterwards
+- [ ] Standard/large: plan confirmation offers continue here, continue in a fresh context, or keep editing; small tasks and a plan reopened after Build began keep the two-answer confirmation. Picking a fresh context writes `## Notes for Done`, moves the stage to `test`, and the new session resumes from the task file
+- [ ] Large: when a slice review passes and a `[todo]` slice remains, you are asked once to continue here or in a fresh context; it is not asked after the last slice or the whole-branch review
 - [ ] Done proposes `AGENTS.md`/`docs/agents/` edits (each needs approval) and drafts a commit message, and does not commit
 - [ ] Optional: set `crossAgentReview` to `codex`; both verdicts are reported, and a missing CLI is skipped with a log note
 
@@ -51,6 +54,10 @@ Run `/loopwright-fix` once on a real bug in the scratch repo, with a description
 - [ ] Stopping midway and running `lw.mjs explore services/x` again resumes the same folder; `--new` abandons it and starts another
 - [ ] The answer pass runs before the check: answered questions appear as claims, defects under "Possible problems found", and only "Questions only the team can answer" reach the questions gate
 - [ ] With uncommitted changes, the outline gate raises the dirty tree; going on puts "plus uncommitted changes in N files" in the header
+
+### Token cost
+
+To measure what a task costs on the main thread before and after a change to the skills or hooks, run the fixed benchmark in [Benchmarking token cost](benchmarking.md).
 
 ## Codex (WIP)
 

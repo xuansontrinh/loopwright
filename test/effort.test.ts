@@ -87,11 +87,11 @@ describe('init/update write effort', () => {
 });
 
 describe('review skill headless effort', () => {
-  it('headless claude -p call passes --effort from lw.mjs effort reviewer', () => {
+  it('headless claude -p call passes --effort from lw.mjs brief', () => {
     const s = read('../content/skills/loopwright-review/SKILL.md');
     const line = s.split('\n').find((l) => l.includes('claude -p'))!;
     expect(line).toContain('--effort');
-    expect(s).toContain('output of `lw.mjs effort reviewer`');
+    expect(s).toContain('`effort` from `brief`');
     expect(s).not.toContain('crossAgentReviewer.effort');
   });
 });

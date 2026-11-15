@@ -48,8 +48,10 @@ Follow each stage skill in turn (Claude Code `/loopwright-<stage>`, Codex `$loop
 - standard (and any fix): `loopwright-plan` → `loopwright-test` → `loopwright-build` → `loopwright-review` → `loopwright-done`
 - large: `loopwright-plan` → for each slice in order: `loopwright-test` → `loopwright-build` → `loopwright-review` → then one whole-branch `loopwright-review` → `loopwright-done`
 - A fix (`kind: fix` in the task file header; set by `/loopwright-fix`, or by Plan after the user agrees to run a bug-like goal as a fix) runs `loopwright-test` at every tier: a small fix is never built without a locked repro test. Large keeps its slice loop.
-- Going back is the user's choice only: at a deviation, or an undecided review finding, run `node "{{LW_HOME}}/hooks/lw.mjs" reopen <plan|test> "<reason>"` (plan or test; accepted only after Build began) and set `stage: <plan|test>` in the task file header (for plan also `plan: draft`), then follow the stage skill it names. Locked tests may then be edited by the tester in Test and are re-locked.
+- Going back is the user's choice only: at a deviation, or an undecided review finding, run `node "{{LW_HOME}}/hooks/lw.mjs" reopen <plan|test> "<reason>"` (plan or test; accepted only after Build began; it sets the header `stage:` line, and `plan: draft` for plan; if it prints `"header": false`, set those lines by hand), then follow the stage skill it names. Locked tests may then be edited by the tester in Test and are re-locked.
 - A failed review returns to `loopwright-build` and then `loopwright-review`, up to the task's fix-round cap.
+
+A "fresh context" answer (at the plan confirmation, or at a slice boundary) ends the turn after the stage is advanced; the next session resumes from `status` and the task file, as in Resume.
 
 Exploring is not a stage of the loop: to understand an unfamiliar codebase before any task, run `loopwright-explore` (`/loopwright-explore [folder]`).
 
@@ -60,6 +62,7 @@ When a stage says to spawn the `loopwright-<role>` subagent, spawn the subagent 
 ## Gates: stop and wait for the user
 
 - each high-impact question, the "run this as a fix?" question for a bug-like goal, the low-impact batch, the tier/settings proposal, and the final plan confirmation;
+- the slice-boundary question after a large-tier slice review passes while a `[todo]` slice remains (continue here or in a fresh context);
 - tester `Uncovered`/`Needs` items and implementer `Deviations`;
 - fixes: the no-repro gate (no locked repro test: provide evidence, find the faulty unit, or stop; never continue without one) and, after the final passing review (whole-branch for large), the sibling gate (include siblings in this fix or list them as follow-ups);
 - each undecided review finding, and the fix-round cap being reached;

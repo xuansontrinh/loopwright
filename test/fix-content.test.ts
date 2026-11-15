@@ -306,9 +306,9 @@ describe('review and done skills for fixes', () => {
     expect(gate).toMatch(/recommend/i);
   });
 
-  it('review skill runs await-user after the verdict command for siblings', () => {
+  it('review skill chains await-user after the verdict command for siblings', () => {
     const l = linesWith(skill('review'), /sibling/i).join('\n');
-    expect(l).toMatch(/await-user[^\n]*after[^\n]*verdict|after the `?verdict`? command/i);
+    expect(l).toMatch(/verdict pass --round <n>`? && node [^\n]*await-user "siblings of the fixed bug"/);
   });
 
   it('review skill reopens plan when siblings are included and records follow-ups otherwise', () => {

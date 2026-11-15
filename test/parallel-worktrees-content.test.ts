@@ -38,10 +38,14 @@ describe('goal intake in flow, plan and fix', () => {
 });
 
 describe('config is read through lw.mjs config', () => {
-  for (const name of ['plan', 'review', 'done']) {
-    it(`loopwright-${name} calls lw.mjs config and does not open <lw>/config.json`, () => {
-      const body = skill(name);
-      expect(body).toContain(`${LW} config`);
+  for (const [name, command] of [
+    ['plan', 'config'],
+    ['review', 'brief reviewer'],
+    ['done', 'brief'],
+  ]) {
+    it(`loopwright-${name} calls lw.mjs ${command} and does not open <lw>/config.json`, () => {
+      const body = skill(name!);
+      expect(body).toContain(`${LW} ${command}`);
       expect(body).not.toContain('<lw>/config.json');
     });
   }

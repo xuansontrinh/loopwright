@@ -78,7 +78,7 @@ Write the result immediately: accepted → `[batch-confirmed]`, changed by the u
 
 In one message, propose and explain each in one line:
 - **tier**: `small` (one area, few files, low risk; no acceptance-test stage for features, the implementer writes tests for every AC; a fix always runs Test), `standard` (default; tests first, then build), `large` (several separable parts; split into ordered slices, each run Test → Build → Review, then one whole-branch review).
-- **profile**: `lean` (trivial or mechanical), `balanced` (default; most tasks), `thorough` (cross-module work, risky changes), `deep` (major refactors, complex redesigns). It sets subagent effort for the task; the user confirms. Written as `profile: <name>` in the header; Test, Build and Review read it via `lw.mjs effort <role>`.
+- **profile**: `lean` (trivial or mechanical), `balanced` (default; most tasks), `thorough` (cross-module work, risky changes), `deep` (major refactors, complex redesigns). It sets subagent effort for the task; the user confirms. Written as `profile: <name>` in the header; Test, Build and Review read it via `lw.mjs brief <role>`.
 - **two-pass** review on/off: on when the implementer's claims matter beyond what tests show (performance, migrations, concurrency, external APIs); otherwise off.
 - **fix-round cap**: default `maxFixRounds` from config; may be lower for small tasks.
 - **check commands**: exact lint / typecheck / test commands from the scout report.
@@ -88,7 +88,13 @@ The user confirms or edits each item; write the outcome to the header and sectio
 ## 7. Confirm
 
 Show the task file path and a short summary (tier, decisions count, ACs). Ask for explicit confirmation. Until the user confirms, keep editing the plan; never start Test or Build.
+Safe point: for tier standard or large (fixes of those tiers included) and a task that was not reopened, the confirmation offers three answers: confirm and continue here; confirm and continue in a fresh context; keep editing. The small tier and a reopened task (Build has begun, so findings and the implementer report live in this conversation) keep the two answers confirm and keep editing, with no fresh-context offer. Give the reason in one sentence, stated as a tradeoff: later turns re-read the whole conversation, so a fresh context saves tokens when much of the task remains (a large task, a long plan conversation), but the new session rewrites the cache, which can cost more than it saves on a short task; nothing is lost either way because the task file holds the plan.
 On explicit confirmation, set the header line to `plan: confirmed` (Test and Build refuse to run without it). Then, unless the task was reopened (keep its base commit so the review scope stays whole), if `git rev-parse HEAD` differs from the recorded base commit, rerun `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md --force` and update the header. Then the next stage is `/loopwright-test` (standard, large, and every fix) or `/loopwright-build` (small feature); under `/loopwright-flow`, return to the flow.
+On "confirm and continue in a fresh context", after the `plan: confirmed` step and the base-commit rerun above, in this order:
+1. Append `## Notes for Done` to the task file (add to it if it exists): up to five lines of things learned so far that Done may propose for `AGENTS.md`.
+2. Re-read the task file and write any decision made in this conversation that it is missing.
+3. Run `node "{{LW_HOME}}/hooks/lw.mjs" stage test` (it updates the header), so the next session resumes at Test and not at this confirmation.
+4. Tell the user what to type, by tool: Claude Code "`/clear`, then `/loopwright-flow`" (`/compact` also works and keeps a summary); Codex and Junie: start a new session and run the flow. End the turn. If the user's next message arrives in the same session, continue with `/loopwright-test` as usual.
 
 ## Fix tasks
 
