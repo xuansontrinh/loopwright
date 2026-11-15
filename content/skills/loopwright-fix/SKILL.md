@@ -33,7 +33,7 @@ First step, before any question or message: if `node "{{LW_HOME}}/hooks/lw.mjs" 
 ## Steps
 
 1. Input: a bug description, issue text, or a path to a log or report. None given → ask the user for one.
-2. Follow `loopwright-plan` with `kind: fix` (`/loopwright-plan` in Claude Code, `$loopwright-plan` in Codex). The plan skill's fix rules apply: the scout reads the report first, the user is asked once for missing evidence, and the root-cause hypothesis is confirmed with the user.
+2. Follow `loopwright-plan` with `kind: fix` (`/loopwright-plan` in Claude Code, `$loopwright-plan` in Codex). The plan skill's fix rules apply: the goal is restated and confirmed first, then the scout reads the report, the user is asked once for missing evidence, and the root-cause hypothesis is confirmed with the user.
 3. Continue as `/loopwright-flow` does: Test runs at every tier, then Build, Review and Done. `/loopwright-flow` resumes a fix task like any other.
 
 ## Rules

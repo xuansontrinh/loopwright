@@ -14,6 +14,7 @@ Run one sample task per tier with `/loopwright-flow`.
 
 For each run, check:
 
+- [ ] Plan restates the goal in its own words and waits for you to confirm or correct it before the scout runs
 - [ ] Plan lists assumptions, tagged high or low impact
 - [ ] High-impact questions are asked one at a time (structured, via `AskUserQuestion`); low-impact ones arrive in one batch
 - [ ] The task file in `.loopwright/tasks/` is updated immediately after each answer

@@ -35,6 +35,7 @@ Give the same answer at the same gate in both runs.
 
 | Gate | Answer |
 |---|---|
+| Goal restatement | Confirm as written |
 | Each high-impact question | The option marked recommended |
 | Low-impact batch | `ok` |
 | Tier and settings proposal | Tier `standard`, profile `balanced`, two-pass off, defaults for the rest |
