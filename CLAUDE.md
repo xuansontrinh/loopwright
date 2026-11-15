@@ -67,4 +67,5 @@ Releases: `main` is PR-only. Release = merged PR bumping `package.json` `version
 - `AGENTS.md` is a symlink to `CLAUDE.md`: edit `CLAUDE.md` only. `sed -i` or bulk replace on `AGENTS.md` turns the link into a regular file; exclude it or use `--follow-symlinks`.
 - `npm run format:check` covers `test/`: run `npm run format` before `lw.mjs lock`, or a later format rewrites locked tests and breaks their hashes.
 - On Windows git prints `C:/a/b` and Node uses `C:\a\b`: wrap git output in `path.resolve` before comparing or storing it. Temp dirs use 8.3 short names (`RUNNER~1`) while git returns long ones: resolve both sides of a path comparison with `realpathSync.native`.
+- Test temp dirs: a vitest global setup gives each run one temp root (`TMPDIR`/`TEMP`/`TMP` point at it) and removes it when the run ends, also after failures; a later run removes the roots of killed runs. Create temp dirs under `os.tmpdir()`, never a fixed `/tmp` path: a dir made anywhere else is never cleaned up.
 - After `npm install --ignore-scripts`, `tsc` may be unlinked: run `npm rebuild typescript`.
