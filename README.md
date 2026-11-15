@@ -58,7 +58,7 @@ flowchart TD
     done --> commit(["You commit"])
 ```
 
-- **Plan** runs in your session. A read-only scout maps the repo, then you answer the high-impact questions one at a time and confirm the plan. Nothing is built before that.
+- **Plan** runs in your session. Plan first restates your goal for you to confirm or correct. A read-only scout then maps the repo, then you answer the high-impact questions one at a time and confirm the plan. Nothing is built before that.
 - **Test** (standard, large, and every fix): a tester subagent, which never sees the implementation, writes acceptance tests from your confirmed criteria and locks them.
 - **Build**: an implementer subagent makes the locked tests pass. Small feature tasks skip Test, so the implementer writes the tests; a fix never skips it.
 - **Review**: a reviewer that starts blind runs your checks, confirms the locked tests are untouched, and reports only proven, high-impact findings. Blocking findings send the task back to Build, up to 3 rounds by default; findings it cannot confirm come to you to fix or dismiss.

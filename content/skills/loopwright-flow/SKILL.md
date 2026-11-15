@@ -61,7 +61,7 @@ When a stage says to spawn the `loopwright-<role>` subagent, spawn the subagent 
 
 ## Gates: stop and wait for the user
 
-- each high-impact question, the "run this as a fix?" question for a bug-like goal, the low-impact batch, the tier/settings proposal, and the final plan confirmation;
+- the goal restatement before the scout, each high-impact question, the "run this as a fix?" question for a bug-like goal, the low-impact batch, the tier/settings proposal, and the final plan confirmation;
 - the slice-boundary question after a large-tier slice review passes while a `[todo]` slice remains (continue here or in a fresh context);
 - tester `Uncovered`/`Needs` items and implementer `Deviations`;
 - fixes: the no-repro gate (no locked repro test: provide evidence, find the faulty unit, or stop; never continue without one) and, after the final passing review (whole-branch for large), the sibling gate (include siblings in this fix or list them as follow-ups);

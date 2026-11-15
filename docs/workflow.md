@@ -28,7 +28,7 @@ flowchart TD
 
 `/loopwright-fix` runs the same stages with `kind: fix` in the task file. The differences:
 
-- **Plan**: the scout reads your bug report, log or issue first. You are asked once for missing evidence (error text, steps, expected behavior) and confirm a root-cause hypothesis.
+- **Plan**: your goal is restated and you confirm it, then the scout reads your bug report, log or issue. You are asked once for missing evidence (error text, steps, expected behavior) and confirm a root-cause hypothesis.
 - **Test never skips**, at any tier. The tester writes a `[repro]` test for the correct behavior and locks it only after it fails for the reported reason, not for an unrelated one. A `[regression]` test covers behavior that must keep working and passes already.
 - **No repro stops the task.** If the tester cannot reproduce the bug, you choose: add evidence, say which unit is at fault (a new `[repro]` criterion is recorded), or stop. There is no option to continue without a locked repro test; stopping marks the task `stopped`.
 - **Build** names the root cause first and fixes it; suppressing the symptom (catching the error, special-casing the input) is not a fix.
@@ -80,7 +80,8 @@ Plan runs in your main thread. Nothing is built until you confirm.
 
 ```mermaid
 flowchart TD
-    in(["Goal, or an imported spec"]) --> scout["Scout subagent<br/>read-only repo map: files, conventions, checks, risks"]
+    in(["Goal, or an imported spec"]) --> restate{{"Goal restatement<br/>you confirm or correct it<br/>(skipped for an imported spec)"}}
+    restate --> scout["Scout subagent<br/>read-only repo map: files, conventions, checks, risks"]
     scout --> ledger["Assumption ledger<br/>every assumption tagged high or low impact,<br/>task file created with plan: draft"]
     ledger --> hi{{"Each high-impact assumption<br/>asked one at a time"}}
     hi -- "answer written to task file" --> more{"More high-impact<br/>items?"}
@@ -134,7 +135,7 @@ If you choose a fresh context, loopwright first writes up to five lines of what 
 
 ## Where loopwright stops and waits for you
 
-- Each high-impact question, the low-impact batch, the tier and settings proposal, and the final plan confirmation.
+- The goal restatement before the scout, each high-impact question, the low-impact batch, the tier and settings proposal, and the final plan confirmation.
 - Tester `Uncovered` or `Needs` items, and implementer `Deviations`.
 - Each undecided review finding, and the fix-round cap being reached.
 - On a large task, the slice boundary question after a slice review passes while another slice remains.

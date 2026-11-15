@@ -38,18 +38,19 @@ First step, before any question or message: if `node "{{LW_HOME}}/hooks/lw.mjs" 
 
 ## Parked stubs
 
-Invoked without a goal (and no active task) → run `grep -l "^status: proposed" <lw>/tasks/*.md` and list the stubs `/loopwright-park` left, one line each (title, `kind`, `found while`, `blocks`). Offer: start one, drop one, or a new task. Drop → set `status: dropped` in the stub; never delete it. Start → treat the stub as an imported spec: run `start tasks/<stub>.md`, and fill that same file in place (status `active`, the Plan template's header lines and sections) instead of creating a second file. Keep its `kind`, `found while` and `blocks` lines. Its `## Goal` is confirmed with the batch; its `## Evidence` is a lead for the scout, not a verified fact.
+Invoked without a goal (and no active task) → run `grep -l "^status: proposed" <lw>/tasks/*.md` and list the stubs `/loopwright-park` left, one line each (title, `kind`, `found while`, `blocks`). Offer: start one, drop one, or a new task. Drop → set `status: dropped` in the stub; never delete it. Start → treat the stub as an imported spec: run `start tasks/<stub>.md`, and fill that same file in place (status `active`, the Plan template's header lines and sections) instead of creating a second file. Keep its `kind`, `found while` and `blocks` lines. Unlike an imported spec, its goal is confirmed before the scout (section 1); its `## Evidence` is a lead for the scout, not a verified fact.
 
 ## 1. Input
 
 - A goal in the user's words, or a path to an imported spec/plan (e.g. from superpowers).
+- Restate the goal first, on every task with a typed goal, a bug report or a parked stub's goal, before the scout runs. Say in your own plain words what the user wants and what will change, and ask it as one question in the format of section 4: the user must confirm or correct it before you go on. A goal with more than one reading lists the readings as options in the same question. Never skip it because the goal looks clear or obvious. A bug is restated in one sentence, observed and expected; its evidence intake stays after the scout. An imported spec and a reopened plan skip the restatement. The confirmed restatement becomes the task file's `## Goal` paragraph and is recorded as an `[asked]` decision once the task file exists. No `await-user` here: no task state exists yet.
 - Called from `/loopwright-fix` → `kind: fix`; read "Fix tasks" below. Otherwise `kind: feature`.
-- A goal that looks like a bug, without `/loopwright-fix` → never switch silently. Ask one question first (format of section 4), recommendation first: "Run this as a fix (repro test first)?" Yes → `kind: fix`; no → `kind: feature`. Record the answer as a decision once the task file exists.
+- A goal that looks like a bug, without `/loopwright-fix` → never switch silently. After the restatement, ask one question (format of section 4), recommendation first: "Run this as a fix (repro test first)?" Yes → `kind: fix`; no → `kind: feature`. Record the answer as a decision once the task file exists.
 - Imported spec: read it fully. Do not interview from scratch; run the assumption pass over it. What the spec states explicitly becomes a decision tagged `batch-confirmed` once the user confirms the batch; what it leaves implicit goes in the ledger.
 
 ## 2. Scout
 
-Before writing any assumption, spawn the `loopwright-scout` subagent and wait for its result. Give it only the goal text or the spec path (a fix: the bug report text, and "Fix tasks: report the fix inputs"). On Claude Code pass `effort` = the output of `node "{{LW_HOME}}/hooks/lw.mjs" effort scout` on the spawn; if the spawn rejects `effort`, fall back to spawning without it (the agent file's effort applies).
+Only after the restatement is confirmed, and before writing any assumption, spawn the `loopwright-scout` subagent and wait for its result. Give it the goal text plus the confirmed restatement, or the spec path (a fix: the bug report text, and "Fix tasks: report the fix inputs"). On Claude Code pass `effort` = the output of `node "{{LW_HOME}}/hooks/lw.mjs" effort scout` on the spawn; if the spawn rejects `effort`, fall back to spawning without it (the agent file's effort applies).
 Never ask the user a question the repo can answer. If the scout report leaves a repo fact open, look it up yourself or spawn the `loopwright-scout` subagent and wait for its result again with that one question.
 
 ## 3. Assumption ledger
