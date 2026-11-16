@@ -9,18 +9,19 @@ The tester writes acceptance tests from the confirmed ACs and locks them. This t
 ## Setup
 
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
-2. `node "{{LW_HOME}}/hooks/lw.mjs" brief tester` → `dir` (`<lw>`), `task` (path relative to `<lw>`), `stage`, `lockedTests`, `reopened`, `effort`. `dir` `null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/` with the first task, so continue and `task: null` reports "no active task". Not a git repo → tell the user loopwright must run inside a git repo, stop.
+2. `node "{{LW_HOME}}/hooks/lw.mjs" brief tester` → `dir` (`<lw>`), `task` (path relative to `<lw>`), `stage`, `lockedTests`, `reopened`, `pulledLocks`, `effort`. `dir` `null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/` with the first task, so continue and `task: null` reports "no active task". Not a git repo → tell the user loopwright must run inside a git repo, stop.
 3. `task: null` → "no active task": stop and point the user to `/loopwright-plan` or `/loopwright-flow`.
 4. Read the task file header.
    - `tier: small` and `kind` feature (or no `kind`) → there is no Test stage; say so and go to `/loopwright-build`. `kind: fix` at tier small → Test runs: a fix is never built without a locked repro test.
    - Header not `plan: confirmed` (or no ACs, or ACs without an interface) → stop; point the user to `/loopwright-plan`.
+   - `pulledLocks` present (a pull the user approved changed locked tests) → the scope is the files in `pulledLocks`, not the ACs below: the tester checks each listed file still tests its acceptance criteria, edits only what the pull broke, and re-locks it; every other locked test stays untouched.
    - Reopened task (`reopened` is not `null`; its `reason` says why) → the scope is the ACs the reason and the task file's added or changed ACs name, in whichever slices hold them (a `[tested]` or `[passed]` slice included), not the first `[todo]` slice. Existing locked tests for those ACs may be edited and re-locked.
    - `tier: large`, not reopened → the current slice is the first `S<n> [todo]` line; test only its ACs.
 
 ## Steps
 
 1. `node "{{LW_HOME}}/hooks/lw.mjs" stage test` (it updates the task file header `stage:` line; if it prints `"header": false`, set that line by hand).
-2. Now spawn the `loopwright-tester` subagent and wait for its result. Give it only the absolute task file path (`<lw>/<task>`) and, for large tier, "Write tests only for slice S<n>: AC…". Reopened: "Reopened task: the reason is … Write or edit tests only for AC…; existing locked tests for them may be edited and re-locked." No chat history, no implementation hints. On Claude Code pass `effort` = the `effort` from `brief` on the spawn; if `brief` has no `effort` (it warns on stderr) or the spawn rejects `effort`, spawn without it (the agent file's effort applies).
+2. Now spawn the `loopwright-tester` subagent and wait for its result. Give it only the absolute task file path (`<lw>/<task>`) and, for large tier, "Write tests only for slice S<n>: AC…". `pulledLocks`: "A pull changed these locked tests: <paths>. Check each still tests its acceptance criteria, edit only what the pull broke, and re-lock them; leave every other locked test untouched." Reopened: "Reopened task: the reason is … Write or edit tests only for AC…; existing locked tests for them may be edited and re-locked." No chat history, no implementation hints. On Claude Code pass `effort` = the `effort` from `brief` on the spawn; if `brief` has no `effort` (it warns on stderr) or the spawn rejects `effort`, spawn without it (the agent file's effort applies).
    Fix tasks: also say the task is a fix whose `## Bug report` it must read, and name any existing test the scout or the user found already failing with the reported symptom.
 3. Verify the report:
    - `node "{{LW_HOME}}/hooks/lw.mjs" brief tester` → `lockedTests` must contain every test file and fixture the report lists. A reported file missing from the locks → run `node "{{LW_HOME}}/hooks/lw.mjs" lock <file>` yourself.
@@ -33,11 +34,11 @@ The tester writes acceptance tests from the confirmed ACs and locks them. This t
      - (c) Stop the task: set `status: stopped` in the task file header and run `node "{{LW_HOME}}/hooks/lw.mjs" done` (the task file stays).
      If (a) and (b) both fail, the task stops the same way, with what was tried recorded in the task file and an honest next step for the user (for example a normal `/loopwright-flow` task to add logging around the suspected code). No repro, no fix: there is no option to continue without a repro, and Build never starts.
    - `Uncovered` or `Needs` not empty → show those items to the user, one at a time. The answer may change an AC or a decision: write it to the task file (`[asked]`), then dispatch the tester again.
-4. Write the test file next to each AC line (`— test: <file>`). Large tier: change the slice (reopened: every slice in scope) to `S<n> [tested]`.
+4. Write the test file next to each AC line (`— test: <file>`). `pulledLocks`: leave the slice markers alone. Large tier otherwise: change the slice (reopened: every slice in scope) to `S<n> [tested]`.
 5. Tell the user in a few lines: test files, ACs covered, locked paths. Then the next stage is `/loopwright-build`.
 
 ## Rules
 
 - Never write task ids (AC, D, S shorthands) into tests, code, comments, commit messages or PR drafts.
-- Lock only in this stage, and only the tests for this stage's scope (the task, or the current slice). Never re-lock an existing locked test, except after a reopen (the user chose to go back), where the tester may edit and re-lock the tests in the reopened scope, or when this stage's verification re-dispatches the tester before Build. Outside a reopen, if one is wrong, tell the user and let them decide.
+- Lock only in this stage, and only the tests for this stage's scope (the task, or the current slice). Never re-lock an existing locked test, except after a reopen (the user chose to go back), where the tester may edit and re-lock the tests in the reopened scope, or after a pull the user approved, where it may re-lock the files in `pulledLocks` and no others, or when this stage's verification re-dispatches the tester before Build. Outside a reopen, if one is wrong, tell the user and let them decide.
 - Do not read the implementation to judge the tests; the ACs are the contract.

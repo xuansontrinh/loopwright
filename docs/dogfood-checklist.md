@@ -29,6 +29,7 @@ For each run, check:
 - [ ] Claude Code only: run `/compact` with a task active and an open question; the summary keeps the task file path, the stage and the open question, and the agent re-reads the task file afterwards
 - [ ] Standard/large: plan confirmation offers continue here, continue in a fresh context, or keep editing; small tasks and a plan reopened after Build began keep the two-answer confirmation. Picking a fresh context writes `## Notes for Done`, moves the stage to `test`, and the new session resumes from the task file
 - [ ] Large: when a slice review passes and a `[todo]` slice remains, you are asked once to continue here or in a fresh context; it is not asked after the last slice or the whole-branch review
+- [ ] Moved branch: pull upstream commits by hand mid-task; Build and Review list the new commits and ask once whether they are pulled (left out of the review) or this task's own; the same HEAD is not asked again
 - [ ] Done proposes `AGENTS.md`/`docs/agents/` edits (each needs approval) and drafts a commit message, and does not commit
 - [ ] Optional: set `crossAgentReview` to `codex`; both verdicts are reported, and a missing CLI is skipped with a log note
 

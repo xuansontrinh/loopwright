@@ -7,7 +7,7 @@ const lineWith = (body: string, needle: RegExp) => body.split('\n').find((l) => 
 
 describe('going back keeps the task file header in step', () => {
   it.each(['flow', 'build', 'review'])('loopwright-%s leaves the header stage and plan: draft to reopen', (name) => {
-    const line = lineWith(read(`skills/loopwright-${name}/SKILL.md`), /lw\.mjs" reopen/);
+    const line = lineWith(read(`skills/loopwright-${name}/SKILL.md`), /lw\.mjs" reopen <plan/);
     expect(line).toContain('sets the header `stage:`');
     expect(line).toContain('`plan: draft`');
     expect(line).toContain('"header": false');

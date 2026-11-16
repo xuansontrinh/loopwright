@@ -124,6 +124,8 @@ flowchart TD
 
 A verdict goes stale when the code changes afterwards, so Done re-checks the fingerprint and sends you back to Review if it differs.
 
+When an approved pull changes a locked test, loopwright sends the task back to Test for those files only. The tester checks that each still tests its acceptance criteria, edits only what the pull broke, and re-locks it. The re-lock is accepted under your pull decision, so Review does not report it.
+
 ## Taking a fresh context at a safe point
 
 Every turn re-reads the whole conversation, so a long task gets more expensive with each turn. A fresh context stops that growth, but the new session has to write its cache again. It saves tokens when much of the task remains (a large task, a long plan conversation) and can cost more than it saves on a short task, so take it only when a lot of work is left. A safe point is a place where the next stage needs nothing from the conversation, because the task file holds the plan and the state. loopwright offers a fresh context at two of them, and it is always your choice:
@@ -140,6 +142,7 @@ If you choose a fresh context, loopwright first writes up to five lines of what 
 - Each undecided review finding, and the fix-round cap being reached.
 - On a large task, the slice boundary question after a slice review passes while another slice remains.
 - New upstream commits found before Plan and Build (Build asks only when they touch the task's files or feature).
+- A moved branch: at the start of Build and Review, new commits since the task's base commit that are already on the upstream branch (once per HEAD): whether they are pulled commits, left out of the review, or this task's own.
 - Each `AGENTS.md` or docs change, and the commit message and PR draft.
 
 It never answers a gate itself, never treats silence as approval, and never commits.

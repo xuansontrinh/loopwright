@@ -54,6 +54,7 @@ describe('lw.mjs', () => {
       lockedAfterBuild: [],
       relockedAfterReopen: [],
       forcedRestartAfterBuild: false,
+      accepted: [],
     });
     writeFileSync(join(repo, 'test/t.test.ts'), 'y');
     const bad = runLw(repo, ['check-locks']);
@@ -65,6 +66,7 @@ describe('lw.mjs', () => {
       lockedAfterBuild: [],
       relockedAfterReopen: [],
       forcedRestartAfterBuild: false,
+      accepted: [],
     });
   });
 
@@ -206,6 +208,7 @@ describe('lw.mjs', () => {
       lockedAfterBuild: [],
       relockedAfterReopen: [],
       forcedRestartAfterBuild: false,
+      accepted: [],
     });
   });
 

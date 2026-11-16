@@ -64,6 +64,7 @@ When a stage says to spawn the `loopwright-<role>` subagent, spawn the subagent 
 - the goal restatement and the effort profile (one prompt) before the scout, each high-impact question, the "run this as a fix?" question for a bug-like goal, the low-impact batch, the tier/settings proposal, and the final plan confirmation;
 - the slice-boundary question after a large-tier slice review passes while a `[todo]` slice remains (continue here or in a fresh context);
 - tester `Uncovered`/`Needs` items and implementer `Deviations`;
+- the moved-branch question at the start of Build and Review, when the branch has new commits that are already on the upstream branch (pulled commits, or this task's own);
 - fixes: the no-repro gate (no locked repro test: provide evidence, find the faulty unit, or stop; never continue without one) and, after the final passing review (whole-branch for large), the sibling gate (include siblings in this fix or list them as follow-ups);
 - each undecided review finding, and the fix-round cap being reached;
 - each AGENTS.md / docs change, and the commit message and PR draft.

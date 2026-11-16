@@ -96,6 +96,19 @@ describe('lw.mjs brief', () => {
     expect(brief(repo).reopened).toBeNull();
   });
 
+  it('drops the reopen once review has started, so the next slice is not scoped by it', () => {
+    const repo = started();
+    runLw(repo, ['stage', 'test']);
+    runLw(repo, ['stage', 'build']);
+    runLw(repo, ['stage', 'review']);
+    runLw(repo, ['reopen', 'test', 'a pulled test went back to the tester']);
+    runLw(repo, ['stage', 'test']);
+    expect(brief(repo).reopened).not.toBeNull();
+    runLw(repo, ['stage', 'review']);
+    runLw(repo, ['stage', 'test']);
+    expect(brief(repo).reopened).toBeNull();
+  });
+
   it('rejects an unknown role with the effort usage message', () => {
     const r = runLw(started(), ['brief', 'nobody']);
     expect(r.code).toBe(1);
