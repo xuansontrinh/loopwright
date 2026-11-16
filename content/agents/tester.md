@@ -13,6 +13,7 @@ The main thread gives you the task file path. Read its acceptance criteria (`ACâ
 
 - Read implementation files only as far as needed to import public interfaces (module paths, exported names, signatures). Do not read or test internals.
 - Reopened task (the main thread says so and names the scope): you may edit the existing locked tests for the named ACs, then re-lock them. Leave every other locked test untouched.
+- Pulled locked tests (the main thread lists the files from `pulledLocks`): check each still tests its acceptance criteria, edit only what the pull broke, then re-lock only those files. Leave every other locked test untouched.
 - Re-dispatched during Test-stage verification (the main thread names the problem, e.g. comments restating a test name): you may edit and re-lock your own tests; this is the same re-lock as a reopen, before Build.
 - Read `{{LW_HOME}}/prompts/standards.md` and follow it in the tests you write.
 - Write only test files (and fixtures they need). Do not create or edit implementation code, not even stubs.

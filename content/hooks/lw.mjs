@@ -218,6 +218,166 @@ const refExists = (ref) => {
   }
 };
 
+/**
+ * Re-locks and restarts that the history flags for the user's attention, and the ones an `accept-locks` took out.
+ * Re-locking an existing lock after a build could launder an implementer's edit; first-time locks in later slices are legitimate.
+ * A reopen covers re-locks until the next Build starts, but only when the history reads
+ * await-user, resume, reopen with nothing between (the pair the skills run around the user's answer
+ * to going back); any other reopen is ignored. A faked triple is not detected.
+ * An acceptance covers only what was flagged when it ran: a later re-lock or forced restart flags again.
+ */
+function lockFlags(history = []) {
+  const lockedAfterBuild = [];
+  const relockedAfterReopen = [];
+  const accepted = [];
+  const seen = new Map();
+  let reopenReason = null;
+  let prev = null;
+  let prev2 = null;
+  let built = false;
+  let forcedRestartAfterBuild = false;
+  const unaccept = (match) => {
+    const i = accepted.findIndex(match);
+    if (i !== -1) accepted.splice(i, 1);
+  };
+  for (const e of history) {
+    const sanctioned = prev2 === 'await-user' && prev === 'resume';
+    prev2 = prev;
+    prev = e.event;
+    if (e.event === 'stage' && e.detail === 'build') {
+      for (const p of seen.keys()) seen.set(p, true);
+      reopenReason = null;
+      built = true;
+    }
+    if (e.event === 'reopen' && sanctioned) reopenReason = e.reason ?? '';
+    if (built && e.event === 'start' && e.detail === '--force') {
+      forcedRestartAfterBuild = true;
+      unaccept((a) => a.restart);
+    }
+    if (e.event === 'accept-locks') {
+      if (e.detail === '--restart') {
+        forcedRestartAfterBuild = false;
+        accepted.push({ restart: true, reason: e.reason });
+      } else {
+        const i = lockedAfterBuild.indexOf(e.detail);
+        if (i !== -1) lockedAfterBuild.splice(i, 1);
+        accepted.push({ path: e.detail, reason: e.reason });
+      }
+    }
+    if (e.event !== 'lock') continue;
+    if (seen.get(e.detail) === true) {
+      if (reopenReason !== null) {
+        if (!relockedAfterReopen.some((r) => r.path === e.detail))
+          relockedAfterReopen.push({ path: e.detail, reason: reopenReason });
+      } else {
+        unaccept((a) => a.path === e.detail);
+        if (!lockedAfterBuild.includes(e.detail)) lockedAfterBuild.push(e.detail);
+      }
+    }
+    seen.set(e.detail, false);
+  }
+  return { lockedAfterBuild, relockedAfterReopen, forcedRestartAfterBuild, accepted };
+}
+
+const isAncestor = (a, b) => {
+  try {
+    gitOut(['merge-base', '--is-ancestor', a, b]);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Locked tests out of step with their lock that the pulled commits from..to touched: the ones on the upstream
+ * branch, never the task's local-only commits. A repo without an upstream branch counts every commit.
+ */
+function pulledLockedTests(state, from, to) {
+  const top = gitTopLevel(cwd);
+  const stale = (state.lockedTests ?? []).filter((l) => {
+    const abs = resolve(top, l.path);
+    return existsSync(abs) && sha256File(abs) !== l.sha256;
+  });
+  if (!stale.length) return undefined;
+  try {
+    // Lock paths are lower-cased on win32 (repoRelative), git prints the tracked case.
+    const fold = (p) => (process.platform === 'win32' ? p.toLowerCase() : p);
+    const lines = (args) => gitOut(args).split('\n').filter(Boolean);
+    const upstream = ['@{u}', 'origin/HEAD'].find(refExists);
+    let commits = lines(['rev-list', `${from}..${to}`]);
+    if (upstream) {
+      const onUpstream = new Set(lines(['rev-list', `${from}..${upstream}`]));
+      commits = commits.filter((c) => onUpstream.has(c));
+    }
+    const names = (args) =>
+      gitOut(['-c', 'core.quotePath=false', ...args])
+        .split('\0')
+        .filter(Boolean)
+        .map(fold);
+    // `--cc` lists a merge commit's own edits (conflict resolutions) only, never what its second parent brings in:
+    // the commits that merge brought are listed on their own. `-m` would list every file the mainline changed since
+    // the merged branch forked, from before the base too. A file the pulled commits changed and then reverted is
+    // dropped by the net diff from..to.
+    const touched = new Set(
+      commits.length ? names(['log', '--cc', '--no-walk', '--name-only', '--format=', '-z', ...commits]) : [],
+    );
+    const net = new Set(names(['diff', '--name-only', '-z', from, to]));
+    return stale.filter((l) => touched.has(fold(l.path)) && net.has(fold(l.path))).map((l) => l.path);
+  } catch (err) {
+    process.stderr.write(`loopwright: cannot diff the previous base (${err.message.split('\n')[0]}); no pulledLocks\n`);
+    return undefined;
+  }
+}
+
+/** The answered HEAD when it sits on the way from the base to `to`: those commits stay in the review. */
+const keptHead = (state, to) =>
+  state.answeredHead && isAncestor(state.baseCommit, state.answeredHead) && isAncestor(state.answeredHead, to)
+    ? state.answeredHead
+    : undefined;
+
+/**
+ * HEAD past the base with at least one commit already on the upstream branch (else origin/HEAD), and not yet
+ * answered. Once answered, only the commits made since that answer are checked, and `keptEarlier` says the
+ * answered commits stay in the review. `localOnly` lists the short shas of the commits that exist only locally
+ * (the task's own work, so the branch holds both kinds); a merge commit holds no work of its own and never counts.
+ */
+function movedHead(state) {
+  try {
+    const to = gitOut(['rev-parse', 'HEAD']);
+    if (to === state.baseCommit || to === state.answeredHead) return undefined;
+    const upstream = ['@{u}', 'origin/HEAD'].find(refExists);
+    if (!upstream) return undefined;
+    const kept = keptHead(state, to);
+    const keptEarlier = Boolean(kept);
+    const range = `${kept ?? state.baseCommit}..`;
+    const lines = (args) => gitOut(args).split('\n').filter(Boolean);
+    const onUpstream = new Set(lines(['rev-list', `${range}${upstream}`]));
+    const commits = lines(['log', '--format=%H %s', `${range}HEAD`]);
+    if (!commits.some((c) => onUpstream.has(c.split(' ')[0]))) return undefined;
+    const localOnly = lines(['rev-list', '--no-merges', `${range}HEAD`])
+      .filter((c) => !onUpstream.has(c))
+      .map((c) => c.slice(0, 7));
+    return {
+      from: state.baseCommit,
+      to,
+      commits,
+      ...(keptEarlier && { keptEarlier }),
+      ...(localOnly.length && { localOnly }),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** How many commits the task already has since its base, so a later pull is known to sit on top of them. */
+function ownCommits(state) {
+  try {
+    return Number(gitOut(['rev-list', '--count', `${state.baseCommit}..HEAD`])) || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 const [cmd, ...rest] = process.argv.slice(2);
 try {
   switch (cmd) {
@@ -239,11 +399,23 @@ try {
       const { dir, id } = ctx(true);
       const prior = readState(dir, id);
       if (!force && prior) fail('loopwright: task already active (run lw.mjs done first, or start --force)');
+      const baseCommit = gitOut(['rev-parse', base]);
+      const baseMoved = prior?.baseCommit !== baseCommit;
+      // Locked tests out of step with their lock now that the base moves, that the commits it moves over touched:
+      // the pull's files, fixed here so a later edit of a test that matched its lock is never taken for a pull.
+      const pulledSnapshot = baseMoved
+        ? prior?.baseCommit && pulledLockedTests(prior, prior.baseCommit, baseCommit)
+        : prior?.pulledSnapshot;
       const state = {
         version: 1,
         task,
         stage: 'plan',
-        baseCommit: gitOut(['rev-parse', base]),
+        baseCommit,
+        // The locked tests a pull changed, and where in the history the base moved, so a re-lock after it counts
+        // as handled; both kept across restarts that leave the base alone.
+        pulledSnapshot: pulledSnapshot?.length ? pulledSnapshot : undefined,
+        baseMovedAt: baseMoved ? (prior?.history?.length ?? 0) : prior.baseMovedAt,
+        answeredHead: prior?.answeredHead,
         worktree: gitTopLevel(cwd),
         branch: gitOut(['rev-parse', '--abbrev-ref', 'HEAD']),
         // A forced restart keeps the audit trail and the lock records, so a locked test edited
@@ -322,42 +494,50 @@ try {
         else if (sha256File(abs) !== l.sha256) changed.push(l.path);
       }
       const ok = changed.length === 0 && missing.length === 0;
-      // Re-locking an existing lock after a build could launder an implementer's edit; first-time locks in later slices are legitimate.
-      // A reopen covers re-locks until the next Build starts, but only when the history reads
-      // await-user, resume, reopen with nothing between (the pair the skills run around the user's answer
-      // to going back); any other reopen is ignored. A faked triple is not detected.
-      const lockedAfterBuild = [];
-      const relockedAfterReopen = [];
-      const seen = new Map();
-      let reopenReason = null;
-      let prev = null;
-      let prev2 = null;
-      for (const e of state.history ?? []) {
-        const sanctioned = prev2 === 'await-user' && prev === 'resume';
-        prev2 = prev;
-        prev = e.event;
-        if (e.event === 'stage' && e.detail === 'build') {
-          for (const p of seen.keys()) seen.set(p, true);
-          reopenReason = null;
-        }
-        if (e.event === 'reopen' && sanctioned) reopenReason = e.reason ?? '';
-        if (e.event !== 'lock') continue;
-        if (seen.get(e.detail) === true) {
-          if (reopenReason !== null) {
-            if (!relockedAfterReopen.some((r) => r.path === e.detail))
-              relockedAfterReopen.push({ path: e.detail, reason: reopenReason });
-          } else if (!lockedAfterBuild.includes(e.detail)) lockedAfterBuild.push(e.detail);
-        }
-        seen.set(e.detail, false);
-      }
-      let built = false;
-      let forcedRestartAfterBuild = false;
-      for (const e of state.history ?? []) {
-        if (e.event === 'stage' && e.detail === 'build') built = true;
-        if (built && e.event === 'start' && e.detail === '--force') forcedRestartAfterBuild = true;
-      }
-      out({ ok, changed, missing, lockedAfterBuild, relockedAfterReopen, forcedRestartAfterBuild });
+      const { lockedAfterBuild, relockedAfterReopen, forcedRestartAfterBuild, accepted } = lockFlags(state.history);
+      out({ ok, changed, missing, lockedAfterBuild, relockedAfterReopen, forcedRestartAfterBuild, accepted });
       process.exit(ok ? 0 : 1);
+      break;
+    }
+    case 'accept-locks': {
+      // Takes re-locks and a forced restart that a decision covers, or that the user dismissed, out of check-locks.
+      const usage = 'loopwright: usage: accept-locks --reason "<text>" [--restart] [<path>...]';
+      const reason = flag(rest, '--reason')?.trim();
+      if (!reason) fail(`loopwright: accept-locks requires --reason <text>\n${usage}`);
+      const restart = rest.includes('--restart');
+      if (restart) rest.splice(rest.indexOf('--restart'), 1);
+      if (!restart && rest.length === 0) fail(`loopwright: accept-locks needs a path or --restart\n${usage}`);
+      const { dir, id, state } = requireState();
+      const flags = lockFlags(state.history);
+      const items = [...rest.map((p) => repoRelative(cwd, p)), ...(restart ? ['--restart'] : [])];
+      const flagged = (item) =>
+        item === '--restart' ? flags.forcedRestartAfterBuild : flags.lockedAfterBuild.includes(item);
+      const accepted = items.filter(flagged);
+      for (const item of accepted) {
+        note(state, 'accept-locks', item);
+        state.history.at(-1).reason = reason;
+      }
+      if (accepted.length) writeState(dir, id, state);
+      out({ accepted, notFlagged: items.filter((item) => !flagged(item)) });
+      break;
+    }
+    case 'keep-base': {
+      // Records the current HEAD as answered, so `brief` stops reporting headMoved until HEAD moves again.
+      // `--pulled`: some of those commits are pulled, so the locked tests they changed are recorded as after a base move.
+      const reason = flag(rest, '--reason')?.trim();
+      if (!reason) fail('loopwright: keep-base requires --reason <text>');
+      const { dir, id, state } = requireState();
+      const head = gitOut(['rev-parse', 'HEAD']);
+      if (rest.includes('--pulled')) {
+        const files = pulledLockedTests(state, keptHead(state, head) ?? state.baseCommit, head);
+        state.pulledSnapshot = files?.length ? files : undefined;
+        state.baseMovedAt = state.history.length;
+      }
+      state.answeredHead = head;
+      note(state, 'keep-base', state.answeredHead);
+      state.history.at(-1).reason = reason;
+      writeState(dir, id, state);
+      out({ answeredHead: state.answeredHead });
       break;
     }
     case 'fingerprint': {
@@ -605,8 +785,12 @@ try {
       const dir = loopwrightDir(cwd);
       const state = dir && readState(dir, worktreeId(cwd));
       const history = state?.history ?? [];
-      const lastBuild = history.findLastIndex((e) => e.event === 'stage' && e.detail === 'build');
-      const reopen = history.findLast((e, i) => e.event === 'reopen' && i > lastBuild);
+      // A reopen counts until the next Build or Review: Review sends a pulled test back to Test and goes on to
+      // pass without a Build, and that reopen must not scope the next slice's Test.
+      const lastScoped = history.findLastIndex(
+        (e) => e.event === 'stage' && (e.detail === 'build' || e.detail === 'review'),
+      );
+      const reopen = history.findLast((e, i) => e.event === 'reopen' && i > lastScoped);
       let cfg;
       try {
         cfg = readConfig();
@@ -615,6 +799,30 @@ try {
         cfg = JSON.parse(readFileSync(fileURLToPath(new URL('./default-config.json', import.meta.url)), 'utf8'));
       }
       const { maxFixRounds, crossAgentReview, docsDir, models } = cfg;
+      const flags = lockFlags(history);
+      const flaggedLocks =
+        flags.lockedAfterBuild.length || flags.forcedRestartAfterBuild
+          ? { lockedAfterBuild: flags.lockedAfterBuild, forcedRestartAfterBuild: flags.forcedRestartAfterBuild }
+          : undefined;
+      const top = state?.pulledSnapshot?.length && gitTopLevel(cwd);
+      const relocked = new Set(
+        history
+          .slice(state?.baseMovedAt ?? 0)
+          .filter((e) => e.event === 'lock')
+          .map((e) => e.detail),
+      );
+      const pulledLocks = (state?.lockedTests ?? [])
+        .filter((l) => {
+          const abs = top && resolve(top, l.path);
+          return (
+            abs &&
+            state.pulledSnapshot.includes(l.path) &&
+            !relocked.has(l.path) &&
+            existsSync(abs) &&
+            sha256File(abs) !== l.sha256
+          );
+        })
+        .map((l) => l.path);
       out({
         dir,
         task: state?.task ?? null,
@@ -623,6 +831,10 @@ try {
         lockedTests: state?.lockedTests,
         verdict: state?.verdict,
         awaitingUser: state?.awaitingUser,
+        flaggedLocks,
+        pulledLocks: pulledLocks.length ? pulledLocks : undefined,
+        headMoved: state && movedHead(state),
+        ownCommits: state ? ownCommits(state) : undefined,
         reopened: reopen ? { target: reopen.detail, reason: reopen.reason } : null,
         config: { maxFixRounds, crossAgentReview, docsDir, crossAgentReviewer: models?.crossAgentReviewer },
         effort,
@@ -780,7 +992,7 @@ try {
     }
     default:
       fail(
-        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|fingerprint|verdict|await-user|resume|park|explore|status|config|brief|tasks|adopt|worktree|carry|effort|done>',
+        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|accept-locks|keep-base|fingerprint|verdict|await-user|resume|park|explore|status|config|brief|tasks|adopt|worktree|carry|effort|done>',
       );
   }
 } catch (err) {

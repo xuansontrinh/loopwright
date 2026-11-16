@@ -6,11 +6,12 @@ State tool: `node "{{LW_HOME}}/hooks/lw.mjs" <cmd>`, run from the task's worktre
 
 ## 0. Locked tests (always first)
 
-Run `node "{{LW_HOME}}/hooks/lw.mjs" check-locks`. It prints `{ok, changed, missing, lockedAfterBuild, relockedAfterReopen, forcedRestartAfterBuild}` and exits 1 when `ok` is false.
+Run `node "{{LW_HOME}}/hooks/lw.mjs" check-locks`. It prints `{ok, changed, missing, lockedAfterBuild, relockedAfterReopen, forcedRestartAfterBuild, accepted}` and exits 1 when `ok` is false.
 - `ok` is false → one Blocking finding per path in `changed` and `missing` (expectation: locked acceptance tests are unchanged; proof: the check-locks output).
-- `lockedAfterBuild` is non-empty → one Undecided finding per path (expectation: "acceptance test re-locked after Build began; user must confirm"; proof: the check-locks output).
+- `lockedAfterBuild` is non-empty (paths not accepted) → one Undecided finding per path (expectation: "acceptance test re-locked after Build began; user must confirm"; proof: the check-locks output).
 - `relockedAfterReopen` is non-empty → information, not a finding: the user sent the task back through `lw.mjs reopen` and the tester re-locked these paths (`check-locks` counts only a reopen directly after an `await-user` and `resume` pair, so a reopen without the user's answer shows up under `lockedAfterBuild`). These re-locks are expected; do not report them.
-- `forcedRestartAfterBuild` is true → one Undecided finding (expectation: "task state was force-restarted after Build began; user must confirm locked tests"; proof: the check-locks output).
+- `accepted` is non-empty → information, not a finding: a decision in the task file or the user already accepted these re-locks (`{path, reason}`) or the forced restart (`{restart: true, reason}`). Do not report them.
+- `forcedRestartAfterBuild` is true (a restart not accepted) → one Undecided finding (expectation: "task state was force-restarted after Build began; user must confirm locked tests"; proof: the check-locks output).
 - The command errors (e.g. no active task) → one Blocking finding with the error text as proof.
 
 ## Inputs

@@ -42,6 +42,7 @@ Give the same answer at the same gate in both runs.
 | Plan confirmation | Confirm. On the second run, when a fresh context is offered, take it, then follow the instruction it prints |
 | Tester report (`Uncovered`, `Needs`) | Accept as written |
 | Implementer report (`Deviations`) | Accept as written |
+| Moved branch (new commits on the upstream branch) | Pulled, leave them out |
 | Undecided review finding | Fix it |
 | Fix-round cap reached | Stop the run and note it; do not compare it |
 | Done: `AGENTS.md` or docs proposals | Decline each |
