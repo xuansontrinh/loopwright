@@ -36,6 +36,7 @@ Second pass: only when the caller hands you the implementer's report. Verify eac
    - bugs, regressions, security vulnerabilities;
    - architecturally bad decisions;
    - non-simplified code paths (a much simpler path does the same; the finding must show the smaller version);
+   - duplicated code (proof: both locations), fixed by calling or extending one of them;
    - duplicated docs: the change states a fact that another doc, comment or contract already states (proof: both locations; the fix is to remove the new copy and link, never to delete the older home);
    - bypassed mechanism: the change branches or hardcodes what an existing mechanism (config, registry, helper) already handles (proof: the mechanism `path:line`);
    - missing tests for new behavior;
@@ -43,6 +44,7 @@ Second pass: only when the caller hands you the implementer's report. Verify eac
    - violations of the other named rules in `standards.md` (comment rule included);
    - deviations from the standards docs or established codebase patterns.
    Exclude lint/format-level nits; mechanical checks own them. Exception: a lint or format check failing on a changed file that is not locked is Blocking; failing on a locked test file is Undecided (the user decides, Build cannot touch it). A failing test assertion stays Blocking.
+   Do not report a candidate that a task decision explicitly keeps.
    A proven violation of a named rule in `standards.md` is high impact (Blocking when confidence is high). Without that proof (smaller version, both locations, mechanism `path:line`, or the hunk) it is dropped. A violation inside a locked test file stays Undecided (the user decides, Build cannot touch it).
 5. **Investigate each candidate.** Self-verify first: re-read the code, run a repro or a test. Then assign impact (high/mid/low) and confidence (high/mid/low).
 6. **Report.**

@@ -102,7 +102,10 @@ The tester, implementer and reviewer all read one shared standards file, `prompt
 
 ```mermaid
 flowchart TD
-    start(["Review round n"]) --> blind["Blind pass: reviewer sees task file and diff only.<br/>Runs checks, re-hashes locked tests"]
+    start(["Review round n"]) --> simp{"Round 1 and Simplify<br/>applies?"}
+    simp -- "yes" --> simplify["Simplify: reviewer proposes cuts,<br/>you pick, approved ones are applied"]
+    simp -- "no" --> blind
+    simplify --> blind["Blind pass: reviewer sees task file and diff only.<br/>Runs checks, re-hashes locked tests"]
     blind --> two{"two-pass on?"}
     two -- "yes" --> second["Second pass: reviewer verifies the<br/>implementer's claims"]
     two -- "no" --> cross
@@ -122,6 +125,8 @@ flowchart TD
     pass --> after(["Done, or the next slice if large"])
 ```
 
+Simplify runs once, at round 1 of the final review (the task, or the whole branch for a large task), on standard and large tasks and on every fix; small feature tasks and `"simplify": false` in the config skip it. A reviewer reads the diff and proposes behavior-preserving cuts, each with its net line change. Cuts nobody would object to come as one apply-all or skip-all question; cuts that give something up (a test case, a guard) come with what they lose, at most 8, largest first, as multi-select questions of up to 4 cuts each. Cuts in locked tests are always in that second group. Only the approved cuts are applied: the implementer applies code cuts, and the tester applies cuts to locked tests and re-locks them. Every approved and declined cut is recorded as a decision with its location and change, so Review does not report a duplicate you chose to keep. An interrupted apply (compaction, `/clear` or a crash) resumes at the apply instead of asking again. With nothing to cut, you are not asked.
+
 A verdict goes stale when the code changes afterwards, so Done re-checks the fingerprint and sends you back to Review if it differs.
 
 When an approved pull changes a locked test, loopwright sends the task back to Test for those files only. The tester checks that each still tests its acceptance criteria, edits only what the pull broke, and re-locks it. The re-lock is accepted under your pull decision, so Review does not report it.
@@ -139,6 +144,7 @@ If you choose a fresh context, loopwright first writes up to five lines of what 
 
 - The goal restatement and the effort profile before the scout, each high-impact question, the low-impact batch, the tier and settings proposal, and the final plan confirmation.
 - Tester `Uncovered` or `Needs` items, and implementer `Deviations`.
+- The Simplify question at the start of Review: which proposed cuts to apply. It is not asked when there is nothing to cut.
 - Each undecided review finding, and the fix-round cap being reached.
 - On a large task, the slice boundary question after a slice review passes while another slice remains.
 - New upstream commits found before Plan and Build (Build asks only when they touch the task's files or feature).

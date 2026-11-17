@@ -17,6 +17,7 @@ The tester writes acceptance tests from the confirmed ACs and locks them. This t
    - `pulledLocks` present (a pull the user approved changed locked tests) → the scope is the files in `pulledLocks`, not the ACs below: the tester checks each listed file still tests its acceptance criteria, edits only what the pull broke, and re-locks it; every other locked test stays untouched.
    - Reopened task (`reopened` is not `null`; its `reason` says why) → the scope is the ACs the reason and the task file's added or changed ACs name, in whichever slices hold them (a `[tested]` or `[passed]` slice included), not the first `[todo]` slice. Existing locked tests for those ACs may be edited and re-locked.
    - `tier: large`, not reopened → the current slice is the first `S<n> [todo]` line; test only its ACs.
+   - `## Review log` has a `- Simplify:` line ending in `— apply pending` (an approved Simplify apply was interrupted) → run `/loopwright-review` to finish it, and stop here: do not spawn the tester.
 
 ## Steps
 

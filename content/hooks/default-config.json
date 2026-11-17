@@ -1,6 +1,7 @@
 {
   "maxFixRounds": 3,
   "crossAgentReview": "off",
+  "simplify": true,
   "docsDir": "docs/agents",
   "models": {
     "claude": {

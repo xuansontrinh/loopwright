@@ -66,7 +66,7 @@ When a stage says to spawn the `loopwright-<role>` subagent, spawn the subagent 
 - tester `Uncovered`/`Needs` items and implementer `Deviations`;
 - the moved-branch question at the start of Build and Review, when the branch has new commits that are already on the upstream branch (pulled commits, or this task's own);
 - fixes: the no-repro gate (no locked repro test: provide evidence, find the faulty unit, or stop; never continue without one) and, after the final passing review (whole-branch for large), the sibling gate (include siblings in this fix or list them as follow-ups);
-- each undecided review finding, and the fix-round cap being reached;
+- the Simplify question at the start of Review (which proposed cuts to apply; not asked when there is nothing to cut), each undecided review finding, and the fix-round cap being reached;
 - each AGENTS.md / docs change, and the commit message and PR draft.
 
 In Test (no-repro gate), Build and Review, run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "<reason>"` before asking and `resume` after the answer, as those skills say; otherwise the stop gate pushes you past the gate. Never answer a gate yourself or treat silence as approval. Do not commit at any point.
