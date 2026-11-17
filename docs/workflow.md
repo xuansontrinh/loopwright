@@ -149,6 +149,7 @@ If you choose a fresh context, loopwright first writes up to five lines of what 
 - On a large task, the slice boundary question after a slice review passes while another slice remains.
 - New upstream commits found before Plan and Build (Build asks only when they touch the task's files or feature).
 - A moved branch: at the start of Build and Review, new commits since the task's base commit that are already on the upstream branch (once per HEAD): whether they are pulled commits, left out of the review, or this task's own.
+- Going back from Done: when you say at a Done question that something needs fixing, it asks whether to go back to Plan, go back to Test, or stay in Done.
 - Each `AGENTS.md` or docs change, and the commit message and PR draft.
 
 It never answers a gate itself, never treats silence as approval, and never commits.

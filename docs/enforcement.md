@@ -13,7 +13,7 @@ The shared standards file (`prompts/standards.md`) is enforced by prompts and re
 
 ## Going back after Build began
 
-`lw.mjs reopen <plan|test> "<reason>"` sends the task back to Plan or Test. Skills run it only after you choose to go back (a deviation, an undecided review finding). It is refused before Build began, for any other target, or without a reason, and the reason is recorded in the status history.
+`lw.mjs reopen <plan|test> "<reason>"` sends the task back to Plan or Test. Skills run it only after you choose to go back (a deviation, an undecided review finding, or a fix you raise at Done before Close). It is refused before Build began, for any other target, or without a reason, and the reason is recorded in the status history.
 
 In stage test the tester may edit and re-lock tests. `check-locks` reports those re-locks as `relockedAfterReopen` (path and reason), which the reviewer treats as information and the PR draft lists. A reopen counts only when the three history events ending with it are `await-user`, `resume`, `reopen`, strictly in a row (the pair the skills run around your answer, then the reopen). Any event between them, such as the `stage build` the skills run before re-spawning the implementer, means it does not count. A re-lock after Build without a counted reopen, including one after a bare `reopen` an agent ran on its own, stays in `lockedAfterBuild` and the reviewer raises it as a finding. Back in Build, the guard blocks locked-test edits again.
 

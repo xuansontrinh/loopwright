@@ -22,6 +22,18 @@ function relock(repo: string): void {
 }
 
 describe('check-locks reopen sanction', () => {
+  it('a sanctioned reopen at stage done lists its re-lock under relockedAfterReopen', () => {
+    const repo = built();
+    runLw(repo, ['stage', 'done']);
+    runLw(repo, ['await-user', 'go back from done']);
+    runLw(repo, ['resume']);
+    runLw(repo, ['reopen', 'test', 'outside review found a gap']);
+    relock(repo);
+    const out = checkLocks(repo);
+    expect(out.lockedAfterBuild).toEqual([]);
+    expect(out.relockedAfterReopen).toEqual([{ path: 'a.txt', reason: 'outside review found a gap' }]);
+  });
+
   it('a reopen without a preceding resume leaves its re-lock in lockedAfterBuild', () => {
     const repo = built();
     runLw(repo, ['reopen', 'test', 'tidy test']);
