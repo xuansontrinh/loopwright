@@ -43,6 +43,7 @@ Run `/loopwright-fix` once on a real bug in the scratch repo, with a description
 - [ ] The reported symptom and the repro failure excerpt are compared; a different error or wrong output sends the tester back
 - [ ] Build starts its report with `Root cause: <file:line>`, and the fix changes that code rather than catching the error or special-casing the repro input
 - [ ] No-repro gate: on a bug the tester cannot reproduce, you are offered more evidence or a faulty-unit search, and Build never starts without a locked repro test
+- [ ] At a Done question, saying something needs fixing offers going back to Plan or Test (or staying in Done); choosing Test runs `await-user`, `resume`, `reopen test` in a row, so the re-locks show as `relockedAfterReopen` and not as unapproved
 - [ ] Sibling gate: if Review finds the same defect pattern elsewhere, you are asked once at the final pass (after the whole-branch review for large) to include the siblings or list them as follow-ups; "include" reopens Plan with one repro criterion per sibling
 - [ ] The PR draft states the root cause in one line, names the repro test(s) with "failed before, passes after", and lists the follow-ups
 

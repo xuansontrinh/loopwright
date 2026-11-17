@@ -48,7 +48,7 @@ Follow each stage skill in turn (Claude Code `/loopwright-<stage>`, Codex `$loop
 - standard (and any fix): `loopwright-plan` → `loopwright-test` → `loopwright-build` → `loopwright-review` → `loopwright-done`
 - large: `loopwright-plan` → for each slice in order: `loopwright-test` → `loopwright-build` → `loopwright-review` → then one whole-branch `loopwright-review` → `loopwright-done`
 - A fix (`kind: fix` in the task file header; set by `/loopwright-fix`, or by Plan after the user agrees to run a bug-like goal as a fix) runs `loopwright-test` at every tier: a small fix is never built without a locked repro test. Large keeps its slice loop.
-- Going back is the user's choice only: at a deviation, or an undecided review finding, run `node "{{LW_HOME}}/hooks/lw.mjs" reopen <plan|test> "<reason>"` (plan or test; accepted only after Build began; it sets the header `stage:` line, and `plan: draft` for plan; if it prints `"header": false`, set those lines by hand), then follow the stage skill it names. Locked tests may then be edited by the tester in Test and are re-locked.
+- Going back is the user's choice only: at a deviation, an undecided review finding, or a fix the user raises at Done, run `node "{{LW_HOME}}/hooks/lw.mjs" reopen <plan|test> "<reason>"` (plan or test; accepted only after Build began; it sets the header `stage:` line, and `plan: draft` for plan; if it prints `"header": false`, set those lines by hand), then follow the stage skill it names. Locked tests may then be edited by the tester in Test and are re-locked.
 - A failed review returns to `loopwright-build` and then `loopwright-review`, up to the task's fix-round cap.
 
 A "fresh context" answer (at the plan confirmation, or at a slice boundary) ends the turn after the stage is advanced; the next session resumes from `status` and the task file, as in Resume.
@@ -67,6 +67,7 @@ When a stage says to spawn the `loopwright-<role>` subagent, spawn the subagent 
 - the moved-branch question at the start of Build and Review, when the branch has new commits that are already on the upstream branch (pulled commits, or this task's own);
 - fixes: the no-repro gate (no locked repro test: provide evidence, find the faulty unit, or stop; never continue without one) and, after the final passing review (whole-branch for large), the sibling gate (include siblings in this fix or list them as follow-ups);
 - the Simplify question at the start of Review (which proposed cuts to apply; not asked when there is nothing to cut), each undecided review finding, and the fix-round cap being reached;
+- going back from Done: when the user says at a Done question that something needs fixing, the question back to Plan, back to Test, or stay in Done;
 - each AGENTS.md / docs change, and the commit message and PR draft.
 
-In Test (no-repro gate), Build and Review, run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "<reason>"` before asking and `resume` after the answer, as those skills say; otherwise the stop gate pushes you past the gate. Never answer a gate yourself or treat silence as approval. Do not commit at any point.
+In Test (no-repro gate), Build, Review and Done (going back), run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "<reason>"` before asking and `resume` after the answer, as those skills say; otherwise the stop gate pushes you past the gate. Never answer a gate yourself or treat silence as approval. Do not commit at any point.

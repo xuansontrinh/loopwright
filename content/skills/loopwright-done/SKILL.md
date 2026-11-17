@@ -41,6 +41,13 @@ Draft both and show them to the user:
   - A `## Follow-ups` section for every kind of task, listing the parked stubs by title and any follow-ups in the task file (still no task paths or ids).
   - Fix tasks (`kind: fix`): the PR also states the root cause in one line (from `## Root cause`), the repro test name(s) with "failed before, passes after", and the follow-ups from `## Follow-ups`.
 
+## Going back
+
+When the user says at any question above that something needs fixing, and before Close, offer to go back; do not ask it on every run. Run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "go back from done"` before asking one question: back to Test, back to Plan, or stay in Done. Recommend Test when only a test or the code changes, Plan when a decision, acceptance criterion or the scope changes.
+- Stay in Done → run `node "{{LW_HOME}}/hooks/lw.mjs" resume` and continue.
+- Plan or Test → run `node "{{LW_HOME}}/hooks/lw.mjs" resume`, append `- Scope change: <reason>` to the review log (the next review starts at round 1 and Simplify runs again), and record the go-back as `D<n> [asked]` with the user's reason. Then run `node "{{LW_HOME}}/hooks/lw.mjs" reopen <plan|test> "<reason>"` (it sets the header `stage:` line, and `plan: draft` for plan; if it prints `"header": false`, set those lines by hand), directly after `resume` with no other `lw.mjs` call between, and only after the user chooses it. Then continue with `/loopwright-plan` or `/loopwright-test`.
+- Applied AGENTS.md/docs edits and carried stubs are kept, not reverted; tell the user they enter the next review's diff.
+
 ## 4. Close
 
 1. Set `status: done` in the task file header.

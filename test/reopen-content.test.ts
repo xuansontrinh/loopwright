@@ -18,7 +18,7 @@ describe('reopen in content', () => {
     expect(reviewer).toContain('lockedAfterBuild');
   });
 
-  it.each(['flow', 'build', 'review'])('loopwright-%s offers reopen through lw.mjs', (name) => {
+  it.each(['flow', 'build', 'review', 'done'])('loopwright-%s offers reopen through lw.mjs', (name) => {
     const body = read(`skills/loopwright-${name}/SKILL.md`);
     expect(body).toMatch(REOPEN_CMD);
   });
