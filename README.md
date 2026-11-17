@@ -50,7 +50,9 @@ flowchart TD
     tier -- "standard" --> test["Test<br/>tester writes and locks acceptance tests"]
     tier -- "large" --> slices["Split into slices<br/>each runs Test, Build, Review,<br/>then one whole-branch review"]
     test --> build["Build<br/>implementer makes the tests pass"]
-    build --> review{"Review<br/>separate reviewer: passes?"}
+    build -- "round 1: standard, large, fix" --> simplify["Simplify<br/>reviewer proposes cuts, you pick,<br/>approved ones are applied"]
+    build -- "small feature or fix round" --> review
+    simplify --> review{"Review<br/>separate reviewer: passes?"}
     review -- "blocking findings, rounds left" --> build
     review -- "fix-round cap reached" --> you{{"You decide"}}
     review -- "pass" --> done["Done<br/>AGENTS.md proposals, commit and PR draft"]
@@ -61,6 +63,7 @@ flowchart TD
 - **Plan** runs in your session. Plan first restates your goal for you to confirm or correct. A read-only scout then maps the repo, then you answer the high-impact questions one at a time and confirm the plan. Nothing is built before that.
 - **Test** (standard, large, and every fix): a tester subagent, which never sees the implementation, writes acceptance tests from your confirmed criteria and locks them.
 - **Build**: an implementer subagent makes the locked tests pass. Small feature tasks skip Test, so the implementer writes the tests; a fix never skips it.
+- **Simplify** (standard, large, and every fix): a read-only reviewer proposes behavior-preserving cuts to the diff, each with its net line change and what it gives up. You choose which to apply; nothing changes without your approval, and you are not asked when there is nothing to cut.
 - **Review**: a reviewer that starts blind runs your checks, confirms the locked tests are untouched, and reports only proven, high-impact findings. Blocking findings send the task back to Build, up to 3 rounds by default; findings it cannot confirm come to you to fix or dismiss.
 - **Done**: proposes `AGENTS.md` updates and drafts the commit and PR message. You approve each change; loopwright never commits.
 

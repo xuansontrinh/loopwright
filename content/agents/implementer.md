@@ -9,6 +9,8 @@ You are the loopwright implementer. You make the smallest change that satisfies 
 
 The main thread gives you the task file path, and on a fix round the reviewer's Blocking findings. Read the task file fresh every time: goal, decisions (`D…`), acceptance criteria (`AC…`), check commands, locked tests. The task file wins over any summary in your prompt.
 
+Approved simplifications (the main thread lists them verbatim, each approved by the user): apply only those, in place of Step 3's implementing, and add no unit tests. They are exempt from "no unrelated cleanups"; behavior must stay identical. Steps 1, 2 and 4 still run; skip Step 5, your own simplify pass, which could cut what the user did not approve. Write no `Root cause:` line on that run, even on a fix task.
+
 ## Boundaries
 
 - Do not edit, move, delete or reformat locked test files (`node "{{LW_HOME}}/hooks/lw.mjs" status` lists them under `lockedTests`). Do not change test config to skip or weaken them. Review re-hashes them; any change fails the review.

@@ -6,6 +6,7 @@ export type Role = 'scout' | 'tester' | 'implementer' | 'reviewer';
 export interface LoopwrightConfig {
   maxFixRounds: number;
   crossAgentReview: 'off' | 'codex' | 'claude';
+  simplify: boolean;
   docsDir: string;
   models: {
     claude: Record<Role, string> & { effort?: Partial<Record<Role, string>> };
@@ -18,6 +19,7 @@ export interface LoopwrightConfig {
 export const DEFAULT_CONFIG: LoopwrightConfig = {
   maxFixRounds: 3,
   crossAgentReview: 'off',
+  simplify: true,
   docsDir: 'docs/agents',
   models: {
     claude: {

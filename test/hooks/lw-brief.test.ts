@@ -30,7 +30,7 @@ describe('lw.mjs brief', () => {
     expect(b.config).toMatchObject({ maxFixRounds: 3, crossAgentReview: 'off', docsDir: 'docs/agents' });
     expect(b.config.crossAgentReviewer).toEqual(DEFAULT_CONFIG.models.crossAgentReviewer);
     expect(Object.keys(b.config).sort()).toEqual(
-      ['crossAgentReview', 'crossAgentReviewer', 'docsDir', 'maxFixRounds'].sort(),
+      ['crossAgentReview', 'crossAgentReviewer', 'docsDir', 'maxFixRounds', 'simplify'].sort(),
     );
     expect(b.dir).toBe(runLw(repo, ['dir']).stdout.trim());
     expect(b).not.toHaveProperty('history');

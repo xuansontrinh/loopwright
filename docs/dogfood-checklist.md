@@ -22,6 +22,7 @@ For each run, check:
 - [ ] Standard/large, and every fix: acceptance tests are written first, fail for the right reason, and are locked (`node .agents/loopwright/hooks/lw.mjs status` lists them)
 - [ ] During Build, editing a locked test file through the agent's edit tools is blocked by the guard
 - [ ] Ending a turn in Build/Review without a passing verdict is blocked by the stop gate (and lets go after 3 blocks, with a warning)
+- [ ] Simplify: after Build on a standard task (and a fix), you are asked which proposed cuts to apply, or nothing is asked when none are found; only approved cuts change the code, and approved cuts in locked tests are re-locked without a Review flag
 - [ ] Review output matches `content/schemas/verdict.json`; only proven findings appear; undecided findings are put to you
 - [ ] Tamper with a locked test via shell (`sed -i`): Review fails on the hash mismatch
 - [ ] Large: each slice runs Test, Build, Review, then a whole-branch review runs

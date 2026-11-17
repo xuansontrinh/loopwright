@@ -836,7 +836,13 @@ try {
         headMoved: state && movedHead(state),
         ownCommits: state ? ownCommits(state) : undefined,
         reopened: reopen ? { target: reopen.detail, reason: reopen.reason } : null,
-        config: { maxFixRounds, crossAgentReview, docsDir, crossAgentReviewer: models?.crossAgentReviewer },
+        config: {
+          maxFixRounds,
+          crossAgentReview,
+          simplify: cfg.simplify ?? true,
+          docsDir,
+          crossAgentReviewer: models?.crossAgentReviewer,
+        },
         effort,
       });
       break;

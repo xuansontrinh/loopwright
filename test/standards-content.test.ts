@@ -36,6 +36,7 @@ describe('shared standards file', () => {
       /no change-log comments/i,
       /leave existing docs alone/i,
       /test name carries the behavior/i,
+      /no duplicated code/i,
     ]) {
       expect(text).toMatch(rule);
     }
@@ -55,6 +56,30 @@ describe('shared standards file', () => {
 
   it('holds the comment rule verbatim', () => {
     expect(s()).toContain(COMMENT_RULE);
+  });
+});
+
+describe('no duplicated code rule', () => {
+  const rule = () =>
+    content('prompts/standards.md')
+      .split('\n')
+      .find((l) => l.startsWith('- **No duplicated code')) ?? '';
+
+  it('tells the writer to call or extend existing code instead of a near-copy', () => {
+    expect(rule()).toMatch(/call or extend existing code/i);
+    expect(rule()).toMatch(/near-copy/i);
+  });
+
+  it('merges two blocks that differ only in a value', () => {
+    expect(rule()).toMatch(/two blocks that differ only in a value[^.]*one/i);
+  });
+
+  it('covers test files', () => {
+    expect(rule()).toMatch(/test files/i);
+  });
+
+  it('gives a why', () => {
+    expect(rule()).toMatch(/\bWhy:/);
   });
 });
 

@@ -8,6 +8,7 @@ Global installs read `~/.config/loopwright/config.json` if you create it (it is 
 {
   "maxFixRounds": 3,
   "crossAgentReview": "off",
+  "simplify": true,
   "docsDir": "docs/agents",
   "models": {
     "claude": { "scout": "opus", "tester": "sonnet", "implementer": "sonnet", "reviewer": "opus" },
@@ -20,6 +21,7 @@ Global installs read `~/.config/loopwright/config.json` if you create it (it is 
 
 - `maxFixRounds`: default fix-round cap; Plan may propose a lower one per task.
 - `crossAgentReview`: `"off"`, `"codex"` or `"claude"`. When set, the review also runs the same reviewer prompt headlessly through the other CLI (`codex exec` or `claude -p`) and both verdicts must pass. A missing or failing CLI is skipped with a note in the review log; it never blocks.
+- `simplify`: `true` or `false`. When `true`, a standard or large task, and every fix, gets a Simplify step at the start of Review: you are asked which proposed cuts to apply. `false` skips it. A missing key counts as `true`.
 - `docsDir`: where Done puts longer standards docs linked from `AGENTS.md`.
 - `models`: per tool and role; tool-native aliases or full IDs, or `inherit` (the session model). Effort is not configured here: it comes only from the profile (see below). Old `models.<tool>.effort` and `models.crossAgentReviewer.effort` keys are ignored, with no validation and no error. Editing generated agent files directly counts as a user modification and is kept on update.
 
