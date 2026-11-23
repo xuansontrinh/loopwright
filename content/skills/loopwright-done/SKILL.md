@@ -8,6 +8,8 @@ Done runs in this main thread; do not spawn the subagents here. You propose; the
 
 ## Setup
 
+Before your first message to the user, read `{{LW_HOME}}/prompts/user-messages.md` unless you already read it in this conversation, and write every message to the user by it.
+
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
 2. `node "{{LW_HOME}}/hooks/lw.mjs" brief` → `dir` (`<lw>`), `task`, `verdict`, `config.docsDir` (the main checkout's config; default `docs/agents`). `dir` `null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/` with the first task, so continue and `task: null` reports "no active task". Not a git repo → tell the user loopwright must run inside a git repo, stop.
 3. `task: null` → "no active task": stop. Then `node "{{LW_HOME}}/hooks/lw.mjs" fingerprint`.
@@ -43,7 +45,7 @@ Draft both and show them to the user:
 
 ## Going back
 
-When the user says at any question above that something needs fixing, and before Close, offer to go back; do not ask it on every run. Run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "go back from done"` before asking one question: back to Test, back to Plan, or stay in Done. Recommend Test when only a test or the code changes, Plan when a decision, acceptance criterion or the scope changes.
+When the user says at any question above that something needs fixing, and before Close, offer to go back; do not ask it on every run. Run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "go back from done"` before asking one question, in plain words following the rules file: back to Test, back to Plan, or stay in Done. Recommend Test when only a test or the code changes, Plan when a decision, acceptance criterion or the scope changes.
 - Stay in Done → run `node "{{LW_HOME}}/hooks/lw.mjs" resume` and continue.
 - Plan or Test → run `node "{{LW_HOME}}/hooks/lw.mjs" resume`, append `- Scope change: <reason>` to the review log (the next review starts at round 1 and Simplify runs again), and record the go-back as `D<n> [asked]` with the user's reason. Then run `node "{{LW_HOME}}/hooks/lw.mjs" reopen <plan|test> "<reason>"` (it sets the header `stage:` line, and `plan: draft` for plan; if it prints `"header": false`, set those lines by hand), directly after `resume` with no other `lw.mjs` call between, and only after the user chooses it. Then continue with `/loopwright-plan` or `/loopwright-test`.
 - Applied AGENTS.md/docs edits and carried stubs are kept, not reverted; tell the user they enter the next review's diff.

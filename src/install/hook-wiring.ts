@@ -21,7 +21,12 @@ export function hookSpecs(tool: HookTool): HookSpec[] {
     { event: 'Stop', script: 'stop-gate.mjs' },
     { event: 'SessionStart', matcher: 'compact', script: 'reinject-context.mjs' },
     // https://code.claude.com/docs/en/hooks.md (PreCompact): no matcher runs it for manual and automatic compaction
-    ...(tool === 'claude' ? [{ event: 'PreCompact', script: 'precompact-instructions.mjs' }] : []),
+    ...(tool === 'claude'
+      ? [
+          { event: 'PreCompact', script: 'precompact-instructions.mjs' },
+          { event: 'PreToolUse', matcher: 'AskUserQuestion', script: 'plain-questions.mjs' },
+        ]
+      : []),
   ];
 }
 

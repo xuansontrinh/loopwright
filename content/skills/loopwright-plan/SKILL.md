@@ -8,6 +8,8 @@ Plan runs in this main thread. You state assumptions; the user decides. Do not e
 
 ## Setup
 
+Before your first message to the user, read `{{LW_HOME}}/prompts/user-messages.md` unless you already read it in this conversation, and write every message to the user by it.
+
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
 2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` prints the `.loopwright` directory (`<lw>` below). `null` inside a git repo → no task has started here yet; `lw.mjs start` (section 3) creates `.loopwright/`, so continue with a new task. Not a git repo → tell the user loopwright must run inside a git repo, stop.
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status`. "no active task" → this worktree is free; a new goal still goes through "Goal intake" below first (a related task in another worktree is not started again here), then continue with a new task. If it prints a task, read `<lw>/<task>`:
@@ -60,12 +62,12 @@ List every assumption you would otherwise make silently, one line each: `A<n> [h
 - **low-impact**: everything else (internal naming, file placement following an existing pattern, minor edge-case choices).
 - Cover: scope in/out, behavior and edge cases, interfaces and paths, error handling, compatibility, how it is tested (no test runner in the repo → high-impact), docs to update, extending an existing mechanism (the scout's `Mechanisms` line) vs adding something new. Behavior that differs by environment, deployment or tenant is high-impact unless it extends a mechanism the scout found.
 
-Show the user the whole ledger in one compact message, then run `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md` (path relative to `<lw>`; if `dir` printed `null`, this creates `.loopwright/`, so run `dir` again for `<lw>`) and create the task file (see Task file) with status `active`, stage `plan` and `plan: draft`, and the profile chosen before the scout in `profile:`. Copy `baseCommit`, `worktree` and `branch` from its output into the header. Put every unresolved ledger line under `## Open questions` with `— pending`; move each to Decisions or Assumptions as it is resolved, so a resumed session knows what is still open. Starting early lets the hooks restore this task after compaction; it builds nothing.
+Show the user the whole ledger in one compact message, as a numbered list in plain words following the rules file: each item says what is assumed and what a wrong guess would change, with its label (`A<n>`, a path) in brackets after. The same goes for the decisions whenever you show them: a plain numbered list. The task file keeps its `A<n>`, `D<n>` and `AC<n>` line shapes unchanged, because hooks read them. Then run `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md` (path relative to `<lw>`; if `dir` printed `null`, this creates `.loopwright/`, so run `dir` again for `<lw>`) and create the task file (see Task file) with status `active`, stage `plan` and `plan: draft`, and the profile chosen before the scout in `profile:`. Copy `baseCommit`, `worktree` and `branch` from its output into the header. Put every unresolved ledger line under `## Open questions` with `— pending`; move each to Decisions or Assumptions as it is resolved, so a resumed session knows what is still open. Starting early lets the hooks restore this task after compaction; it builds nothing.
 
 ## 4. High-impact questions, one at a time
 
 For each high-impact item, most impactful first: ask ONE question, wait for the answer, write it to the task file immediately, then ask the next.
-- Write every question for a reader who does not know the code: first say in one plain sentence what the feature does for its users and what will change; never rely on a route, function or status name alone.
+- Write every question for a reader who does not know the code, following the rules file: first say in one plain sentence what the feature does for its users and what will change.
 - Claude Code: use `AskUserQuestion` with 2–4 options, your recommendation first and marked "(recommended)".
 - Codex: numbered plain-text options, recommendation first. The first time, add: "Tip: `/plan` mode offers structured prompts."
 Record the answer as `D<n> [asked] <decision> — rejected: <option, why>`. An answer that raises a new high-impact question goes into the ledger and is asked the same way.
@@ -77,18 +79,18 @@ Write the result immediately: accepted → `[batch-confirmed]`, changed by the u
 
 ## 6. Proposal
 
-In one message, propose and explain each in one line:
+In one message, propose and explain each in one line, in plain words following the rules file (how big the work is, how much testing, how much review effort), with the name in brackets after:
 - **tier**: `small` (one area, few files, low risk; no acceptance-test stage for features, the implementer writes tests for every AC; a fix always runs Test), `standard` (default; tests first, then build), `large` (several separable parts; split into ordered slices, each run Test → Build → Review, then one whole-branch review).
 - **profile**: `lean` (trivial or mechanical), `balanced` (default; most tasks), `thorough` (cross-module work, risky changes), `deep` (major refactors, complex redesigns). It sets subagent effort for the task. It is pre-filled with the profile chosen before the scout; say so when the scout's findings suggest a different one. The user confirms or changes it. Written as `profile: <name>` in the header; Test, Build and Review read it via `lw.mjs brief <role>`.
 - **two-pass** review on/off: on when the implementer's claims matter beyond what tests show (performance, migrations, concurrency, external APIs); otherwise off.
 - **fix-round cap**: default `maxFixRounds` from config; may be lower for small tasks.
 - **check commands**: exact lint / typecheck / test commands from the scout report.
-- **acceptance criteria** `AC<n>` (fix tasks: see "Fix tasks"): observable behavior, each with the module path and export the test will use (the tester stops without one), and the planned test file. Large tier: slices `S<n>` with their ACs.
+- **acceptance criteria** `AC<n>` (fix tasks: see "Fix tasks"; show them as plain sentences of what the user will be able to see or do, with the label in brackets after): observable behavior, each with the module path and export the test will use (the tester stops without one), and the planned test file. Large tier: slices `S<n>` with their ACs.
 The user confirms or edits each item; write the outcome to the header and sections immediately.
 
 ## 7. Confirm
 
-Show the task file path and a short summary (tier, decisions count, ACs). Ask for explicit confirmation. Until the user confirms, keep editing the plan; never start Test or Build.
+Show the task file path and a short summary in plain words following the rules file: what will be built and why, how big the work is, what the user will be able to see or do when it is done, and how it will be checked; not counts of decisions or criteria. Ask for explicit confirmation. Until the user confirms, keep editing the plan; never start Test or Build.
 Safe point: for tier standard or large (fixes of those tiers included) and a task that was not reopened, the confirmation offers three answers: confirm and continue here; confirm and continue in a fresh context; keep editing. The small tier and a reopened task (Build has begun, so findings and the implementer report live in this conversation) keep the two answers confirm and keep editing, with no fresh-context offer. Give the reason in one sentence, stated as a tradeoff: later turns re-read the whole conversation, so a fresh context saves tokens when much of the task remains (a large task, a long plan conversation), but the new session rewrites the cache, which can cost more than it saves on a short task; nothing is lost either way because the task file holds the plan.
 On explicit confirmation, set the header line to `plan: confirmed` (Test and Build refuse to run without it). Then, unless the task was reopened (keep its base commit so the review scope stays whole), if `git rev-parse HEAD` differs from the recorded base commit, rerun `node "{{LW_HOME}}/hooks/lw.mjs" start tasks/<file>.md --force` and update the header. Then the next stage is `/loopwright-test` (standard, large, and every fix) or `/loopwright-build` (small feature); under `/loopwright-flow`, return to the flow.
 On "confirm and continue in a fresh context", after the `plan: confirmed` step and the base-commit rerun above, in this order:

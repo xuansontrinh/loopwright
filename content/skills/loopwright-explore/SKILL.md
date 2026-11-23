@@ -8,6 +8,8 @@ Writes a walkthrough of a codebase (or one folder, `/loopwright-explore services
 
 ## Setup
 
+Before your first message to the user, read `{{LW_HOME}}/prompts/user-messages.md` unless you already read it in this conversation, and write every message to the user by it.
+
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
 2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>`. `null` inside a git repo → no task has started here yet; `lw.mjs explore` creates `.loopwright/`, so continue. Not a git repo → tell the user loopwright must run inside a git repo, stop.
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status`. A task in `build` or `review` is active → run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "exploring the codebase"` before the first question and `node "{{LW_HOME}}/hooks/lw.mjs" resume` after the last, so the stop gate does not push you past the gates. "no active task" is normal. Remember whether the stage is `test`, `build` or `review` (see Finish).

@@ -7,6 +7,7 @@ import { isolatedEnv, makeBareRepo, makeRepo, runLw } from './helpers.js';
 
 const HOOK = resolve(__dirname, '../../content/hooks/precompact-instructions.mjs');
 const TASK = 'tasks/t.md';
+const RULES = resolve(__dirname, '../../content/prompts/user-messages.md');
 
 function activeTask(stage: string): string {
   const repo = makeRepo();
@@ -36,7 +37,8 @@ const instructions = (taskLine: string, wait?: string) =>
     '- any question the user has not answered yet, with its options;',
     '- unresolved review findings, verbatim;',
     '- the implementer report, if a second review pass is still due;',
-    '- any user decision that is not yet written in the task file.',
+    '- any user decision that is not yet written in the task file;',
+    `- that every message to the user follows ${RULES}, which is read again after compaction.`,
     'After compaction, re-read the task file before continuing.',
   ].join('\n');
 

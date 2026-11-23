@@ -8,10 +8,12 @@ Entry for bug fixes. It reuses Plan, Test, Build, Review and Done with `kind: fi
 
 ## Setup
 
+Before your first message to the user, read `{{LW_HOME}}/prompts/user-messages.md` unless you already read it in this conversation, and write every message to the user by it.
+
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
 2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` prints the `.loopwright` directory (`<lw>` below). `null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/`, so continue with a new task. Not a git repo → tell the user loopwright must run inside a git repo, stop.
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status`. "no active task" → this worktree is free; the bug is a new goal, so run "Goal intake" below before Steps (a related task in another worktree is not started again here). It prints a task → this worktree is occupied; follow "Goal intake" below instead of starting a second task here.
-4. Hooks check: `grep -l "loopwright/hooks/" .claude/settings.json .codex/config.toml .junie/config.json ~/.claude/settings.json ~/.codex/config.toml ~/.junie/config.json 2>/dev/null`. No match → warn the user once: "loopwright hooks are not installed, so locked tests, the stop gate and context restore are not enforced; run `npx loopwright init` to install them." Continue unless the user objects.
+4. Hooks check: `grep -l "loopwright/hooks/" .claude/settings.json .codex/config.toml .junie/config.json ~/.claude/settings.json ~/.codex/config.toml ~/.junie/config.json 2>/dev/null`. No match → warn the user once: "loopwright hooks are not installed, so nothing stops the code writer from editing the frozen tests (locked tests), nothing keeps the agent from stopping with work unfinished (stop gate), and a shortened conversation loses track of the task (context restore); run `npx loopwright init` to install them." Continue unless the user objects.
 
 ## Goal intake
 
