@@ -154,11 +154,16 @@ If you choose a fresh context, loopwright first writes up to five lines of what 
 
 It never answers a gate itself, never treats silence as approval, and never commits.
 
+## Plain words in messages to you
+
+Every message the agent shows you follows one shared rules file, `prompts/user-messages.md` in the installed loopwright directory: say what a thing is in everyday words first, give a name or id in brackets after it, say what each option does, and keep it short. Each skill reads the file once per conversation before its first message to you, and the agent is pointed back to it after compaction. The task file stays written for the agents; only messages to you change. On Claude Code a hook also checks questions, see [Enforcement](enforcement.md#plain-words-in-messages-to-you).
+
 ## What the hooks do along the way
 
 - **Locked-test guard**: during Build, edit tools cannot touch locked test files.
 - **Stop gate**: in Build and Review, the agent cannot finish its turn without a passing verdict that matches the current working tree, except while it waits for one of your decisions.
 - **Context reinjection**: after context compaction, the task's goal, stage, decisions and next step are printed again, plus the kind and root cause line for a fix.
 - **Compaction instructions** (Claude Code only): before a compaction, tells the summary to keep the task file path, the stage, any open question, unresolved review findings and decisions not yet in the task file, and to re-read the task file afterwards.
+- **Question check** (Claude Code only): while a task is active, a question to you that names a task id or a loopwright-only phrase with no plain description before it is sent back to the agent for a rewrite; after 2 denials in a row it goes through.
 
 Details and limits: [Enforcement](enforcement.md).

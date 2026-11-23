@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { isolatedEnv, makeRepo, runLw } from './helpers.js';
 
 const HOOK = resolve(__dirname, '../../content/hooks/reinject-context.mjs');
+const RULES = resolve(__dirname, '../../content/prompts/user-messages.md');
 const TASK = 'tasks/2026-11-08-x.md';
 const ROOT_CAUSE = 'src/parse.ts:42 - the trailing comma is dropped before the split';
 
@@ -97,15 +98,16 @@ describe('reinject-context for feature tasks', () => {
     'Stage: build',
     '- D1: decision number 1',
     '- D2: decision number 2',
+    `Write every message to the user by ${RULES}; read it again before your next one.`,
     'Continue /loopwright-build; locked tests must not be edited.',
   ].join('\n');
 
-  it('output is unchanged without a kind header', () => {
+  it('prints the plain task summary without a kind header', () => {
     const repo = setup(task({}));
     expect(reinject(repo).trim()).toBe(expected);
   });
 
-  it('output is unchanged with kind feature', () => {
+  it('prints the plain task summary with kind feature', () => {
     const repo = setup(task({ kind: 'feature' }));
     expect(reinject(repo).trim()).toBe(expected);
   });

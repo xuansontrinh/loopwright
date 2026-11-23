@@ -1,11 +1,27 @@
 # Enforcement and its limits
 
-Four hooks (plain Node scripts, no dependencies) are wired by default on Claude Code, three elsewhere:
+Five hooks (plain Node scripts, no dependencies) are wired by default on Claude Code, three elsewhere:
 
 - **Locked-test guard** (PreToolUse): during Build, blocks edit tools on locked test files.
 - **Stop gate** (Stop): in Build or Review, blocks finishing unless a passing verdict matches the current working-tree fingerprint. It blocks at most 3 times per stage, then lets the stop through with a warning, so it cannot deadlock a session. It stands down while the agent is waiting for your decision.
 - **Context reinjection** (SessionStart after compaction): re-prints goal, stage, decisions and next step from the task file.
 - **Compaction instructions** (PreCompact, Claude Code only): while a task is active, tells compaction to keep the task file path, the stage, any open question, unresolved review findings and decisions not yet in the task file, and to re-read the task file afterwards.
+- **Question check** (PreToolUse on `AskUserQuestion`, Claude Code only): while a task is active, sends a question back for a rewrite when it names a task id or a loopwright-only phrase with no plain description before it. See [Plain words in messages to you](#plain-words-in-messages-to-you).
+
+## Plain words in messages to you
+
+Every skill tells the agent to read one shared rules file, `prompts/user-messages.md` in the installed loopwright directory, once per conversation and before its first message to you. After compaction, context reinjection and the compaction instructions point the agent back to it. This part works on Claude Code, Codex and Junie.
+
+On Claude Code only, the question check adds a hook on `AskUserQuestion`. While a task is active it reads each question, header, and option label and description. It sends the question back to the agent, before you see it, when the text holds one of these with no plain description before it:
+
+- a task id that the active task file defines, such as `AC3`, `D2`, `A1`, `S2`, `R1` or `U1`; `S3` in a question about Amazon S3 passes unless the task has a slice S3
+- a loopwright-only phrase: stop gate, re-lock, fix round, two-pass, acceptance criteria
+
+Text in brackets, parentheses or backticks is not checked, so the label may follow the plain description. The denial quotes the text and names the rules file, and the agent asks again. After 2 denials in a row the next attempt goes through, so a question is never stuck. The check allows silently when no task is active, under `LOOPWRIGHT_HOOKS=off`, on unreadable input, and for any other tool.
+
+Limits:
+
+- Only questions are checked, and only for those labels. Words with an everyday meaning that loopwright also uses (tier, slice, lock, profile) and every other message (stage updates, findings, reports) rely on the rules file alone.
 
 ## Code standards
 

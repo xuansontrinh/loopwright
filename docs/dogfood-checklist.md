@@ -31,6 +31,8 @@ For each run, check:
 - [ ] Standard/large: plan confirmation offers continue here, continue in a fresh context, or keep editing; small tasks and a plan reopened after Build began keep the two-answer confirmation. Picking a fresh context writes `## Notes for Done`, moves the stage to `test`, and the new session resumes from the task file
 - [ ] Large: when a slice review passes and a `[todo]` slice remains, you are asked once to continue here or in a fresh context; it is not asked after the last slice or the whole-branch review
 - [ ] Moved branch: pull upstream commits by hand mid-task; Build and Review list the new commits and ask once whether they are pulled (left out of the review) or this task's own; the same HEAD is not asked again
+- [ ] Plain words: every message you see (stage updates, questions, the assumption list, the plan, relayed review findings, proposed code cuts, deviations) makes sense without knowing loopwright or the code; a task id such as `AC3` or a term such as "re-lock" never stands alone, and the plain description comes first
+- [ ] Claude Code only, question check: a gate question never reaches you with a bare task id or loopwright-only phrase; if the agent tried one, the transcript shows it sent back once and asked again in plain words, and a third attempt after 2 denials in a row goes through
 - [ ] Done proposes `AGENTS.md`/`docs/agents/` edits (each needs approval) and drafts a commit message, and does not commit
 - [ ] Optional: set `crossAgentReview` to `codex`; both verdicts are reported, and a missing CLI is skipped with a log note
 

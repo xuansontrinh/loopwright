@@ -91,7 +91,8 @@ Run a single stage, or the whole loop with `flow`. In Codex, use `$` instead of 
 |---|---|---|---|
 | Skills install | Supported, tested | WIP: installed, not tested end-to-end | WIP: reads `.agents/skills` |
 | Subagents (scout, tester, implementer, reviewer) | Supported, tested | WIP: installed, not tested end-to-end | WIP: `.junie/agents` |
-| Hook enforcement (locked-test guard, stop gate, context reinjection, compaction instructions on Claude Code) | Supported, tested | WIP: installed, not tested end-to-end | Experimental (`--experimental junie-hooks`, Early Access) |
+| Hook enforcement (locked-test guard, stop gate, context reinjection, plus compaction instructions and the question check on Claude Code only) | Supported, tested | WIP: installed, not tested end-to-end | Experimental (`--experimental junie-hooks`, Early Access) |
+| Plain-words rules for messages to you | Supported | WIP: installed, not tested end-to-end | WIP: reads `.agents/skills` |
 | Structured questions | `AskUserQuestion` | Plain-text fallback (numbered options) | Plain-text fallback |
 | Cross-agent review (as the reviewer) | Supported, tested | WIP: untested | Not supported |
 | Global install | Supported, tested | WIP: installed, not tested end-to-end | WIP: `~/.junie/agents` |

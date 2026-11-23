@@ -28,7 +28,7 @@ Repo install:
 
 - `.agents/skills/loopwright-{flow,fix,park,explore,plan,test,build,review,done}/SKILL.md`, and `.claude/skills` as a symlink to `../.agents/skills` (existing directories or other symlinks are prompted about unless `--force`)
 - `.claude/agents/loopwright-<role>.md` and `.codex/agents/loopwright-<role>.toml`, and `.junie/agents/loopwright-<role>.md` for `scout`, `tester`, `implementer`, `reviewer`
-- `.agents/loopwright/` with `hooks/`, `prompts/reviewer.md`, `schemas/verdict.json`
+- `.agents/loopwright/` with `hooks/`, `prompts/reviewer.md`, `prompts/simplifier.md`, `prompts/standards.md`, `prompts/user-messages.md`, `schemas/verdict.json`
 - hook wiring (unless `--no-hook`): entries in `.claude/settings.json`, and a `# BEGIN loopwright` ... `# END loopwright` block in `.codex/config.toml`
 - `.loopwright/` in the main worktree with its own `.gitignore` (`*`), `config.json`, `manifest.json`, `tasks/`, `state/`
 

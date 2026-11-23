@@ -2,7 +2,16 @@
 // SessionStart(compact) hook: re-inject the active task summary after context compaction.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { allow, exitIfHooksOff, failOpen, loopwrightDir, readState, readStdinJson, worktreeId } from './lib.mjs';
+import {
+  USER_MESSAGES_RULES,
+  allow,
+  exitIfHooksOff,
+  failOpen,
+  loopwrightDir,
+  readState,
+  readStdinJson,
+  worktreeId,
+} from './lib.mjs';
 
 const NEXT = {
   plan: 'Continue /loopwright-plan: finish the assumption ledger and confirm the tier.',
@@ -65,14 +74,13 @@ try {
   } else {
     lines.push(`Stage: ${state.stage}`);
   }
-  if (state.awaitingUser)
-    lines.push(
-      `Waiting on the user: ${state.awaitingUser} — do not proceed until they answer; then run lw.mjs resume.`,
-    );
-  else lines.push(NEXT[state.stage] ?? NEXT.plan);
-  const body = lines.slice(0, 40);
-  if (lines.length > 40) body[39] = lines[lines.length - 1];
-  const out = body.join('\n');
+  const closing = [
+    `Write every message to the user by ${USER_MESSAGES_RULES}; read it again before your next one.`,
+    state.awaitingUser
+      ? `Waiting on the user: ${state.awaitingUser} — do not proceed until they answer; then run lw.mjs resume.`
+      : (NEXT[state.stage] ?? NEXT.plan),
+  ];
+  const out = [...lines.slice(0, 40 - closing.length), ...closing].join('\n');
 
   if (tool === 'codex') {
     process.stdout.write(

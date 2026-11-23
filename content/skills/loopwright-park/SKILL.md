@@ -8,6 +8,8 @@ Captures work found mid-task (call it B) as a stub, so the current task (A) keep
 
 ## Setup
 
+Before your first message to the user, read `{{LW_HOME}}/prompts/user-messages.md` unless you already read it in this conversation, and write every message to the user by it.
+
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
 2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>`. `null` inside a git repo → no task has started here yet; `lw.mjs park` creates `.loopwright/`, so continue. Not a git repo → tell the user loopwright must run inside a git repo, stop.
 3. `node "{{LW_HOME}}/hooks/lw.mjs" status`. It prints a task → that is A. If A's `stage` is `build` or `review`, run `node "{{LW_HOME}}/hooks/lw.mjs" await-user "parking follow-up work"` before asking anything, and `node "{{LW_HOME}}/hooks/lw.mjs" resume` after the answers, so the stop gate does not push you past the questions. Other stages need neither. "no active task" → park without a link.

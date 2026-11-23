@@ -12,6 +12,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /** Mirror of PROFILES in src/core/profiles.ts (a test pins them equal). */
 export const PROFILES = {
@@ -20,6 +21,9 @@ export const PROFILES = {
   thorough: { scout: 'high', tester: 'high', implementer: 'high', reviewer: 'xhigh' },
   deep: { scout: 'xhigh', tester: 'xhigh', implementer: 'xhigh', reviewer: 'xhigh' },
 };
+
+/** Hooks sit in `<loopwright home>/hooks`, the prompts beside them. */
+export const USER_MESSAGES_RULES = fileURLToPath(new URL('../prompts/user-messages.md', import.meta.url));
 
 const MAX_BUFFER = 1024 * 1024 * 1024;
 

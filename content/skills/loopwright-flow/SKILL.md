@@ -8,9 +8,11 @@ Runs the stage skills in order for the confirmed tier and resumes where a task l
 
 ## Setup
 
+Before your first message to the user, read `{{LW_HOME}}/prompts/user-messages.md` unless you already read it in this conversation, and write every message to the user by it.
+
 1. Run every loopwright command from the worktree root: `cd "$(git rev-parse --show-toplevel)"`.
 2. `node "{{LW_HOME}}/hooks/lw.mjs" dir` → `<lw>`. `null` inside a git repo → no task has started here yet; `lw.mjs start` creates `.loopwright/` with the first task, so continue. Not a git repo → tell the user loopwright must run inside a git repo, stop.
-3. Hooks check: `grep -l "loopwright/hooks/" .claude/settings.json .codex/config.toml .junie/config.json ~/.claude/settings.json ~/.codex/config.toml ~/.junie/config.json 2>/dev/null`. No match → warn the user once: "loopwright hooks are not installed, so locked tests, the stop gate and context restore are not enforced; run `npx loopwright init` to install them." Continue unless the user objects. In Codex, hooks also need approval via `/hooks`.
+3. Hooks check: `grep -l "loopwright/hooks/" .claude/settings.json .codex/config.toml .junie/config.json ~/.claude/settings.json ~/.codex/config.toml ~/.junie/config.json 2>/dev/null`. No match → warn the user once: "loopwright hooks are not installed, so nothing stops the code writer from editing the frozen tests (locked tests), nothing keeps the agent from stopping with work unfinished (stop gate), and a shortened conversation loses track of the task (context restore); run `npx loopwright init` to install them." Continue unless the user objects. In Codex, hooks also need approval via `/hooks`.
 4. Junie: if a `loopwright-<role>` subagent fails because its configured model is not available to the user, spawn it again without `model` and `reasoningLevel` (Junie's default); this is not an error to report.
 
 ## Resume
@@ -57,7 +59,7 @@ Exploring is not a stage of the loop: to understand an unfamiliar codebase befor
 
 Work found along the way that does not belong in the task goes to `loopwright-park` (`/loopwright-park`), which leaves the current task unchanged.
 
-When a stage says to spawn the `loopwright-<role>` subagent, spawn the subagent and wait for its result; never do its work in this thread. After each stage, tell the user one line: what finished and what runs next.
+When a stage says to spawn the `loopwright-<role>` subagent, spawn the subagent and wait for its result; never do its work in this thread. After each stage, tell the user one line in plain words, following the rules file: what finished and what the next stage does for the user.
 
 ## Gates: stop and wait for the user
 
