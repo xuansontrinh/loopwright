@@ -166,9 +166,10 @@ describe('init installs the rules file', () => {
     const installed = join(home, '.config/loopwright/prompts/user-messages.md');
     expect(existsSync(installed)).toBe(true);
     expect(readFileSync(installed, 'utf8')).not.toContain('{{');
+    const pointer = `${join(home, '.config/loopwright')}/prompts/user-messages.md`;
     for (const name of SKILLS) {
       const text = readFileSync(join(home, `.agents/skills/loopwright-${name}/SKILL.md`), 'utf8');
-      expect(text, name).toContain(installed);
+      expect(text, name).toContain(pointer);
     }
   });
 });
