@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 export const PROFILES = {
   lean: { scout: 'low', tester: 'low', implementer: 'low', reviewer: 'medium' },
   balanced: { scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' },
-  thorough: { scout: 'high', tester: 'high', implementer: 'high', reviewer: 'xhigh' },
+  thorough: { scout: 'high', tester: 'high', implementer: 'high', reviewer: 'high' },
   deep: { scout: 'xhigh', tester: 'xhigh', implementer: 'xhigh', reviewer: 'xhigh' },
 };
 

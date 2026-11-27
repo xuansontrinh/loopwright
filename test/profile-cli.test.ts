@@ -73,13 +73,13 @@ describe('rendered agents', () => {
       expect(claude(repo, r)).toMatch(/^effort: high$/m);
       expect(junie(repo, r)).toMatch(/^reasoningLevel: high$/m);
     }
-    expect(claude(repo, 'reviewer')).toMatch(/^effort: xhigh$/m);
-    expect(junie(repo, 'reviewer')).toMatch(/^reasoningLevel: xhigh$/m);
+    expect(claude(repo, 'reviewer')).toMatch(/^effort: high$/m);
+    expect(junie(repo, 'reviewer')).toMatch(/^reasoningLevel: high$/m);
   });
   it.each([
     ['lean', ['low', 'low', 'low', 'medium']],
     ['balanced', ['medium', 'medium', 'medium', 'high']],
-    ['thorough', ['high', 'high', 'high', 'xhigh']],
+    ['thorough', ['high', 'high', 'high', 'high']],
     ['deep', ['xhigh', 'xhigh', 'xhigh', 'xhigh']],
   ] as const)('profile %s renders codex model_reasoning_effort per role', (name, efforts) => {
     const repo = createTempGitRepo();
@@ -110,7 +110,7 @@ describe('rendered agents', () => {
     writeFileSync(p, JSON.stringify(c));
     expect(runCli(repo, ['update', '--profile', 'thorough']).exitCode).toBe(0);
     expect(codex(repo, 'scout')).toMatch(/^model_reasoning_effort = "high"$/m);
-    expect(codex(repo, 'reviewer')).toMatch(/^model_reasoning_effort = "xhigh"$/m);
+    expect(codex(repo, 'reviewer')).toMatch(/^model_reasoning_effort = "high"$/m);
     expect(codex(repo, 'reviewer')).not.toMatch(/bogus/);
   });
 });

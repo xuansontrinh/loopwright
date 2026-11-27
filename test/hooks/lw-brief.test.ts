@@ -26,7 +26,7 @@ describe('lw.mjs brief', () => {
     const r = runLw(repo, ['brief', 'reviewer']);
     expect(r.code).toBe(0);
     const b = JSON.parse(r.stdout);
-    expect(b).toMatchObject({ task: TASK, stage: 'plan', reopened: null, effort: 'xhigh' });
+    expect(b).toMatchObject({ task: TASK, stage: 'plan', reopened: null, effort: 'high' });
     expect(b.config).toMatchObject({ maxFixRounds: 3, crossAgentReview: 'off', docsDir: 'docs/agents' });
     expect(b.config.crossAgentReviewer).toEqual(DEFAULT_CONFIG.models.crossAgentReviewer);
     expect(Object.keys(b.config).sort()).toEqual(
