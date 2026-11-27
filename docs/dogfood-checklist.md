@@ -65,6 +65,8 @@ Run `/loopwright-fix` once on a real bug in the scratch repo, with a description
 
 To measure what a task costs on the main thread before and after a change to the skills or hooks, run the fixed benchmark in [Benchmarking token cost](benchmarking.md).
 
+- [ ] Choosing a fresh context also offers `claude --model sonnet "/loopwright-flow"`, and a session started that way resumes the task
+
 ## Codex (WIP)
 
 Codex support is work in progress; only install and discovery checks are listed. No end-to-end run has been done.

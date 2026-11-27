@@ -140,6 +140,14 @@ Every turn re-reads the whole conversation, so a long task gets more expensive w
 
 If you choose a fresh context, loopwright first writes up to five lines of what it learned under `## Notes for Done` in the task file, which Done reads later, checks that the task file holds every decision made so far, and moves the task to the next stage. Then it asks you to type `/clear`, then `/loopwright-flow` on Claude Code (`/compact` also works and keeps a summary), or to start a new session and run the flow on Codex and Junie. The flow resumes from the task file. If you keep typing in the same session instead, the flow carries on with Test as usual and nothing is lost.
 
+After Plan, the main thread only dispatches subagents and passes on their results, so a cheaper model there costs about half as much. On Claude Code, loopwright also offers this at these points: instead of `/clear`, leave the session and run this in the same folder, then the flow resumes from the task file.
+
+```bash
+claude --model sonnet "/loopwright-flow"
+```
+
+Start a new session this way rather than typing `/model` inside the old one: `/model` rewrites the whole conversation cache and changes the default model for later sessions. Subagents keep their configured models, and a role set to `inherit` follows the session model, so it also runs on the cheaper one. Leave Plan on the stronger model, where the decisions are made. Loopwright never switches the model itself, and Codex and Junie get no such offer.
+
 ## Where loopwright stops and waits for you
 
 - The goal restatement and the effort profile before the scout, each high-impact question, the low-impact batch, the tier and settings proposal, and the final plan confirmation.
