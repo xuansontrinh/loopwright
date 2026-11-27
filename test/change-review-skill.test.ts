@@ -46,4 +46,16 @@ describe('change reviews in the review skill', () => {
     expect(line).toMatch(/every round/i);
     expect(line).toContain('- Sibling <path>:<line> — <why>');
   });
+
+  it('reads brief again after the pulled-locks reopen, so a dropped snapshot is not used', () => {
+    const step = lineWith(setup, /^8\. /);
+    expect(step).toMatch(/run `brief reviewer` again[^.]*`reopen` drops `reviewed`/);
+  });
+
+  it('builds the headless prompt from a quoted heredoc, so quoted code in findings is not run', () => {
+    const step = lineWith(passes, /^4\. \*\*Cross-agent pass/);
+    expect(step).toContain(`PROMPT="$(cat <<'EOF'`);
+    expect(step).toMatch(/never inside double quotes/);
+    expect(step).not.toContain('PROMPT="Follow');
+  });
 });
