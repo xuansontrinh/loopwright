@@ -70,7 +70,7 @@ The implementer report stays out of this pass, as in a blind pass. Output: the s
 ## Fix tasks
 
 Applies when the task file header has `kind: fix`.
-- Read `## Root cause` and `## Bug report`. The diff must change the code named in `## Root cause`. A change that only hides the symptom (catching and discarding the error, special-casing the repro input, skipping or removing the failing path, widening a type or check only to silence the failure) is a Blocking finding with the hunk as proof.
+- Read `## Root cause` and `## Bug report`. The diff must change the code named in `## Root cause` (the diff against the base commit; in a change review this was checked in an earlier round and is not checked again). A change that only hides the symptom (catching and discarding the error, special-casing the repro input, skipping or removing the failing path, widening a type or check only to silence the failure) is a Blocking finding with the hunk as proof.
 - Search for siblings: other places with the same defect pattern. Return each in `siblings` as `{path, line, why}`. A sibling is never a blocking or undecided finding and does not affect `pass`.
 - In a change review the sibling search is not repeated: return a sibling only when the changed lines themselves show a new one. In a change review the symptom-hiding rule applies to the changed lines.
 

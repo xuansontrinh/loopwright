@@ -223,4 +223,28 @@ describe('lw.mjs review-diff', () => {
     expect(b.verdict.pass).toBe(false);
     expect(b.reviewed).toBeUndefined();
   });
+
+  it('keeps a/ and b/ headers when diff.noprefix is set', () => {
+    const repo = started();
+    git(repo, ['config', 'diff.noprefix', 'true']);
+    expect(verdict(repo).code).toBe(0);
+    writeFileSync(join(repo, 'a.txt'), 'changed\n');
+    const r = diff(repo);
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain('--- a/a.txt');
+    expect(r.stdout).toContain('+++ b/a.txt');
+  });
+
+  it('shows a moved file as a delete and an add, never a rename', () => {
+    const repo = started();
+    writeFileSync(join(repo, 'old.txt'), 'the same content in both names\nline two\n');
+    expect(verdict(repo).code).toBe(0);
+    rmSync(join(repo, 'old.txt'));
+    writeFileSync(join(repo, 'moved.txt'), 'the same content in both names\nline two\n');
+    const r = diff(repo);
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain('deleted file mode');
+    expect(r.stdout).toContain('new file mode');
+    expect(r.stdout).not.toContain('rename from');
+  });
 });

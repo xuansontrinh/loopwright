@@ -594,9 +594,12 @@ try {
       execFileSync(
         'git',
         [
+          '--no-pager',
           '-c',
           'core.quotePath=false',
           'diff',
+          '--src-prefix=a/',
+          '--dst-prefix=b/',
           '--no-color',
           '--no-ext-diff',
           '--no-textconv',

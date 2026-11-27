@@ -148,7 +148,7 @@ After Plan, the main thread only dispatches subagents and passes on their result
 claude --model sonnet "/loopwright-flow"
 ```
 
-Start a new session this way rather than typing `/model` inside the old one: `/model` rewrites the whole conversation cache and changes the default model for later sessions. Subagents keep their configured models, and a role set to `inherit` follows the session model, so it also runs on the cheaper one. Leave Plan on the stronger model, where the decisions are made. Loopwright never switches the model itself, and Codex and Junie get no such offer.
+Start a new session this way rather than typing `/model` inside the old one: `/model` rewrites the whole conversation cache and can also change the default model for later sessions (observed, not documented). Subagents keep their configured models, and a role set to `inherit` follows the session model, so it also runs on the cheaper one. Leave Plan on the stronger model, where the decisions are made. loopwright never switches the model itself, and Codex and Junie get no such offer.
 
 ## Where loopwright stops and waits for you
 
