@@ -105,7 +105,7 @@ flowchart TD
     start(["Review round n"]) --> simp{"Round 1 and Simplify<br/>applies?"}
     simp -- "yes" --> simplify["Simplify: reviewer proposes cuts,<br/>you pick, approved ones are applied"]
     simp -- "no" --> blind
-    simplify --> blind["Blind pass: reviewer sees task file and diff only.<br/>Runs checks, re-hashes locked tests"]
+    simplify --> blind["Round 1: blind pass over the whole diff.<br/>Later rounds: the changes since the last review,<br/>plus a check that the earlier findings are fixed.<br/>Runs checks, re-hashes locked tests"]
     blind --> two{"two-pass on?"}
     two -- "yes" --> second["Second pass: reviewer verifies the<br/>implementer's claims"]
     two -- "no" --> cross
@@ -126,6 +126,8 @@ flowchart TD
 ```
 
 Simplify runs once, at round 1 of the final review (the task, or the whole branch for a large task), on standard and large tasks and on every fix; small feature tasks and `"simplify": false` in the config skip it. A reviewer reads the diff and proposes behavior-preserving cuts, each with its net line change. Cuts nobody would object to come as one apply-all or skip-all question; cuts that give something up (a test case, a guard) come with what they lose, at most 8, largest first, as multi-select questions of up to 4 cuts each. Cuts in locked tests are always in that second group. Only the approved cuts are applied: the implementer applies code cuts, and the tester applies cuts to locked tests and re-locks them. Every approved and declined cut is recorded as a decision with its location and change, so Review does not report a duplicate you chose to keep. An interrupted apply (compaction, `/clear` or a crash) resumes at the apply instead of asking again. With nothing to cut, you are not asked.
+
+Round 1 of each scope (the task, a slice, the whole branch, or the first round after going back) is a full review: the reviewer sees the task file and the whole diff and nothing else. Later rounds review the changes since the last review, plus the code they touch, and confirm that the earlier findings are fixed. When loopwright cannot tell what changed (there is no record of the last review, or the earlier findings are no longer at hand), it runs a full review instead. The one-line result tells you when a round looked only at the changes.
 
 A verdict goes stale when the code changes afterwards, so Done re-checks the fingerprint and sends you back to Review if it differs.
 

@@ -8,6 +8,8 @@ Five hooks (plain Node scripts, no dependencies) are wired by default on Claude 
 - **Compaction instructions** (PreCompact, Claude Code only): while a task is active, tells compaction to keep the task file path, the stage, any open question, unresolved review findings and decisions not yet in the task file, and to re-read the task file afterwards.
 - **Question check** (PreToolUse on `AskUserQuestion`, Claude Code only): while a task is active, sends a question back for a rewrite when it names a task id or a loopwright-only phrase with no plain description before it. See [Plain words in messages to you](#plain-words-in-messages-to-you).
 
+Each verdict also records the reviewed code as a git object in the repo's object store, so the next review round can see what changed. Nothing in your working tree, index or branches changes, and if git has cleaned the object up, the next round is a full review.
+
 ## Plain words in messages to you
 
 Every skill tells the agent to read one shared rules file, `prompts/user-messages.md` in the installed loopwright directory, once per conversation and before its first message to you. After compaction, context reinjection and the compaction instructions point the agent back to it. This part works on Claude Code, Codex and Junie.

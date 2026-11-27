@@ -110,3 +110,39 @@ One setup call per stage, a `stage` or `reopen` that writes the header, and chai
 Taking the fresh context (`after3`) cut cache-read tokens a further 2% but raised cost. The new session wrote its cache again: cache-write grew from 61,711 to 89,604 tokens against `after2`, and output grew from 11,952 to 15,439 tokens. A 1-hour cache write costs 40 times a cache read ($8 against $0.20 per million tokens on Opus 5.5 on a subscription; see [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing)). On a short task the fresh context therefore costs more. It is expected to pay off only when much of the task remains.
 
 Each configuration is one sample, so small differences are noise.
+
+### Replay of past reviews
+
+Past reviews were rebuilt from reviewer transcripts, checked against the recorded checksums of the locked tests, and reviewed again by the reviewer subagent. All replays ran the real `loopwright-reviewer` subagent on Opus 5.5. The locked test files matched their recorded checksums and the test counts matched the original runs. Costs are per run at list prices.
+
+**Reviewer effort.** Five past failed reviews, reviewed again at the original effort and one step lower.
+
+| State | `xhigh` | `high` | `medium` |
+|---|---|---|---|
+| Usage report and benchmark doc | $1.14 | $0.48, $0.59 | |
+| Per-worktree layout | $1.16 | $0.53, $0.57 | |
+| Pulled locked tests | $1.49 | $0.77, $0.70 | |
+| Shared code standards | | $0.42 | $0.31 |
+| Scout effort flag | | $0.34 | $0.35 |
+
+`xhigh` to `high` cut cost by 51 to 53%. Every correctness finding the `xhigh` run made, the `high` runs made too. One cleanup finding (a helper with one call site) was found by `xhigh` and missed by both `high` runs. Separately, 4 of the 11 original findings were not found again by any run at any effort: one review catches only part of what another would.
+
+**Main thread on a cheaper model.** In the session history, Sonnet main threads cost about half of Opus at similar turn counts (227 turns for $6.54 against 241 for $14.20), and Fable about double Opus. A check of four Sonnet and seven Opus sessions found no gap in how findings were relayed or in skipped steps.
+
+**Change review.** The "after the fix" state of the same five reviews, reviewed in full and as a change review, both at `high`. What changed since the previous review was 2 to 20% of the whole change.
+
+| State after its fix | Full | Change review |
+|---|---|---|
+| Usage report and benchmark doc | $0.69 | $0.57, $0.36 |
+| Per-worktree layout | $0.58 | $0.25 |
+| Pulled locked tests | $0.84 | $0.42, $0.35 |
+| Shared code standards | $0.52 | $0.22 |
+| Scout effort flag | $0.39 | $0.17 |
+
+About half the cost in total. Where the fix was only partial, both change reviews caught it and the full review did not. Open undecided findings were carried forward correctly. The full reviews raised three blocking findings in code the fix had not touched, which the change reviews by design did not look at; in the effort replays, round 1 with today's reviewer found those same three in almost every run.
+
+In the session history, of 12 later-round findings that could be placed in a tracked file, 10 were in files the fix round had changed.
+
+**Tried and dropped.** Telling the reviewer to judge impact before investigating a candidate cost 4% more over eight runs, with no change in findings.
+
+**Limits.** Five states, one or two runs per setting, all from this repo. None of the five was a fix task, so the fix-task rules of the change review are designed, not measured. The replay reviewers saw today's `CLAUDE.md` and today's reviewer procedure, which hold rules learned after the original reviews.

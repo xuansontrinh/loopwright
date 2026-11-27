@@ -66,6 +66,7 @@ Run `/loopwright-fix` once on a real bug in the scratch repo, with a description
 To measure what a task costs on the main thread before and after a change to the skills or hooks, run the fixed benchmark in [Benchmarking token cost](benchmarking.md).
 
 - [ ] Choosing a fresh context also offers `claude --model sonnet "/loopwright-flow"`, and a session started that way resumes the task
+- [ ] After a fix round, the next review is a changes-only review, the result line says so, and the review log line carries "changes only"
 
 ## Codex (WIP)
 
