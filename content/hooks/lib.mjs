@@ -12,6 +12,8 @@ import {
   realpathSync,
   renameSync,
   rmSync,
+  statSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -174,8 +176,13 @@ export function workingTree(cwd) {
       env: { ...process.env, GIT_INDEX_FILE: index },
     }).trim();
   try {
-    if (existsSync(userIndex)) copyFileSync(userIndex, index);
-    else run(['read-tree', 'HEAD']);
+    if (existsSync(userIndex)) {
+      copyFileSync(userIndex, index);
+      // Keep the source mtime: git trusts an entry's stat data unless the entry is as new as the index file
+      // (racy check), so a fresh mtime on the copy would hide a same-size edit made just after the entry was written.
+      const st = statSync(userIndex);
+      utimesSync(index, st.atime, st.mtime);
+    } else run(['read-tree', 'HEAD']);
     run(['add', '-A']);
     return run(['write-tree']);
   } finally {

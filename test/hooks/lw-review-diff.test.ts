@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { LW, git, isolatedEnv, makeRepo, runLw, scaffoldLoopwright } from './helpers.js';
@@ -246,5 +246,21 @@ describe('lw.mjs review-diff', () => {
     expect(r.stdout).toContain('deleted file mode');
     expect(r.stdout).toContain('new file mode');
     expect(r.stdout).not.toContain('rename from');
+  });
+
+  it('sees a same-size edit made in the same second as the index entry was written', () => {
+    const repo = started();
+    const t = new Date('2020-01-01T00:00:00Z');
+    writeFileSync(join(repo, 'a.txt'), 'one\n');
+    utimesSync(join(repo, 'a.txt'), t, t);
+    git(repo, ['add', 'a.txt']);
+    // The entry is as new as the index file itself, so git must re-hash it instead of trusting its stat data.
+    utimesSync(join(repo, '.git', 'index'), t, t);
+    expect(verdict(repo).code).toBe(0);
+    writeFileSync(join(repo, 'a.txt'), 'two\n');
+    utimesSync(join(repo, 'a.txt'), t, t);
+    const r = diff(repo);
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain('+two');
   });
 });
