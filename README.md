@@ -64,7 +64,7 @@ flowchart TD
 - **Test** (standard, large, and every fix): a tester subagent, which never sees the implementation, writes acceptance tests from your confirmed criteria and locks them.
 - **Build**: an implementer subagent makes the locked tests pass. Small feature tasks skip Test, so the implementer writes the tests; a fix never skips it.
 - **Simplify** (standard, large, and every fix): a read-only reviewer proposes behavior-preserving cuts to the diff, each with its net line change and what it gives up. You choose which to apply; nothing changes without your approval, and you are not asked when there is nothing to cut.
-- **Review**: a reviewer that starts blind runs your checks, confirms the locked tests are untouched, and reports only proven, high-impact findings. Blocking findings send the task back to Build, up to 3 rounds by default; findings it cannot confirm come to you to fix or dismiss.
+- **Review**: a reviewer that starts blind runs your checks, confirms the locked tests are untouched, and reports only proven, high-impact findings. Blocking findings send the task back to Build, up to 3 rounds by default, and after a fix, later rounds check only what changed; findings it cannot confirm come to you to fix or dismiss.
 - **Done**: proposes `AGENTS.md` updates and drafts the commit and PR message. You approve each change; loopwright never commits.
 
 Each task's goal, decisions, criteria and review log live in `.loopwright/tasks/<date>-<title>.md`. For the large-tier slice loop, step-by-step Plan and Review charts, and every point where loopwright waits for you, see [Workflow in detail](docs/workflow.md).

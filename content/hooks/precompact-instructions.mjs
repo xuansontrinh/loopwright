@@ -29,6 +29,7 @@ try {
     '- the task file path and the stage;',
     '- any question the user has not answered yet, with its options;',
     '- unresolved review findings, verbatim;',
+    "- the last review round's findings sent to Build and its undecided findings not yet asked, word for word until the next verdict;",
     '- the implementer report, if a second review pass is still due;',
     '- any user decision that is not yet written in the task file;',
     `- that every message to the user follows ${USER_MESSAGES_RULES}, which is read again after compaction.`,

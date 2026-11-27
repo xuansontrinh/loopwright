@@ -15,7 +15,7 @@ const E = (a: string, b: string, c: string, d: string) => ({ scout: a, tester: b
 const MATRIX: Record<string, Record<string, string>> = {
   lean: E('low', 'low', 'low', 'medium'),
   balanced: E('medium', 'medium', 'medium', 'high'),
-  thorough: E('high', 'high', 'high', 'xhigh'),
+  thorough: E('high', 'high', 'high', 'high'),
   deep: E('xhigh', 'xhigh', 'xhigh', 'xhigh'),
 };
 

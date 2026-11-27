@@ -2,15 +2,21 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
+  copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readlinkSync,
   realpathSync,
   renameSync,
+  rmSync,
+  statSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -18,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 export const PROFILES = {
   lean: { scout: 'low', tester: 'low', implementer: 'low', reviewer: 'medium' },
   balanced: { scout: 'medium', tester: 'medium', implementer: 'medium', reviewer: 'high' },
-  thorough: { scout: 'high', tester: 'high', implementer: 'high', reviewer: 'xhigh' },
+  thorough: { scout: 'high', tester: 'high', implementer: 'high', reviewer: 'high' },
   deep: { scout: 'xhigh', tester: 'xhigh', implementer: 'xhigh', reviewer: 'xhigh' },
 };
 
@@ -150,6 +156,38 @@ export function fingerprint(cwd, baseCommit) {
     }
   }
   return h.digest('hex');
+}
+
+/** Tree id of the working tree as it is now: the files in the user's index (force-added ignored files too) plus
+ * untracked files that are not ignored, the same set the fingerprint covers. Built in a temporary index seeded from a
+ * copy of the user's index (or HEAD when there is none), so the user's index and working tree are never written. */
+export function workingTree(cwd) {
+  const top = gitTopLevel(cwd);
+  // A linked worktree's index lives under .git/worktrees/<name>/; git prints the path relative to `top`.
+  const userIndex = resolve(top, git(top, ['rev-parse', '--git-path', 'index']));
+  const tmp = mkdtempSync(join(tmpdir(), 'lw-index-'));
+  const index = join(tmp, 'index');
+  const run = (args) =>
+    execFileSync('git', args, {
+      cwd: top,
+      encoding: 'utf8',
+      maxBuffer: MAX_BUFFER,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, GIT_INDEX_FILE: index },
+    }).trim();
+  try {
+    if (existsSync(userIndex)) {
+      copyFileSync(userIndex, index);
+      // Keep the source mtime: git trusts an entry's stat data unless the entry is as new as the index file
+      // (racy check), so a fresh mtime on the copy would hide a same-size edit made just after the entry was written.
+      const st = statSync(userIndex);
+      utimesSync(index, st.atime, st.mtime);
+    } else run(['read-tree', 'HEAD']);
+    run(['add', '-A']);
+    return run(['write-tree']);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 }
 
 /** Hooks call this first: LOOPWRIGHT_HOOKS=off (e.g. a headless cross-agent reviewer) disables them silently. */

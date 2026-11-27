@@ -105,7 +105,7 @@ flowchart TD
     start(["Review round n"]) --> simp{"Round 1 and Simplify<br/>applies?"}
     simp -- "yes" --> simplify["Simplify: reviewer proposes cuts,<br/>you pick, approved ones are applied"]
     simp -- "no" --> blind
-    simplify --> blind["Blind pass: reviewer sees task file and diff only.<br/>Runs checks, re-hashes locked tests"]
+    simplify --> blind["Round 1: blind pass over the whole diff.<br/>Later rounds: the changes since the last review,<br/>plus a check that the earlier findings are fixed.<br/>Runs checks, re-hashes locked tests"]
     blind --> two{"two-pass on?"}
     two -- "yes" --> second["Second pass: reviewer verifies the<br/>implementer's claims"]
     two -- "no" --> cross
@@ -127,6 +127,8 @@ flowchart TD
 
 Simplify runs once, at round 1 of the final review (the task, or the whole branch for a large task), on standard and large tasks and on every fix; small feature tasks and `"simplify": false` in the config skip it. A reviewer reads the diff and proposes behavior-preserving cuts, each with its net line change. Cuts nobody would object to come as one apply-all or skip-all question; cuts that give something up (a test case, a guard) come with what they lose, at most 8, largest first, as multi-select questions of up to 4 cuts each. Cuts in locked tests are always in that second group. Only the approved cuts are applied: the implementer applies code cuts, and the tester applies cuts to locked tests and re-locks them. Every approved and declined cut is recorded as a decision with its location and change, so Review does not report a duplicate you chose to keep. An interrupted apply (compaction, `/clear` or a crash) resumes at the apply instead of asking again. With nothing to cut, you are not asked.
 
+Round 1 of each scope (the task, a slice, the whole branch, or the first round after going back) is a full review: the reviewer sees the task file and the whole diff and nothing else. Later rounds review the changes since the last review, plus the code they touch, and confirm that the earlier findings are fixed. When loopwright cannot tell what changed (there is no record of the last review, or the earlier findings are no longer at hand), it runs a full review instead. The one-line result tells you when a round looked only at the changes.
+
 A verdict goes stale when the code changes afterwards, so Done re-checks the fingerprint and sends you back to Review if it differs.
 
 When an approved pull changes a locked test, loopwright sends the task back to Test for those files only. The tester checks that each still tests its acceptance criteria, edits only what the pull broke, and re-locks it. The re-lock is accepted under your pull decision, so Review does not report it.
@@ -139,6 +141,14 @@ Every turn re-reads the whole conversation, so a long task gets more expensive w
 - **A slice boundary**, for large tasks: when a slice review passes and another slice remains, you are asked whether to continue here or in a fresh context. It is not asked after the last slice, after the whole-branch review, or on smaller tasks.
 
 If you choose a fresh context, loopwright first writes up to five lines of what it learned under `## Notes for Done` in the task file, which Done reads later, checks that the task file holds every decision made so far, and moves the task to the next stage. Then it asks you to type `/clear`, then `/loopwright-flow` on Claude Code (`/compact` also works and keeps a summary), or to start a new session and run the flow on Codex and Junie. The flow resumes from the task file. If you keep typing in the same session instead, the flow carries on with Test as usual and nothing is lost.
+
+After Plan, the main thread only dispatches subagents and passes on their results, so a cheaper model there costs about half as much. On Claude Code, loopwright also offers this at these points: instead of `/clear`, leave the session and run this in the same folder, then the flow resumes from the task file.
+
+```bash
+claude --model sonnet "/loopwright-flow"
+```
+
+Start a new session this way rather than typing `/model` inside the old one: `/model` rewrites the whole conversation cache and can also change the default model for later sessions (observed, not documented). Subagents keep their configured models, and a role set to `inherit` follows the session model, so it also runs on the cheaper one. Leave Plan on the stronger model, where the decisions are made. loopwright never switches the model itself, and Codex and Junie get no such offer.
 
 ## Where loopwright stops and waits for you
 

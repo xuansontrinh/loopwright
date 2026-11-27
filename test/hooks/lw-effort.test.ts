@@ -33,7 +33,7 @@ describe('lw.mjs effort', () => {
   it('falls back to the manifest recorded profile', () => {
     const repo = setup({ manifestProfile: 'thorough' });
     expect(runLw(repo, ['effort', 'scout']).stdout.trim()).toBe('high');
-    expect(runLw(repo, ['effort', 'reviewer']).stdout.trim()).toBe('xhigh');
+    expect(runLw(repo, ['effort', 'reviewer']).stdout.trim()).toBe('high');
   });
   it('a config.json profile key is ignored', () => {
     const repo = setup({ config: { profile: 'deep' } });

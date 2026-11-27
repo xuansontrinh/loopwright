@@ -64,7 +64,7 @@ describe('lw.mjs brief with a bad value', () => {
     const b = JSON.parse(r.stdout);
     expect(b.config.maxFixRounds).toBe(DEFAULT_CONFIG.maxFixRounds);
     expect(b.config.docsDir).toBe(DEFAULT_CONFIG.docsDir);
-    expect(b.effort).toBe('xhigh');
+    expect(b.effort).toBe('high');
   });
 
   it('falls back to the shipped default, not the user config, when both configs are corrupt', () => {

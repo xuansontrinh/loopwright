@@ -19,6 +19,7 @@ import {
   repoRelative,
   sha256File,
   statePath,
+  workingTree,
   worktreeId,
   writeState,
 } from './lib.mjs';
@@ -378,6 +379,18 @@ function ownCommits(state) {
   }
 }
 
+/** The verdict's snapshot of the reviewed code, while its git tree still exists; else undefined. */
+function usableSnapshot(state) {
+  const tree = state?.reviewed?.tree;
+  if (typeof tree !== 'string' || !/^[0-9a-f]{40,64}$/.test(tree)) return undefined;
+  try {
+    gitOut(['cat-file', '-e', `${tree}^{tree}`]);
+    return state.reviewed;
+  } catch {
+    return undefined;
+  }
+}
+
 const [cmd, ...rest] = process.argv.slice(2);
 try {
   switch (cmd) {
@@ -454,6 +467,7 @@ try {
       state.stage = target;
       state.stopBlocks = 0;
       delete state.awaitingUser;
+      delete state.reviewed;
       note(state, 'reopen', target);
       state.history.at(-1).reason = reason;
       writeState(dir, id, state);
@@ -554,10 +568,50 @@ try {
         fail('loopwright: verdict requires --round <n>');
       const { dir, id, state } = requireState();
       state.verdict = { pass: result === 'pass', fingerprint: fingerprint(cwd, state.baseCommit), round };
+      // The reviewed code as a git tree, so the next round can look only at what changed since (review-diff).
+      try {
+        state.reviewed = { tree: workingTree(cwd), round };
+      } catch (err) {
+        delete state.reviewed;
+        process.stderr.write(
+          `loopwright: reviewed snapshot not recorded (${err instanceof Error ? err.message : String(err)})\n`,
+        );
+      }
       delete state.awaitingUser;
       note(state, 'verdict', `${result} round ${round}`);
       writeState(dir, id, state);
       out(state.verdict);
+      break;
+    }
+    case 'review-diff': {
+      const stat = rest.includes('--stat');
+      if (stat) rest.splice(rest.indexOf('--stat'), 1);
+      const { state } = requireState();
+      const snapshot = usableSnapshot(state);
+      if (!snapshot) fail('loopwright: no reviewed snapshot; run a full review');
+      // Numstat, not stat: git cuts long paths to `...` when stdout is not a terminal, and the paths are reused.
+      // Stdout streams straight through, so a large diff never fills a buffer. Paths are relative to the worktree root.
+      execFileSync(
+        'git',
+        [
+          '--no-pager',
+          '-c',
+          'core.quotePath=false',
+          'diff',
+          '--src-prefix=a/',
+          '--dst-prefix=b/',
+          '--no-color',
+          '--no-ext-diff',
+          '--no-textconv',
+          '--no-renames',
+          ...(stat ? ['--numstat'] : []),
+          snapshot.tree,
+          workingTree(cwd),
+          '--',
+          ...rest,
+        ],
+        { cwd: gitTopLevel(cwd), stdio: ['ignore', 'inherit', 'pipe'] },
+      );
       break;
     }
     case 'await-user': {
@@ -830,6 +884,7 @@ try {
         baseCommit: state?.baseCommit,
         lockedTests: state?.lockedTests,
         verdict: state?.verdict,
+        reviewed: usableSnapshot(state) ? { round: state.reviewed.round } : undefined,
         awaitingUser: state?.awaitingUser,
         flaggedLocks,
         pulledLocks: pulledLocks.length ? pulledLocks : undefined,
@@ -998,7 +1053,7 @@ try {
     }
     default:
       fail(
-        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|accept-locks|keep-base|fingerprint|verdict|await-user|resume|park|explore|status|config|brief|tasks|adopt|worktree|carry|effort|done>',
+        'loopwright: usage: lw.mjs <dir|start|stage|reopen|lock|check-locks|accept-locks|keep-base|fingerprint|verdict|review-diff|await-user|resume|park|explore|status|config|brief|tasks|adopt|worktree|carry|effort|done>',
       );
   }
 } catch (err) {

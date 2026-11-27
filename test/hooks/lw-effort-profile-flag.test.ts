@@ -40,7 +40,7 @@ describe('lw.mjs effort --profile', () => {
   });
 
   it('the flag picks the role effort of the named profile', () => {
-    expect(effort(makeRepo(), ['reviewer', '--profile', 'thorough']).stdout.trim()).toBe('xhigh');
+    expect(effort(makeRepo(), ['reviewer', '--profile', 'thorough']).stdout.trim()).toBe('high');
   });
 
   it('the flag wins over the task header and the manifest profile', () => {

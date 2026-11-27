@@ -97,7 +97,7 @@ On "confirm and continue in a fresh context", after the `plan: confirmed` step a
 1. Append `## Notes for Done` to the task file (add to it if it exists): up to five lines of things learned so far that Done may propose for `AGENTS.md`.
 2. Re-read the task file and write any decision made in this conversation that it is missing.
 3. Run `node "{{LW_HOME}}/hooks/lw.mjs" stage test` (it updates the header), so the next session resumes at Test and not at this confirmation.
-4. Tell the user what to type, by tool: Claude Code "`/clear`, then `/loopwright-flow`" (`/compact` also works and keeps a summary); Codex and Junie: start a new session and run the flow. End the turn. If the user's next message arrives in the same session, continue with `/loopwright-test` as usual.
+4. Tell the user what to type, by tool: Claude Code "`/clear`, then `/loopwright-flow`" (`/compact` also works and keeps a summary). On Claude Code also say, in plain words following the rules file, that the remaining stages cost less on a cheaper model: instead of `/clear`, leave this session and run `claude --model sonnet "/loopwright-flow"` in the same folder; subagents keep their configured models, and a role whose model is `inherit` follows the session model, so it would run on the cheaper model too; Codex and Junie: start a new session and run the flow. End the turn. If the user's next message arrives in the same session, continue with `/loopwright-test` as usual.
 
 ## Fix tasks
 

@@ -78,10 +78,10 @@ describe('per-worktree layout: config and effort come from the main checkout', (
       JSON.stringify({ files: {}, options: { hook: true, symlink: true, profile: 'thorough' } }),
     );
     expect(runLw(wt, ['effort', 'scout']).stdout.trim()).toBe('high');
-    expect(runLw(wt, ['effort', 'reviewer']).stdout.trim()).toBe('xhigh');
+    expect(runLw(wt, ['effort', 'reviewer']).stdout.trim()).toBe('high');
     expect(runLw(wt, ['start', TASK_WT]).code).toBe(0);
     expect(runLw(wt, ['effort', 'tester']).stdout.trim()).toBe('high');
-    expect(runLw(wt, ['effort', 'reviewer']).stdout.trim()).toBe('xhigh');
+    expect(runLw(wt, ['effort', 'reviewer']).stdout.trim()).toBe('high');
   });
 });
 
