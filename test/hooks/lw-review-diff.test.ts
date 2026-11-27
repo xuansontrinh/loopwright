@@ -49,6 +49,19 @@ describe('lw.mjs review-diff', () => {
     expect(r.stdout).not.toContain('keep.txt');
   });
 
+  it('shows an ignored file that was force-added but not committed', () => {
+    const repo = started();
+    writeFileSync(join(repo, '.gitignore'), 'secret.log\n');
+    writeFileSync(join(repo, 'secret.log'), 'before\n');
+    git(repo, ['add', '-f', 'secret.log']);
+    expect(verdict(repo).code).toBe(0);
+    writeFileSync(join(repo, 'secret.log'), 'after\n');
+    const r = diff(repo);
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain('secret.log');
+    expect(r.stdout).toContain('+after');
+  });
+
   it('prints nothing when nothing changed since the verdict', () => {
     const repo = started();
     expect(verdict(repo).code).toBe(0);

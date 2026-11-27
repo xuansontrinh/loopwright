@@ -2,6 +2,7 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
+  copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -155,21 +156,26 @@ export function fingerprint(cwd, baseCommit) {
   return h.digest('hex');
 }
 
-/** Tree id of the working tree as it is now: tracked files plus untracked files that are not ignored, the same set
- * the fingerprint covers. Built through a temporary index, so the user's index and working tree are untouched. */
+/** Tree id of the working tree as it is now: the files in the user's index (force-added ignored files too) plus
+ * untracked files that are not ignored, the same set the fingerprint covers. Built in a temporary index seeded from a
+ * copy of the user's index (or HEAD when there is none), so the user's index and working tree are never written. */
 export function workingTree(cwd) {
   const top = gitTopLevel(cwd);
+  // A linked worktree's index lives under .git/worktrees/<name>/; git prints the path relative to `top`.
+  const userIndex = resolve(top, git(top, ['rev-parse', '--git-path', 'index']));
   const tmp = mkdtempSync(join(tmpdir(), 'lw-index-'));
+  const index = join(tmp, 'index');
   const run = (args) =>
     execFileSync('git', args, {
       cwd: top,
       encoding: 'utf8',
       maxBuffer: MAX_BUFFER,
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, GIT_INDEX_FILE: join(tmp, 'index') },
+      env: { ...process.env, GIT_INDEX_FILE: index },
     }).trim();
   try {
-    run(['read-tree', 'HEAD']);
+    if (existsSync(userIndex)) copyFileSync(userIndex, index);
+    else run(['read-tree', 'HEAD']);
     run(['add', '-A']);
     return run(['write-tree']);
   } finally {
