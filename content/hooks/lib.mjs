@@ -5,12 +5,15 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readlinkSync,
   realpathSync,
   renameSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -150,6 +153,28 @@ export function fingerprint(cwd, baseCommit) {
     }
   }
   return h.digest('hex');
+}
+
+/** Tree id of the working tree as it is now: tracked files plus untracked files that are not ignored, the same set
+ * the fingerprint covers. Built through a temporary index, so the user's index and working tree are untouched. */
+export function workingTree(cwd) {
+  const top = gitTopLevel(cwd);
+  const tmp = mkdtempSync(join(tmpdir(), 'lw-index-'));
+  const run = (args) =>
+    execFileSync('git', args, {
+      cwd: top,
+      encoding: 'utf8',
+      maxBuffer: MAX_BUFFER,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, GIT_INDEX_FILE: join(tmp, 'index') },
+    }).trim();
+  try {
+    run(['read-tree', 'HEAD']);
+    run(['add', '-A']);
+    return run(['write-tree']);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 }
 
 /** Hooks call this first: LOOPWRIGHT_HOOKS=off (e.g. a headless cross-agent reviewer) disables them silently. */
